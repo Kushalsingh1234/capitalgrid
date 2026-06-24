@@ -1,0 +1,102 @@
+const countries = [
+  {
+    id: 'india',
+    name: 'India',
+    flag: '🇮🇳',
+    taxRate: 12,
+    taxLabel: '12%',
+    strength: 80,
+    strengthLabel: 'High Growth',
+    resources: 90,
+    resourcesLabel: 'Abundant',
+    taxDesc: 'Favorable corporate taxing. Boosts early-stage startup viability and fast liquidity reinvestment.',
+    strengthDesc: 'Emerging industrial sector with skyrocketing consumer demand. Retail spaces experience hyper-activity.',
+    resourcesDesc: 'Extremely rich in agricultural and fabric materials. Ideal base location for Primary Sector and textile setups.'
+  },
+  {
+    id: 'usa',
+    name: 'United States',
+    flag: '🇺🇸',
+    taxRate: 18,
+    taxLabel: '18%',
+    strength: 95,
+    strengthLabel: 'Market Power',
+    resources: 75,
+    resourcesLabel: 'High',
+    taxDesc: 'Higher tax rate offset by massive local consumption and global shipping advantages.',
+    strengthDesc: 'World\'s primary capital center. Highly stable pricing indexes on raw goods and materials.',
+    resourcesDesc: 'High availability of industrial parts and energy resources. Top-tier manufacturing hub.'
+  },
+  {
+    id: 'uk',
+    name: 'United Kingdom',
+    flag: '🇬🇧',
+    taxRate: 16,
+    taxLabel: '16%',
+    strength: 70,
+    strengthLabel: 'Trade Hub',
+    resources: 60,
+    resourcesLabel: 'Moderate',
+    taxDesc: 'Standard European tax rules. Offset by special customs agreements on shipping imports/exports.',
+    strengthDesc: 'Financial capital of the Western hemisphere. Excellent options for low-cost banking and loans.',
+    resourcesDesc: 'Moderate raw minerals. Highly optimized for high-end retail networks and distribution.'
+  },
+  {
+    id: 'germany',
+    name: 'Germany',
+    flag: '🇩🇪',
+    taxRate: 15,
+    taxLabel: '15%',
+    strength: 85,
+    strengthLabel: 'Industrial Lead',
+    resources: 70,
+    resourcesLabel: 'Steady',
+    taxDesc: 'Balanced business tax structure, incentivizing mechanical and automobile production setups.',
+    strengthDesc: 'Strong European economic driver. High efficiency multipliers on complex heavy factory equipment.',
+    resourcesDesc: 'Steady supplies of coal and metal parts. Ideal location for automobile assembly lines.'
+  },
+  {
+    id: 'japan',
+    name: 'Japan',
+    flag: '🇯🇵',
+    taxRate: 14,
+    taxLabel: '14%',
+    strength: 75,
+    strengthLabel: 'Tech Dominant',
+    resources: 50,
+    resourcesLabel: 'Scarce',
+    taxDesc: 'Low technology taxes. High government grants for electronics manufacturers.',
+    strengthDesc: 'Advanced micro-processor markets. Electronics retail commands premium profit margins.',
+    resourcesDesc: 'Scarce raw metals. Highly dependent on importing resources, but offset by high processing yield.'
+  },
+  {
+    id: 'brazil',
+    name: 'Brazil',
+    flag: '🇧🇷',
+    taxRate: 10,
+    taxLabel: '10%',
+    strength: 65,
+    strengthLabel: 'Raw Materials',
+    resources: 95,
+    resourcesLabel: 'Abundant',
+    taxDesc: 'Lowest corporate tax rate in the hemisphere. Extremely cheap startup formation costs.',
+    strengthDesc: 'Highly liquid resource trading center. High volatility, offering arbitrage trading opportunities.',
+    resourcesDesc: 'Unmatched agricultural lands and iron reserves. The ultimate primary resource provider.'
+  },
+  {
+    id: 'australia',
+    name: 'Australia',
+    flag: '🇦🇺',
+    taxRate: 11,
+    taxLabel: '11%',
+    strength: 68,
+    strengthLabel: 'Mining Giant',
+    resources: 92,
+    resourcesLabel: 'Abundant',
+    taxDesc: 'Favorable extraction tax credits. Lower royalties on mined minerals.',
+    strengthDesc: 'Stable oceanic trade route connections. Reliable shipping and raw materials market rates.',
+    resourcesDesc: 'Incredibly massive gold, lithium, and steel reserves. The perfect environment for mining companies.'
+  }
+];
+
+export default countries;

@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme Core Variables coexisting with utility classes */
+body {
+  background-color: #0A0A0A;
+  color: #ffffff;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Glassmorphic elements utilizing Tailwind properties */
+.glass-input {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: #ffffff;
+  padding: 12px 16px;
+  transition: all 0.2s ease;
+}
+
+.glass-input:focus {
+  border-color: #00d2ff;
+  box-shadow: 0 0 10px rgba(0, 210, 255, 0.2);
+  outline: none;
+  background: rgba(255, 255, 255, 0.04);
+}
