@@ -1,4 +1,8 @@
 import Startup from '../models/Startup.js';
+import Transaction from '../models/Transaction.js';
+import Employee from '../models/Employee.js';
+import { BUSINESS_REQUIRED_EMPLOYEES } from './employeeController.js';
+import { PRODUCT_DEPENDENCIES } from '../config/dependencies.js';
 
 /**
  * @desc    Add produced items to startup inventory
@@ -40,8 +44,68 @@ export const completeProduction = async (req, res) => {
       });
     }
 
-    // Find existing inventory slot or create new one
+    // Verify required employees and raw materials are available before production
+    const dependency = PRODUCT_DEPENDENCIES[productId];
     const inventory = startup.inventory || [];
+
+    if (dependency) {
+      // 1. Fetch hired employee records
+      let hiredEmployees = [];
+      if (global.useMockDb) {
+        hiredEmployees = (global.mockEmployees || []).filter(e => String(e.startupId) === String(startup._id));
+      } else {
+        hiredEmployees = await Employee.find({ startupId: startup._id });
+      }
+
+      // Verify employees
+      const requiredEmployees = dependency.employees || {};
+      for (const [role, reqQty] of Object.entries(requiredEmployees)) {
+        const record = hiredEmployees.find(e => e.employeeType === role);
+        const currentQty = record ? record.quantity : 0;
+        if (currentQty < reqQty) {
+          return res.status(400).json({
+            success: false,
+            message: `Required workforce not met: Hire at least ${reqQty} ${role}${reqQty > 1 ? 's' : ''} to produce ${productName}.`
+          });
+        }
+      }
+
+      // Verify raw materials
+      const requiredMaterials = dependency.materials || {};
+      const missingMatList = [];
+      for (const [matId, qtyPerUnit] of Object.entries(requiredMaterials)) {
+        const needed = qtyPerUnit * quantity;
+        const invItem = inventory.find(item => item.productId === matId);
+        const available = invItem ? invItem.quantity : 0;
+        if (available < needed) {
+          const matName = matId.charAt(0).toUpperCase() + matId.slice(1).replace('_', ' ');
+          missingMatList.push(`${matName} (${needed} needed, ${available} available)`);
+        }
+      }
+
+      if (missingMatList.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient raw materials: ${missingMatList.join(', ')}.`
+        });
+      }
+
+      // Deduct materials if everything is verified
+      for (const [matId, qtyPerUnit] of Object.entries(requiredMaterials)) {
+        const needed = qtyPerUnit * quantity;
+        const itemIndex = inventory.findIndex(item => item.productId === matId);
+        if (itemIndex > -1) {
+          inventory[itemIndex].quantity -= needed;
+          if (inventory[itemIndex].quantity <= 0) {
+            inventory.splice(itemIndex, 1);
+          }
+        }
+      }
+      startup.inventory = inventory;
+    }
+
+
+    // Find existing inventory slot or create new one
     const existingItem = inventory.find(item => item.productId === productId);
 
     if (existingItem) {
@@ -61,6 +125,34 @@ export const completeProduction = async (req, res) => {
       startup.inventory = inventory;
       startup.markModified('inventory');
       await startup.save();
+    }
+
+    // Create production transaction record
+    if (global.useMockDb) {
+      const newTransaction = {
+        _id: 'mock-tx-' + Date.now(),
+        startup: startup._id,
+        transactionType: 'Production',
+        buyerStartupName: null,
+        sellerStartupName: null,
+        productName: productName,
+        quantity: quantity,
+        pricePerUnit: 0,
+        totalAmount: 0,
+        createdAt: new Date()
+      };
+      global.mockTransactions.push(newTransaction);
+    } else {
+      await Transaction.create({
+        startup: startup._id,
+        transactionType: 'Production',
+        buyerStartupName: null,
+        sellerStartupName: null,
+        productName: productName,
+        quantity: quantity,
+        pricePerUnit: 0,
+        totalAmount: 0
+      });
     }
 
     res.status(200).json({

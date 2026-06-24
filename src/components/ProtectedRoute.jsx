@@ -39,7 +39,7 @@ export default function ProtectedRoute({ children }) {
     return <Navigate to="/app/dashboard" replace />;
   }
   
-  if (location.pathname === '/app/dashboard' && !hasStartup) {
+  if (['/app/dashboard', '/app/marketplace'].includes(location.pathname) && !hasStartup) {
     // If they don't have a startup, force them to startup registration page
     return <Navigate to="/app/startup-registration" replace />;
   }

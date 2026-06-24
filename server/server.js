@@ -8,6 +8,9 @@ import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import startupRoutes from './routes/startupRoutes.js';
 import productionRoutes from './routes/productionRoutes.js';
+import marketplaceRoutes from './routes/marketplaceRoutes.js';
+import transactionRoutes from './routes/transactionRoutes.js';
+import employeeRoutes from './routes/employeeRoutes.js';
 
 // Load config settings
 dotenv.config();
@@ -25,6 +28,9 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/startup', startupRoutes);
 app.use('/api/production', productionRoutes);
+app.use('/api/marketplace', marketplaceRoutes);
+app.use('/api/transaction', transactionRoutes);
+app.use('/api/employee', employeeRoutes);
 
 // ES Modules __dirname setup
 const __filename = fileURLToPath(import.meta.url);

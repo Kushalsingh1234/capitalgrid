@@ -28,6 +28,7 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import StartupRegistration from './pages/StartupRegistration';
 import PlayerDashboard from './pages/PlayerDashboard';
+import MarketplacePage from './pages/MarketplacePage';
 
 // Client ID fallback check
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "dummy-client-id";
@@ -58,6 +59,14 @@ ReactDOM.createRoot(document.getElementById('root')).render(
               element={
                 <ProtectedRoute>
                   <PlayerDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/app/marketplace" 
+              element={
+                <ProtectedRoute>
+                  <MarketplacePage />
                 </ProtectedRoute>
               } 
             />

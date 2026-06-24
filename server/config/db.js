@@ -11,6 +11,9 @@ const connectDB = async () => {
     global.useMockDb = true;
     global.mockUsers = [];
     global.mockStartups = [];
+    global.mockMarketplace = [];
+    global.mockTransactions = [];
+    global.mockEmployees = [];
   }
 };
 

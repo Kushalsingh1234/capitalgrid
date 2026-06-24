@@ -1,6 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getProductsForBusiness, isRetailBusiness } from '../data/products';
 import * as productionService from '../services/productionService';
+import { PRODUCT_DEPENDENCIES } from '../data/dependencies';
+
+const BUSINESS_REQUIRED_ROLES = {
+  'Farming': ['Farmer'],
+  'Dairy': ['Farmer'],
+  'Mining': ['Labourer'],
+  'Garment Factory': ['Fashion Designer', 'Labourer'],
+  'Food Processing Factory': ['Labourer'],
+  'Construction Factory': ['Labourer'],
+  'Automobile Manufacturing': ['Engineer', 'Labourer'],
+  'Electronics Manufacturing': ['Engineer', 'Labourer']
+};
 
 /**
  * ProductionCenter — renders the production panel for the player's business type.
@@ -12,13 +24,21 @@ import * as productionService from '../services/productionService';
  *   token: string — JWT auth token
  *   onProductionComplete: (inventory) => void — called when a batch finishes
  */
-export default function ProductionCenter({ businessType, token, onProductionComplete }) {
+export default function ProductionCenter({ businessType, token, onProductionComplete, employees = [], inventory = [] }) {
   const [quantities, setQuantities] = useState({});
   const [producing, setProducing] = useState({}); // { productId: { remaining, total, qty, name } }
   const timerRefs = useRef({});
 
   const products = getProductsForBusiness(businessType);
   const isRetail = isRetailBusiness(businessType);
+
+  // Compute required employees missing count
+  const requiredRoles = BUSINESS_REQUIRED_ROLES[businessType] || [];
+  const missingRoles = requiredRoles.filter(role => {
+    const emp = employees.find(e => e.employeeType === role);
+    return !emp || emp.quantity <= 0;
+  });
+  const isBlocked = missingRoles.length > 0;
 
   // Initialize quantities to 1 for each product
   useEffect(() => {
@@ -59,45 +79,46 @@ export default function ProductionCenter({ businessType, token, onProductionComp
     }));
 
     // Start countdown interval
+    let remaining = totalSeconds;
     timerRefs.current[product.id] = setInterval(() => {
-      setProducing(prev => {
-        const current = prev[product.id];
-        if (!current) {
-          clearInterval(timerRefs.current[product.id]);
-          return prev;
-        }
+      remaining -= 1;
 
-        const newRemaining = current.remaining - 1;
+      if (remaining <= 0) {
+        // Production complete — call API
+        clearInterval(timerRefs.current[product.id]);
+        delete timerRefs.current[product.id];
 
-        if (newRemaining <= 0) {
-          // Production complete — call API
-          clearInterval(timerRefs.current[product.id]);
-          delete timerRefs.current[product.id];
-
-          productionService.completeProduction({
-            productId: product.id,
-            productName: product.name,
-            quantity: current.qty
-          }, token).then(response => {
-            if (response.success && onProductionComplete) {
-              onProductionComplete(response.inventory);
-            }
-          }).catch(err => {
-            console.error('[Production API Error]', err.message);
-          });
-
-          // Remove from producing state
+        // Remove from producing state
+        setProducing(prev => {
           const { [product.id]: removed, ...rest } = prev;
           return rest;
-        }
+        });
 
-        return {
-          ...prev,
-          [product.id]: { ...current, remaining: newRemaining }
-        };
-      });
+        // Trigger API Call
+        productionService.completeProduction({
+          productId: product.id,
+          productName: product.name,
+          quantity: qty
+        }, token).then(response => {
+          if (response.success && onProductionComplete) {
+            onProductionComplete(response.inventory);
+          }
+        }).catch(err => {
+          console.error('[Production API Error]', err.message);
+        });
+
+      } else {
+        // Just update the remaining time
+        setProducing(prev => {
+          if (!prev[product.id]) return prev;
+          return {
+            ...prev,
+            [product.id]: { ...prev[product.id], remaining }
+          };
+        });
+      }
     }, 1000);
-  }, [quantities, producing, token, onProductionComplete]);
+  }, [quantities, token, onProductionComplete]);
 
   // --- Retail: No Production ---
   if (isRetail) {
@@ -110,11 +131,8 @@ export default function ProductionCenter({ businessType, token, onProductionComp
         </h3>
         <div className="p-6 bg-white/2 border border-white/5 rounded text-center">
           <i className="fa-solid fa-store text-3xl text-warningGlow/50 mb-3"></i>
-          <p className="text-sm text-text-secondary leading-relaxed">
-            This business does not manufacture products.
-          </p>
-          <p className="text-xs text-text-muted mt-1">
-            Products will later be purchased from the marketplace.
+          <p className="text-sm text-text-secondary leading-relaxed font-semibold">
+            This business cannot produce goods. Purchase products from Marketplace.
           </p>
         </div>
       </div>
@@ -145,6 +163,13 @@ export default function ProductionCenter({ businessType, token, onProductionComp
         Production Center
       </h3>
 
+      {isBlocked && (
+        <div className="mb-6 p-4 bg-red-950/35 border border-red-500/30 rounded text-red-400 text-xs flex items-center gap-3">
+          <i className="fa-solid fa-triangle-exclamation"></i>
+          <span>Hire {missingRoles.map(r => r === 'Farmer' || r === 'Builder' || r === 'Labourer' || r === 'Engineer' || r === 'Manager' || r === 'Chief' || r === 'Fashion Designer' ? r + 's' : r).join(' and ')} before production can begin.</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {products.map((product) => {
           const isProducing = !!producing[product.id];
@@ -152,6 +177,47 @@ export default function ProductionCenter({ businessType, token, onProductionComp
           const progressPct = prodState
             ? ((prodState.total - prodState.remaining) / prodState.total) * 100
             : 0;
+
+          // Compute product dependencies dynamically based on selected batch size
+          const selectedQty = quantities[product.id] || 1;
+          const dep = PRODUCT_DEPENDENCIES[product.id];
+          const missingResources = [];
+
+          if (dep) {
+            // Check employees
+            if (dep.employees) {
+              for (const [role, reqQty] of Object.entries(dep.employees)) {
+                const hired = employees.find(e => e.employeeType === role)?.quantity || 0;
+                if (hired < reqQty) {
+                  missingResources.push({
+                    name: role,
+                    needed: reqQty,
+                    available: hired,
+                    type: 'employee'
+                  });
+                }
+              }
+            }
+
+            // Check materials
+            if (dep.materials) {
+              for (const [matId, qtyPerUnit] of Object.entries(dep.materials)) {
+                const needed = qtyPerUnit * selectedQty;
+                const available = inventory.find(i => i.productId === matId)?.quantity || 0;
+                if (available < needed) {
+                  const matName = matId.charAt(0).toUpperCase() + matId.slice(1).replace('_', ' ');
+                  missingResources.push({
+                    name: matName,
+                    needed,
+                    available,
+                    type: 'material'
+                  });
+                }
+              }
+            }
+          }
+
+          const hasMissing = missingResources.length > 0;
 
           return (
             <div
@@ -226,10 +292,32 @@ export default function ProductionCenter({ businessType, token, onProductionComp
                     </button>
                   </div>
 
+                  {/* Warning Card */}
+                  {hasMissing && (
+                    <div className="mb-3 p-3 bg-red-950/20 border border-red-500/20 rounded text-[11px] text-red-400">
+                      <div className="font-display font-bold uppercase tracking-wider text-[10px] text-red-400 mb-1 flex items-center gap-1">
+                        <i className="fa-solid fa-triangle-exclamation animate-pulse"></i>
+                        <span>Missing Resources</span>
+                      </div>
+                      <ul className="space-y-0.5 list-disc pl-4 font-mono text-[10px] text-red-300">
+                        {missingResources.map((res, index) => (
+                          <li key={index}>
+                            - {res.name} ({res.needed} needed)
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   {/* Produce Button */}
                   <button
                     onClick={() => handleProduce(product)}
-                    className="w-full py-2.5 bg-gradient-to-r from-cyanGlow/10 to-blueGlow/10 border border-cyanGlow/25 hover:border-cyanGlow/50 hover:from-cyanGlow/20 hover:to-blueGlow/20 text-cyanGlow font-display text-[10px] font-bold uppercase tracking-widest rounded transition-all flex items-center justify-center gap-2"
+                    disabled={isBlocked || hasMissing}
+                    className={`w-full py-2.5 font-display text-[10px] font-bold uppercase tracking-widest rounded transition-all flex items-center justify-center gap-2 border ${
+                      isBlocked || hasMissing
+                        ? 'bg-white/2 border-white/5 text-text-muted cursor-not-allowed'
+                        : 'bg-gradient-to-r from-cyanGlow/10 to-blueGlow/10 border-cyanGlow/25 hover:border-cyanGlow/50 hover:from-cyanGlow/20 hover:to-blueGlow/20 text-cyanGlow'
+                    }`}
                   >
                     <i className="fa-solid fa-play text-[8px]"></i>
                     Produce
