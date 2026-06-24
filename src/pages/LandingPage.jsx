@@ -3,6 +3,127 @@ import { Link } from 'react-router-dom';
 import countriesData from '../data/countries';
 import sectorsData from '../data/industries';
 
+// Mapping country IDs to FlagCDN two-letter ISO country codes
+const flagCodes = {
+  india: 'in',
+  usa: 'us',
+  uk: 'gb',
+  germany: 'de',
+  japan: 'jp',
+  brazil: 'br',
+  australia: 'au'
+};
+
+// Inline SVG illustrations for the Industry Cards (royalty-free, lightweight, responsive)
+function SectorIllustration({ id }) {
+  if (id === 'primary') {
+    return (
+      <svg className="sector-svg" viewBox="0 0 200 100">
+        <defs>
+          <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1E3A8A" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#0B0F19" stopOpacity="0.95" />
+          </linearGradient>
+          <linearGradient id="glowGradBlue" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#0066ff" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#0066ff" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <rect width="200" height="100" fill="url(#primaryGrad)" rx="8" />
+        <path d="M0,100 Q40,65 90,82 T200,68 L200,100 Z" fill="url(#glowGradBlue)" />
+        <path d="M-10,95 Q50,75 110,90 T210,80" fill="none" stroke="rgba(0, 102, 255, 0.15)" strokeWidth="1.5" />
+        
+        {/* Wheat crop illustration */}
+        <g transform="translate(35, 30) scale(0.9)">
+          <path d="M10,40 Q15,20 12,10 M22,40 Q25,18 24,5" fill="none" stroke="#0066ff" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="12" cy="10" r="2" fill="#60a5fa" />
+          <circle cx="24" cy="5" r="2" fill="#3b82f6" />
+          <circle cx="9" cy="20" r="1.5" fill="#60a5fa" opacity="0.8" />
+          <circle cx="27" cy="15" r="1.5" fill="#3b82f6" opacity="0.8" />
+        </g>
+        {/* Mining pickaxe / silo outline */}
+        <g transform="translate(130, 25) scale(0.85)" stroke="#0066ff" strokeWidth="1.5" fill="none">
+          <rect x="10" y="15" width="22" height="35" rx="3" fill="rgba(0, 102, 255, 0.1)" stroke="#3b82f6" strokeWidth="1.5" />
+          <path d="M10,15 Q21,3 32,15" stroke="#3b82f6" strokeWidth="1.5" />
+          <line x1="21" y1="15" x2="21" y2="50" stroke="rgba(255,255,255,0.15)" />
+        </g>
+      </svg>
+    );
+  }
+  if (id === 'factories') {
+    return (
+      <svg className="sector-svg" viewBox="0 0 200 100">
+        <defs>
+          <linearGradient id="factGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1E3A8A" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#0B0F19" stopOpacity="0.95" />
+          </linearGradient>
+        </defs>
+        <rect width="200" height="100" fill="url(#factGrad)" rx="8" />
+        
+        {/* Conveyor belt with gears */}
+        <path d="M 25,80 L 175,80" stroke="rgba(0, 102, 255, 0.35)" strokeWidth="4" strokeLinecap="round" />
+        <circle cx="45" cy="80" r="4.5" fill="#0066ff" className="spinning-gear" />
+        <circle cx="100" cy="80" r="4.5" fill="#0066ff" className="spinning-gear" />
+        <circle cx="155" cy="80" r="4.5" fill="#0066ff" className="spinning-gear" />
+        
+        {/* Factory silhouette */}
+        <path d="M 50,80 L 50,45 L 75,60 L 100,45 L 125,60 L 150,45 L 150,80 Z" fill="rgba(0, 102, 255, 0.12)" stroke="#0066ff" strokeWidth="1.8" />
+        <line x1="75" y1="45" x2="75" y2="28" stroke="rgba(255, 255, 255, 0.25)" strokeWidth="2" />
+        <path d="M75,28 Q80,18 90,22" fill="none" stroke="rgba(0, 102, 255, 0.4)" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (id === 'manufacturing') {
+    return (
+      <svg className="sector-svg" viewBox="0 0 200 100">
+        <defs>
+          <linearGradient id="mfgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1E3A8A" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#0B0F19" stopOpacity="0.95" />
+          </linearGradient>
+        </defs>
+        <rect width="200" height="100" fill="url(#mfgGrad)" rx="8" />
+        
+        {/* Microchip and circuits */}
+        <rect x="70" y="25" width="60" height="45" rx="4" fill="rgba(0, 102, 255, 0.15)" stroke="#0066ff" strokeWidth="2" />
+        <circle cx="100" cy="47" r="8" fill="rgba(0, 102, 255, 0.2)" stroke="#60a5fa" strokeWidth="1.5" />
+        
+        <path d="M 20,47 L 70,47 M 130,47 L 180,47 M 100,8 L 100,25 M 100,70 L 100,92" fill="none" stroke="rgba(0, 102, 255, 0.45)" strokeWidth="1.5" strokeDasharray="4,4" className="animated-circuits" />
+        <circle cx="20" cy="47" r="3.5" fill="#60a5fa" />
+        <circle cx="180" cy="47" r="3.5" fill="#60a5fa" />
+        <circle cx="100" cy="8" r="3.5" fill="#0066ff" />
+        <circle cx="100" cy="92" r="3.5" fill="#0066ff" />
+      </svg>
+    );
+  }
+  if (id === 'retail') {
+    return (
+      <svg className="sector-svg" viewBox="0 0 200 100">
+        <defs>
+          <linearGradient id="retailGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1E3A8A" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#0B0F19" stopOpacity="0.95" />
+          </linearGradient>
+        </defs>
+        <rect width="200" height="100" fill="url(#retailGrad)" rx="8" />
+        
+        {/* Storefront outline */}
+        <path d="M 30,80 L 110,80 M 110,80 L 110,42 L 30,42 Z" fill="rgba(0, 102, 255, 0.08)" stroke="#3b82f6" strokeWidth="1.5" />
+        <path d="M 25,42 L 115,42" stroke="#0066ff" strokeWidth="2.5" strokeLinecap="round" />
+        <rect x="45" y="55" width="20" height="25" fill="none" stroke="rgba(255, 255, 255, 0.15)" strokeWidth="1" />
+        <rect x="75" y="55" width="20" height="25" fill="none" stroke="rgba(255, 255, 255, 0.15)" strokeWidth="1" />
+        
+        {/* Logistics distribution arrow line */}
+        <path d="M 125,65 L 160,65 L 165,70 L 175,70 L 175,75 M 125,75 L 175,75" fill="none" stroke="#60a5fa" strokeWidth="1.5" />
+        <circle cx="140" cy="75" r="2.5" fill="#60a5fa" />
+        <circle cx="165" cy="75" r="2.5" fill="#0066ff" />
+      </svg>
+    );
+  }
+  return null;
+}
+
 export default function LandingPage() {
   // --- States ---
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -14,6 +135,20 @@ export default function LandingPage() {
     { id: 3, time: '[16:15:33]', text: '🚗 <span class="player">GenesisAuto</span> opened a <span class="facility">Car Showroom</span>' },
     { id: 4, time: '[16:15:34]', text: '🏦 Logistical services rented by <span class="facility">Heavy Forge</span> from <span class="player">QuantumLogistics</span>' }
   ]);
+  const [visibleNews, setVisibleNews] = useState([0, 1, 2, 3, 4]);
+
+  // Bloomberg structured news pool
+  const newsHeadlines = [
+    { type: 'M&A', text: 'AUTOFORGE ACQUIRES MICROCHIP INDUSTRIES IN ALL-STOCK TRANSACTION' },
+    { type: 'MARKET', text: 'INDIA WHEAT EXPORTS SURGE 18% AS GLOBAL SUPPLIES TIGHTEN' },
+    { type: 'M&A', text: 'GENESISAUTO ACQUIRES CYBERSTEEL REFINERY IN $4.2B DEAL' },
+    { type: 'COMMODITY', text: 'STEEL PRICES HIT SIX-MONTH HIGH AMID HEAVY CONSTRUCTION DEMAND' },
+    { type: 'M&A', text: 'APEXRETAIL MERGES WITH STARLIGHT LOGISTICS FOR SUPPLY INTEGRATION' },
+    { type: 'MARKET', text: 'GLOBAL FUEL PRICES RISE; SHIPPING CHARGES EXPECTED TO INCREMENT' },
+    { type: 'M&A', text: 'NOVA MINES ENTERS DEFENSIVE MERGER COMPACT WITH INDUSTRIAL GIANT' },
+    { type: 'DEMAND', text: 'ASIAN MANUFACTURING SECTOR REPORT SURGE IN RAW MATERIALS ORDERING' },
+    { type: 'M&A', text: 'ARES CORP SECURES CONTROLLING STAKE IN REGIONAL WEAVING MILL' }
+  ];
 
   // --- Refs ---
   const canvasRef = useRef(null);
@@ -37,7 +172,7 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // 2. Interactive Canvas World Network Map
+  // 2. Interactive Canvas World Network Map (Relocated to dedicated section)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -51,15 +186,35 @@ export default function LandingPage() {
     let connections = [];
     let particles = [];
 
+    // Stylized dot-matrix world continents representation (16 rows x 30 cols)
+    const WORLD_GRID = [
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,0,0],
+      [0,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,0],
+      [0,1,1,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+      [0,0,0,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,0],
+      [0,0,0,0,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1,1,0,0],
+      [0,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,1,0,0],
+      [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0],
+      [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0]
+    ];
+
     const initNetwork = () => {
       nodes = [
-        { id: 'USA', name: 'New York Hub', x: width * 0.25, y: height * 0.35, size: 5 },
-        { id: 'UK', name: 'London Hub', x: width * 0.45, y: height * 0.28, size: 4 },
-        { id: 'GERMANY', name: 'Berlin Hub', x: width * 0.52, y: height * 0.26, size: 4 },
-        { id: 'BRAZIL', name: 'Sao Paulo Hub', x: width * 0.35, y: height * 0.75, size: 4.5 },
-        { id: 'INDIA', name: 'Mumbai Hub', x: width * 0.68, y: height * 0.48, size: 5 },
-        { id: 'JAPAN', name: 'Tokyo Hub', x: width * 0.85, y: height * 0.32, size: 5 },
-        { id: 'AUSTRALIA', name: 'Sydney Hub', x: width * 0.88, y: height * 0.8, size: 4.5 }
+        { id: 'USA', name: 'New York Hub', x: width * 0.22, y: height * 0.35, size: 5 },
+        { id: 'UK', name: 'London Hub', x: width * 0.43, y: height * 0.28, size: 4 },
+        { id: 'GERMANY', name: 'Berlin Hub', x: width * 0.50, y: height * 0.26, size: 4 },
+        { id: 'BRAZIL', name: 'Sao Paulo Hub', x: width * 0.33, y: height * 0.72, size: 4.5 },
+        { id: 'INDIA', name: 'Mumbai Hub', x: width * 0.65, y: height * 0.48, size: 5 },
+        { id: 'JAPAN', name: 'Tokyo Hub', x: width * 0.82, y: height * 0.32, size: 5 },
+        { id: 'AUSTRALIA', name: 'Sydney Hub', x: width * 0.85, y: height * 0.8, size: 4.5 }
       ];
 
       connections = [
@@ -88,8 +243,8 @@ export default function LandingPage() {
           targetX: endNode.x,
           targetY: endNode.y,
           progress: 0,
-          speed: 0.005 + Math.random() * 0.008,
-          color: Math.random() > 0.5 ? '#00d2ff' : '#0066ff'
+          speed: 0.004 + Math.random() * 0.007,
+          color: Math.random() > 0.5 ? '#0066ff' : '#60a5fa'
         });
       }
     };
@@ -101,21 +256,42 @@ export default function LandingPage() {
       initNetwork();
     };
 
+    // Click handler to select country and scroll down to Countries Section profile
+    const handleCanvasClick = (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const clickX = ((event.clientX - rect.left) / rect.width) * canvas.width;
+      const clickY = ((event.clientY - rect.top) / rect.height) * canvas.height;
+
+      const clickedNode = nodes.find(node => {
+        const dist = Math.hypot(node.x - clickX, node.y - clickY);
+        return dist < 22; // click hit radius
+      });
+
+      if (clickedNode) {
+        setSelectedCountryKey(clickedNode.id.toLowerCase());
+        const element = document.getElementById('countries-section');
+        element?.scrollIntoView({ behavior: 'smooth' });
+      }
+    };
+
     window.addEventListener('resize', handleResize);
+    canvas.addEventListener('click', handleCanvasClick);
     initNetwork();
 
     const animate = () => {
       ctx.clearRect(0, 0, width, height);
 
-      // Draw stylized ambient dot matrix background
-      ctx.fillStyle = 'rgba(0, 210, 255, 0.015)';
-      const cols = 25;
-      const rows = 15;
-      for (let c = 0; c < cols; c++) {
-        for (let r = 0; r < rows; r++) {
-          ctx.beginPath();
-          ctx.arc((width / cols) * c + (width / cols) / 2, (height / rows) * r + (height / rows) / 2, 1, 0, Math.PI * 2);
-          ctx.fill();
+      // Draw dot-matrix world map contours for continents
+      ctx.fillStyle = 'rgba(0, 102, 255, 0.07)';
+      const cols = WORLD_GRID[0].length;
+      const rows = WORLD_GRID.length;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (WORLD_GRID[r][c] === 1) {
+            ctx.beginPath();
+            ctx.arc((width / cols) * c + (width / cols) / 2, (height / rows) * r + (height / rows) / 2, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
       }
 
@@ -126,14 +302,14 @@ export default function LandingPage() {
         const toNode = nodes.find(n => n.id === conn.to);
         if (fromNode && toNode) {
           ctx.beginPath();
-          ctx.strokeStyle = 'rgba(0, 210, 255, 0.07)';
+          ctx.strokeStyle = 'rgba(0, 102, 255, 0.12)';
           ctx.moveTo(fromNode.x, fromNode.y);
           ctx.lineTo(toNode.x, toNode.y);
           ctx.stroke();
         }
       });
 
-      // Draw Active Particles (Cargo Flow)
+      // Draw Active Particles (Trade Flow)
       particles.forEach((part, index) => {
         part.progress += part.speed;
         part.x = part.x + (part.targetX - part.x) * part.progress;
@@ -142,7 +318,7 @@ export default function LandingPage() {
         ctx.beginPath();
         ctx.arc(part.x, part.y, 3.5, 0, Math.PI * 2);
         ctx.fillStyle = part.color;
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = 6;
         ctx.shadowColor = part.color;
         ctx.fill();
         ctx.shadowBlur = 0;
@@ -156,25 +332,25 @@ export default function LandingPage() {
       nodes.forEach(node => {
         ctx.beginPath();
         ctx.arc(node.x, node.y, node.size + 4, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(0, 210, 255, 0.15)';
+        ctx.strokeStyle = 'rgba(0, 102, 255, 0.2)';
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
         ctx.beginPath();
         ctx.arc(node.x, node.y, node.size, 0, Math.PI * 2);
-        ctx.fillStyle = '#00d2ff';
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = '#00d2ff';
+        ctx.fillStyle = '#0066ff';
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = 'rgba(0, 102, 255, 0.5)';
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-        ctx.font = '700 8px Outfit';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.font = '600 8.5px Inter, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(node.id, node.x, node.y - 12);
       });
 
-      if (Math.random() < 0.03 && particles.length < 25) {
+      if (Math.random() < 0.035 && particles.length < 25) {
         spawnParticle();
       }
 
@@ -185,11 +361,12 @@ export default function LandingPage() {
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      canvas.removeEventListener('click', handleCanvasClick);
       cancelAnimationFrame(animationId);
     };
   }, []);
 
-  // 3. Live Ledger Stream Ticker
+  // 3. Live Market Activity Ticker logic
   useEffect(() => {
     const playersList = ['AresCorp', 'ApexRetail', 'QuantumLogistics', 'StarlightFarms', 'CyberSteel', 'NeuronBaking', 'NovaMines', 'GenesisAuto', 'ZeroGravity'];
     const factoriesList = ['Steel Refinery', 'Silicon Lab', 'Weaving Mill', 'Microchip Assembly', 'Heavy Forge', 'Garment Floor'];
@@ -220,7 +397,7 @@ export default function LandingPage() {
         if (nextLogs.length > 5) nextLogs.shift();
         return nextLogs;
       });
-    }, 3000);
+    }, 2800); // Ticker updates faster for more dynamics
 
     return () => clearInterval(interval);
   }, []);
@@ -232,6 +409,28 @@ export default function LandingPage() {
     }, 2500);
     return () => clearInterval(interval);
   }, []);
+
+  // 5. Bloomberg News Feed Panel Rotation (Cycles Visible News Indices, faster 2.8s loop)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setVisibleNews(prev => {
+        const nextIndex = (prev[prev.length - 1] + 1) % newsHeadlines.length;
+        return [...prev.slice(1), nextIndex];
+      });
+    }, 2800);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Continuous Stock ticker data (CapitalGrid Blue, continuously scrolls)
+  const tickerItems = [
+    { name: 'COTTON', change: '▲ 4.2%', up: true },
+    { name: 'STEEL', change: '▼ 1.8%', up: false },
+    { name: 'COAL', change: '▲ 5.4%', up: true },
+    { name: 'OIL', change: '▲ 2.1%', up: true },
+    { name: 'CARS', change: '▲ 1.2%', up: true },
+    { name: 'MICROCHIPS', change: '▲ 6.3%', up: true },
+    { name: 'WHEAT', change: '▼ 0.8%', up: false }
+  ];
 
   return (
     <div className="bg-gameBg text-white min-h-screen relative overflow-x-hidden font-body">
@@ -273,16 +472,136 @@ export default function LandingPage() {
 
       {/* SECTION 1: HERO SECTION */}
       <header className="hero-section" id="home-section">
-        <div className="hero-map-wrapper">
-          <canvas ref={canvasRef} id="map-canvas"></canvas>
+        {/* Transparent Skyline Backdrop SVG (SAAS Aesthetics) */}
+        <div className="hero-skyline-background">
+          <svg viewBox="0 0 1600 500" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-full animate-fade-in" style={{ animationDelay: '0.5s' }}>
+            <defs>
+              <linearGradient id="skylineGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0" />
+                <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.15" />
+              </linearGradient>
+              <linearGradient id="skylineGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#60a5fa" stopOpacity="0" />
+                <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.25" />
+              </linearGradient>
+              <linearGradient id="skylineGrad3" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#60a5fa" stopOpacity="0" />
+                <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.4" />
+              </linearGradient>
+
+              {/* Window grid patterns */}
+              <pattern id="windowGrid1" width="12" height="18" patternUnits="userSpaceOnUse">
+                <rect x="2" y="3" width="3.5" height="5.5" fill="#93c5fd" opacity="0.8" rx="0.5" />
+                <rect x="7" y="3" width="3.5" height="5.5" fill="#93c5fd" opacity="0.8" rx="0.5" />
+              </pattern>
+              
+              <pattern id="windowGrid2" width="18" height="26" patternUnits="userSpaceOnUse">
+                <rect x="3" y="4" width="4.5" height="7.5" fill="#60a5fa" opacity="0.7" rx="0.5" />
+                <rect x="11" y="15" width="4.5" height="7.5" fill="#93c5fd" opacity="0.6" rx="0.5" />
+              </pattern>
+              
+              <pattern id="verticalGlassLines" width="8" height="12" patternUnits="userSpaceOnUse">
+                <line x1="3" y1="0" x2="3" y2="12" stroke="#60a5fa" strokeWidth="1" opacity="0.5" />
+              </pattern>
+            </defs>
+
+            {/* Layer 1: Far Buildings (Subtle background silhouette with tall spires) */}
+            <path d="M 0,500 L 0,280 L 40,280 L 40,240 L 45,240 L 45,160 L 49,160 L 49,240 L 54,240 L 54,280 L 90,280 L 90,320 L 130,320 L 130,220 L 180,220 L 180,300 L 220,300 L 220,180 L 224,180 L 224,100 L 228,100 L 228,180 L 232,180 L 232,320 L 280,320 L 280,260 L 330,220 L 380,260 L 380,350 L 420,350 L 420,290 L 450,290 L 450,200 L 454,200 L 454,120 L 458,120 L 458,200 L 462,200 L 462,290 L 500,290 L 500,340 L 550,340 L 550,210 L 610,210 L 610,340 L 660,340 L 660,250 L 720,250 L 720,190 L 724,190 L 724,110 L 728,110 L 728,190 L 732,190 L 732,250 L 790,250 L 790,310 L 840,310 L 840,230 L 890,230 L 890,310 L 930,310 L 930,170 L 934,170 L 934,80 L 938,80 L 938,170 L 942,170 L 942,310 L 1000,310 L 1000,270 L 1050,230 L 1100,270 L 1100,360 L 1150,360 L 1150,280 L 1200,280 L 1200,190 L 1204,190 L 1204,110 L 1208,110 L 1208,190 L 1212,190 L 1212,280 L 1260,280 L 1260,330 L 1310,330 L 1310,220 L 1370,220 L 1370,330 L 1420,330 L 1420,240 L 1480,240 L 1480,180 L 1484,180 L 1484,90 L 1488,90 L 1488,180 L 1492,180 L 1492,240 L 1550,240 L 1550,320 L 1600,320 L 1600,500 Z" fill="url(#skylineGrad1)" stroke="rgba(96, 165, 250, 0.18)" strokeWidth="1" />
+
+            {/* Layer 2: Mid Buildings (With dome structures, skybridge Twin Towers and angular facades) */}
+            <path d="M 0,500 L 0,330 L 60,330 L 60,260 L 110,210 L 160,260 L 160,330 L 200,330 L 200,180 L 240,180 L 240,230 L 280,230 L 280,180 L 320,180 L 320,330 L 360,330 L 360,270 L 420,270 L 420,350 L 460,350 L 460,220 Q 460,180 500,180 Q 540,180 540,220 L 540,350 L 580,350 L 580,240 L 660,160 L 660,350 L 700,350 L 700,200 L 740,200 L 740,250 L 780,250 L 780,200 L 820,200 L 820,350 L 860,350 L 860,290 L 920,290 L 920,360 L 960,360 L 960,230 Q 960,190 1000,190 Q 1040,190 1040,230 L 1040,360 L 1080,360 L 1080,250 L 1160,170 L 1160,360 L 1200,360 L 1200,190 L 1240,190 L 1240,240 L 1280,240 L 1280,190 L 1320,190 L 1320,360 L 1360,360 L 1360,280 L 1420,280 L 1420,370 L 1460,370 L 1460,230 Q 1460,195 1500,195 Q 1540,195 1540,230 L 1540,370 L 1600,370 Z" fill="url(#skylineGrad2)" stroke="rgba(96, 165, 250, 0.3)" strokeWidth="1" />
+
+            {/* Layer 3: Foreground Detailed Skyscraper Elements with window pattern overlays */}
+            
+            {/* F1: Stepped Skyscraper (Empire State style) */}
+            <rect x="80" y="380" width="90" height="120" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
+            <rect x="90" y="300" width="70" height="80" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
+            <rect x="105" y="220" width="40" height="80" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
+            <line x1="125" y1="220" x2="125" y2="100" stroke="#60a5fa" strokeWidth="2" opacity="0.65" />
+            <circle cx="125" cy="100" r="3" fill="#60a5fa" opacity="0.75" />
+            <rect x="85" y="390" width="80" height="100" fill="url(#windowGrid1)" />
+            <rect x="95" y="310" width="60" height="65" fill="url(#windowGrid2)" />
+            
+            {/* F2: Modern Slanted Glass Tower */}
+            <path d="M 230,500 L 230,280 L 310,190 L 310,500 Z" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
+            <path d="M 230,280 L 310,190" stroke="#60a5fa" strokeWidth="2" opacity="0.4" />
+            <line x1="250" y1="500" x2="250" y2="258" stroke="rgba(96, 165, 250, 0.25)" strokeWidth="1" />
+            <line x1="270" y1="500" x2="270" y2="235" stroke="rgba(96, 165, 250, 0.25)" strokeWidth="1" />
+            <line x1="290" y1="500" x2="290" y2="213" stroke="rgba(96, 165, 250, 0.25)" strokeWidth="1" />
+            <path d="M 235,500 L 235,285 L 305,206 L 305,500 Z" fill="url(#verticalGlassLines)" />
+
+            {/* F3: Triangular Structural Truss Tower (Bank of China style) */}
+            <path d="M 400,500 L 440,140 L 480,500 Z" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
+            <line x1="400" y1="500" x2="480" y2="500" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
+            <line x1="400" y1="500" x2="440" y2="410" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
+            <line x1="480" y1="500" x2="440" y2="410" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
+            <line x1="440" y1="410" x2="400" y2="320" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
+            <line x1="440" y1="410" x2="480" y2="320" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
+            <line x1="400" y1="320" x2="480" y2="320" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
+            <line x1="400" y1="320" x2="440" y2="230" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
+            <line x1="480" y1="320" x2="440" y2="230" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
+            <line x1="440" y1="230" x2="400" y2="140" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
+            <line x1="440" y1="230" x2="480" y2="140" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
+            <circle cx="440" cy="140" r="2.5" fill="#60a5fa" />
+
+            {/* F4: Skybridge Twin Towers (Petronas style) */}
+            <rect x="540" y="160" width="40" height="340" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
+            <rect x="630" y="160" width="40" height="340" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
+            <rect x="580" y="260" width="50" height="12" fill="url(#skylineGrad2)" stroke="rgba(96, 165, 250, 0.25)" strokeWidth="1" />
+            <line x1="560" y1="160" x2="560" y2="70" stroke="#60a5fa" strokeWidth="1.5" opacity="0.5" />
+            <line x1="650" y1="160" x2="650" y2="70" stroke="#60a5fa" strokeWidth="1.5" opacity="0.5" />
+            <circle cx="560" cy="70" r="2.5" fill="#60a5fa" opacity="0.75" />
+            <circle cx="650" cy="70" r="2.5" fill="#60a5fa" opacity="0.75" />
+            <rect x="544" y="180" width="32" height="300" fill="url(#windowGrid1)" />
+            <rect x="634" y="180" width="32" height="300" fill="url(#windowGrid1)" />
+
+            {/* F5: Modern Curved Landmark Building (Spire and curved facade) */}
+            <path d="M 730,500 L 730,260 Q 775,190 820,260 L 820,500 Z" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
+            <path d="M 730,260 Q 775,190 820,260" stroke="#60a5fa" strokeWidth="2.2" opacity="0.45" fill="none" />
+            <line x1="775" y1="190" x2="775" y2="120" stroke="#60a5fa" strokeWidth="1.5" opacity="0.5" />
+            <circle cx="775" cy="120" r="2" fill="#60a5fa" />
+            <rect x="740" y="270" width="70" height="210" fill="url(#windowGrid2)" />
+
+            {/* F6: Setbacks Skyscraper (Sears/Willis Tower style) */}
+            <rect x="880" y="360" width="90" height="140" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
+            <rect x="890" y="260" width="70" height="100" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
+            <rect x="905" y="180" width="40" height="80" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
+            <line x1="925" y1="180" x2="925" y2="90" stroke="#60a5fa" strokeWidth="1.8" opacity="0.5" />
+            <circle cx="925" cy="90" r="2.5" fill="#60a5fa" opacity="0.75" />
+            <rect x="885" y="370" width="80" height="120" fill="url(#windowGrid1)" />
+            <rect x="895" y="270" width="60" height="80" fill="url(#windowGrid2)" />
+
+            {/* F7: Modern Slanted Roof Skyscraper 2 */}
+            <path d="M 1030,500 L 1030,200 L 1110,290 L 1110,500 Z" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
+            <path d="M 1030,200 L 1110,290" stroke="#60a5fa" strokeWidth="2" opacity="0.4" />
+            <path d="M 1035,500 L 1035,210 L 1105,288 L 1105,500 Z" fill="url(#verticalGlassLines)" />
+
+            {/* F8: Triangular A-Frame Building */}
+            <path d="M 1170,500 L 1220,220 L 1270,500 Z" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
+            <line x1="1170" y1="500" x2="1220" y2="220" stroke="rgba(96,165,250,0.3)" strokeWidth="1" />
+            <line x1="1270" y1="500" x2="1220" y2="220" stroke="rgba(96,165,250,0.3)" strokeWidth="1" />
+            <circle cx="1220" cy="220" r="2.5" fill="#60a5fa" />
+            
+            {/* F9: Wide Headquarters Grid Facade */}
+            <rect x="1320" y="240" width="110" height="260" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
+            <rect x="1325" y="250" width="100" height="240" fill="url(#windowGrid1)" />
+
+            {/* F10: Classic Tiered Skyscraper */}
+            <path d="M 1470,500 L 1470,350 L 1480,350 L 1480,250 L 1495,250 L 1495,150 L 1525,150 L 1525,250 L 1540,250 L 1540,350 L 1550,350 L 1550,500 Z" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
+            <line x1="1510" y1="150" x2="1510" y2="80" stroke="#60a5fa" strokeWidth="1.5" opacity="0.5" />
+            <circle cx="1510" cy="80" r="2.5" fill="#60a5fa" opacity="0.75" />
+            <rect x="1498" y="160" width="24" height="80" fill="url(#windowGrid2)" />
+            <rect x="1483" y="260" width="54" height="80" fill="url(#windowGrid1)" />
+          </svg>
         </div>
 
-        <div className="hero-container container">
+        <div className="hero-container container relative z-10">
+          {/* Left Column: Brand & Headlines */}
           <div className="hero-content">
-            <div className="badge neon-text-blue">
+            <div className="badge">
               <i className="fa-solid fa-gamepad"></i> Multiplayer Live Economy
             </div>
-            <h1 className="hero-title leading-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            <h1 className="hero-title leading-tight">
               Build Companies.<br />
               <span className="text-gradient">Control Industries.</span><br />
               Shape The Economy.
@@ -290,7 +609,7 @@ export default function LandingPage() {
             <p className="hero-subtitle">
               Every product in CapitalGrid is created by a real player. Farmers grow resources, factories manufacture goods, retailers sell products, and businesses depend on each other to thrive. Build your empire inside a living, player-driven economy.
             </p>
-            <div className="hero-actions">
+            <div className="hero-actions mb-8">
               <Link to="/signup" className="btn btn-large btn-primary">
                 Start Your Company <i className="fa-solid fa-arrow-right"></i>
               </Link>
@@ -300,76 +619,153 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="hero-visuals">
-            <div className="floating-cards-container">
-              <div className="floating-mini-card item-farming" style={{ '--delay': '0s' }}>
-                <div className="card-icon"><i className="fa-solid fa-wheat-awn"></i></div>
+          {/* Right Column: Premium SVG Cinematic Visual & Bloomberg News Terminal */}
+          <div className="hero-visuals-suite flex flex-col gap-6 w-full items-center justify-center">
+            {/* Cinematic Economy Dashboard (SVG-based, Lightweight, Micro-Animated) */}
+            <div className="cinematic-economy-panel glass-card relative w-full max-w-[480px]">
+              <svg className="cinematic-dashboard-svg" viewBox="0 0 500 300" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="chartFillGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#0066ff" stopOpacity="0.25" />
+                    <stop offset="100%" stopColor="#0066ff" stopOpacity="0" />
+                  </linearGradient>
+                  <linearGradient id="skylineGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#1A365D" stopOpacity="0.35" />
+                    <stop offset="100%" stopColor="#0B0F19" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+
+                {/* Grid Overlay */}
+                <g stroke="rgba(255,255,255,0.03)" strokeWidth="1">
+                  <line x1="50" y1="0" x2="50" y2="300" />
+                  <line x1="100" y1="0" x2="100" y2="300" />
+                  <line x1="150" y1="0" x2="150" y2="300" />
+                  <line x1="200" y1="0" x2="200" y2="300" />
+                  <line x1="250" y1="0" x2="250" y2="300" />
+                  <line x1="300" y1="0" x2="300" y2="300" />
+                  <line x1="350" y1="0" x2="350" y2="300" />
+                  <line x1="400" y1="0" x2="400" y2="300" />
+                  <line x1="450" y1="0" x2="450" y2="300" />
+                  
+                  <line x1="0" y1="50" x2="500" y2="50" />
+                  <line x1="0" y1="100" x2="500" y2="100" />
+                  <line x1="0" y1="150" x2="500" y2="150" />
+                  <line x1="0" y1="200" x2="500" y2="200" />
+                  <line x1="0" y1="250" x2="500" y2="250" />
+                </g>
+
+                {/* City Skyline Silhouette Contours */}
+                <path d="M 30,300 L 30,170 L 55,170 L 55,300 M 65,300 L 65,130 L 105,130 L 105,300 M 115,300 L 115,195 L 145,195 L 145,300 M 165,300 L 165,95 L 215,95 L 215,300 M 225,300 L 225,155 L 255,155 L 255,300 M 275,300 L 275,205 L 305,205 L 305,300 M 325,300 L 325,115 L 365,115 L 365,300 M 375,300 L 375,175 L 405,175 L 405,300 M 415,300 L 415,225 L 455,225 L 455,300" fill="url(#skylineGrad)" stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+
+                {/* Simulated Economy Chart Lines */}
+                <path d="M 40,240 Q 120,215 180,165 T 320,135 T 460,75 L 460,300 L 40,300 Z" fill="url(#chartFillGrad)" className="animated-chart-line" />
+                <path d="M 40,240 Q 120,215 180,165 T 320,135 T 460,75" fill="none" stroke="#0066ff" strokeWidth="4.5" strokeLinecap="round" className="animated-chart-line" />
+
+                {/* Supply Chain Trade Routes with flow particles */}
+                <path d="M 90,195 L 240,155 M 240,155 L 385,175 M 385,175 L 440,85" fill="none" stroke="rgba(0, 102, 255, 0.25)" strokeWidth="1.5" />
+                <path d="M 90,195 L 240,155" fill="none" stroke="#60a5fa" strokeWidth="1.5" strokeDasharray="6, 30" className="animated-route-line" />
+                <path d="M 240,155 L 385,175" fill="none" stroke="#60a5fa" strokeWidth="1.5" strokeDasharray="6, 30" className="animated-route-line" />
+                <path d="M 385,175 L 440,85" fill="none" stroke="#60a5fa" strokeWidth="1.5" strokeDasharray="6, 30" className="animated-route-line" />
+
+                {/* Pulsing Trade Nodes */}
+                <circle cx="90" cy="195" r="5" fill="#0066ff" className="pulsing-node" />
+                <circle cx="240" cy="155" r="6" fill="#60a5fa" className="pulsing-node" />
+                <circle cx="385" cy="175" r="5" fill="#0066ff" className="pulsing-node" />
+                <circle cx="440" cy="85" r="5.5" fill="#3b82f6" className="pulsing-node" />
+              </svg>
+
+              {/* Floating Data Badge 1 */}
+              <div className="drifting-card floating-mini-card item-farming absolute" style={{ top: '12%', left: '6%', animationDelay: '0s' }}>
+                <div className="card-icon"><i className="fa-solid fa-chart-line"></i></div>
                 <div className="card-info">
-                  <span className="card-tag">RESOURCE</span>
-                  <span className="card-name">Farming Sector</span>
+                  <span className="card-tag">GLOBAL VOL</span>
+                  <span className="card-name text-blue-400 font-bold">$14.2M/HR</span>
                 </div>
               </div>
 
-              <div className="floating-mini-card item-factory" style={{ '--delay': '2.5s' }}>
-                <div className="card-icon"><i className="fa-solid fa-industry"></i></div>
+              {/* Floating Data Badge 2 */}
+              <div className="drifting-card floating-mini-card item-factory absolute" style={{ bottom: '16%', right: '6%', animationDelay: '2.5s' }}>
+                <div className="card-icon"><i className="fa-solid fa-gauge-high"></i></div>
                 <div className="card-info">
-                  <span className="card-tag">PRODUCTION</span>
-                  <span className="card-name">Garment Factory</span>
-                </div>
-              </div>
-
-              <div className="floating-mini-card item-retail" style={{ '--delay': '5s' }}>
-                <div className="card-icon"><i className="fa-solid fa-store"></i></div>
-                <div className="card-info">
-                  <span className="card-tag">COMMERCE</span>
-                  <span className="card-name">Car Showroom</span>
+                  <span className="card-tag">CAPACITY</span>
+                  <span className="card-name text-green-400 font-bold">98.4% ACT</span>
                 </div>
               </div>
             </div>
 
-            <div className="activity-feed-terminal">
+            {/* Bloomberg-style Financial News Terminal Panel */}
+            <div className="bloomberg-terminal glass-card w-full max-w-[480px]">
               <div className="terminal-header">
-                <span className="dot red"></span>
-                <span className="dot yellow"></span>
-                <span className="dot green"></span>
-                <span className="terminal-title">LIVE LEDGER STREAM</span>
-                <span className="terminal-status neon-text-cyan">
-                  <i className="fa-solid fa-circle-nodes pulse-fast mr-1"></i> CONNECTED
-                </span>
+                <span className="dot red pulsing-dot-red"></span>
+                <span className="terminal-title">BLOOMBERG NEWS TERMINAL</span>
+                <span className="terminal-status"><i className="fa-solid fa-circle-check"></i> LIVE NEWS</span>
               </div>
-              <div className="terminal-body">
-                {logs.map((log) => (
-                  <div key={log.id} className="log-entry">
-                    <span className="log-time">{log.time}</span>{' '}
-                    <span dangerouslySetInnerHTML={{ __html: log.text }}></span>
-                  </div>
-                ))}
+              <div className="news-list-panel">
+                <div className="news-panel-header">BREAKING NEWS Feed</div>
+                <div className="news-items-container flex flex-col gap-1 p-3">
+                  {visibleNews.map((newsIdx, idx) => {
+                    const item = newsHeadlines[newsIdx];
+                    return (
+                      <div key={idx} className="news-item-row flex items-center gap-2.5 py-1.5 border-b border-white/5 last:border-0 animate-fade-in">
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded tracking-widest ${
+                          item.type === 'M&A' 
+                            ? 'bg-blue-500/20 text-blue-400 border border-blue-500/35 shadow-[0_0_8px_rgba(0,102,255,0.15)]' 
+                            : 'bg-gray-800/80 text-gray-400 border border-gray-700/30'
+                        }`}>
+                          {item.type}
+                        </span>
+                        <span className="news-headline-text text-[11px] font-semibold tracking-wide text-white flex-grow line-clamp-1">
+                          {item.text}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="hero-stats-bar">
+        {/* Stats Bar (Positioned at bottom of Hero stretching full width) */}
+        <div className="hero-stats-bar w-full">
           <div className="container stats-bar-container">
             <div className="stat-item">
-              <div className="stat-value">5+</div>
+              <div className="stat-value text-blue-500">5+</div>
               <div className="stat-label">Industries</div>
             </div>
             <div className="stat-divider"></div>
             <div className="stat-item">
-              <div className="stat-value">20+</div>
+              <div className="stat-value text-blue-500">20+</div>
               <div className="stat-label">Products</div>
             </div>
             <div className="stat-divider"></div>
             <div className="stat-item">
-              <div className="stat-value">7</div>
+              <div className="stat-value text-blue-500">7</div>
               <div className="stat-label">Countries</div>
             </div>
             <div className="stat-divider"></div>
             <div className="stat-item animate-pulse-glow">
-              <div className="stat-value text-gradient-cyan">100%</div>
+              <div className="stat-value text-gradient">100%</div>
               <div className="stat-label">Player Driven Economy</div>
             </div>
+          </div>
+        </div>
+
+        {/* Live Market Ticker Bar (Styled in CapitalGrid blue, continuously scrolls) */}
+        <div className="stock-ticker-bar w-full border-t border-b border-blue-900/30">
+          <div className="ticker-track">
+            {/* Duplicated for seamless loop */}
+            {[...tickerItems, ...tickerItems, ...tickerItems].map((item, idx) => (
+              <React.Fragment key={idx}>
+                <span className="ticker-item inline-flex items-center gap-1.5 px-6 font-display text-xs tracking-wider font-semibold text-gray-300">
+                  <span className="ticker-name font-bold text-white">{item.name}</span>
+                  <span className={item.up ? 'text-green-500 font-bold' : 'text-red-500 font-bold'}>
+                    {item.change}
+                  </span>
+                </span>
+                <span className="ticker-divider text-blue-900/50">|</span>
+              </React.Fragment>
+            ))}
           </div>
         </div>
       </header>
@@ -378,8 +774,8 @@ export default function LandingPage() {
       <section className="section economy-section" id="economy-section">
         <div className="container">
           <div className="section-header text-center">
-            <div className="section-tag neon-text-cyan">ECOSYSTEM LAYER</div>
-            <h2 className="section-title" style={{ fontFamily: 'Outfit, sans-serif' }}>One Economy. Thousands Of Possibilities.</h2>
+            <div className="section-tag">GLOBAL ECONOMY</div>
+            <h2 className="section-title">One Economy. Thousands Of Possibilities.</h2>
             <p className="section-subtitle">Every business relies on another. Nothing exists in isolation.</p>
           </div>
 
@@ -452,7 +848,7 @@ export default function LandingPage() {
           <div className="flow-statement-box text-center">
             <h3 className="glow-quote-text">
               "Your success doesn't depend on defeating other players.<br />
-              It depends on becoming <span className="neon-text-cyan">valuable</span> to them."
+              It depends on becoming <span className="text-gradient">valuable</span> to them."
             </h3>
           </div>
         </div>
@@ -462,14 +858,15 @@ export default function LandingPage() {
       <section className="section industries-section" id="industries-section">
         <div className="container">
           <div className="section-header text-center">
-            <div className="section-tag neon-text-blue">SECTOR MATRIX</div>
-            <h2 className="section-title" style={{ fontFamily: 'Outfit, sans-serif' }}>Choose Your Path To Power</h2>
+            <div className="section-tag">INDUSTRY SECTORS</div>
+            <h2 className="section-title">Choose Your Path To Power</h2>
             <p className="section-subtitle">Select which sector of the global economy you want to dominate.</p>
           </div>
 
           <div className="industry-grid">
             {sectorsData.map((sect) => (
-              <div key={sect.id} className="industry-card glass-card">
+              <div key={sect.id} className="industry-card glass-card overflow-hidden">
+                <SectorIllustration id={sect.id} />
                 <div className="industry-card-glow"></div>
                 <div className="industry-icon-wrapper">
                   <i className={sect.icon}></i>
@@ -496,8 +893,8 @@ export default function LandingPage() {
       <section className="section timeline-section" id="how-it-works-section">
         <div className="container">
           <div className="section-header text-center">
-            <div className="section-tag neon-text-cyan">THE ROADMAP</div>
-            <h2 className="section-title" style={{ fontFamily: 'Outfit, sans-serif' }}>Every Empire Starts With One Decision</h2>
+            <div className="section-tag">YOUR JOURNEY</div>
+            <h2 className="section-title">Every Empire Starts With One Decision</h2>
             <p className="section-subtitle">A step-by-step breakdown of your journey to global dominance.</p>
           </div>
 
@@ -528,12 +925,32 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* SECTION 4.5: GLOBAL TRADE MAP (Transition before Countries section) */}
+      <section className="section global-trade-map-section py-20 border-t border-blue-900/10" id="trade-map-section">
+        <div className="container">
+          <div className="section-header text-center">
+            <div className="section-tag">GLOBAL LOGISTICS</div>
+            <h2 className="section-title">Connected Markets, Global Trade</h2>
+            <p className="section-subtitle">
+              Click on any major economic hub to inspect the local country profile and tax structure below.
+            </p>
+          </div>
+
+          <div className="global-map-panel glass-card relative overflow-hidden w-full h-[400px] border border-blue-900/35 shadow-cyan">
+            <canvas ref={canvasRef} id="map-canvas" className="w-full h-full cursor-pointer"></canvas>
+            <div className="map-interaction-instructions absolute bottom-4 left-4 flex items-center gap-2 bg-black/60 backdrop-blur px-3 py-1.5 rounded-full text-xs font-semibold tracking-wider text-blue-400">
+              <i className="fa-solid fa-mouse-pointer text-blue-500 animate-pulse"></i> INTERACTIVE HUB RADAR (CLICK TO RADAR SELECT)
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* SECTION 5: GLOBAL BUSINESS EXPERIENCE */}
       <section className="section countries-section" id="countries-section">
         <div className="container">
           <div className="section-header text-center">
-            <div className="section-tag neon-text-blue">TERRITORIAL DIVISION</div>
-            <h2 className="section-title" style={{ fontFamily: 'Outfit, sans-serif' }}>Build Anywhere In The World</h2>
+            <div className="section-tag">GLOBAL PRESENCE</div>
+            <h2 className="section-title">Build Anywhere In The World</h2>
             <p className="section-subtitle">Every country has its own opportunities, taxes and economic advantages.</p>
           </div>
 
@@ -545,9 +962,15 @@ export default function LandingPage() {
                   className={`country-card glass-card ${selectedCountryKey === country.id ? 'active' : ''}`}
                   onClick={() => setSelectedCountryKey(country.id)}
                 >
-                  <div className="country-header">
-                    <span className="flag-icon">{country.flag}</span>
-                    <h3 className="country-name">{country.name}</h3>
+                  <div className="country-header flex items-center gap-3">
+                    <img 
+                      src={`https://flagcdn.com/w40/${flagCodes[country.id]}.png`}
+                      srcSet={`https://flagcdn.com/w80/${flagCodes[country.id]}.png 2x`}
+                      alt={`${country.name} Flag`}
+                      className="country-flag-img rounded-[3px] border border-white/10"
+                      style={{ width: '26px', height: 'auto', objectFit: 'contain' }}
+                    />
+                    <h3 className="country-name text-white font-bold">{country.name}</h3>
                   </div>
                   <div className="country-mini-stats">
                     <span>Tax Rate: <strong>{country.taxLabel}</strong></span>
@@ -560,12 +983,18 @@ export default function LandingPage() {
             <div className="country-hud-panel glass-card">
               <div className="hud-scanner-line"></div>
               <div className="hud-header">
-                <span className="hud-tag">DATAFEED LINKED</span>
-                <div className="hud-country-title-row">
-                  <span className="hud-flag">{selectedCountry.flag}</span>
-                  <h3 className="hud-country-name">{selectedCountry.name}</h3>
+                <span className="hud-tag">COUNTRY PROFILE</span>
+                <div className="hud-country-title-row flex items-center gap-3 mt-1.5">
+                  <img 
+                    src={`https://flagcdn.com/w40/${flagCodes[selectedCountry.id]}.png`}
+                    srcSet={`https://flagcdn.com/w80/${flagCodes[selectedCountry.id]}.png 2x`}
+                    alt={`${selectedCountry.name} Flag`}
+                    className="hud-country-flag-img rounded-[3px] border border-white/10"
+                    style={{ width: '32px', height: 'auto', objectFit: 'contain' }}
+                  />
+                  <h3 className="hud-country-name text-white font-bold">{selectedCountry.name}</h3>
                 </div>
-                <span className="hud-status neon-text-cyan"><i className="fa-solid fa-chart-line"></i> SYSTEM STATUS: STABLE</span>
+                <span className="hud-status"><i className="fa-solid fa-chart-line text-blue-500"></i> ECONOMY: ACTIVE</span>
               </div>
 
               <div className="hud-body">
@@ -575,7 +1004,7 @@ export default function LandingPage() {
                     <span className="hud-stat-value">{selectedCountry.taxLabel}</span>
                   </div>
                   <div className="hud-progress-track">
-                    <div className="hud-progress-fill bg-cyan" style={{ width: `${selectedCountry.taxRate * 4}%` }}></div>
+                    <div className="hud-progress-fill bg-cyanGlow" style={{ width: `${selectedCountry.taxRate * 4}%` }}></div>
                   </div>
                   <p className="hud-stat-desc">{selectedCountry.taxDesc}</p>
                 </div>
@@ -583,10 +1012,10 @@ export default function LandingPage() {
                 <div className="hud-stat-group">
                   <div className="hud-stat-labels">
                     <span className="hud-stat-title">Economic Strength</span>
-                    <span className="hud-stat-value text-blue">{selectedCountry.strengthLabel}</span>
+                    <span className="hud-stat-value text-blue-500">{selectedCountry.strengthLabel}</span>
                   </div>
                   <div className="hud-progress-track">
-                    <div className="hud-progress-fill bg-blue" style={{ width: `${selectedCountry.strength}%` }}></div>
+                    <div className="hud-progress-fill bg-blue-500" style={{ width: `${selectedCountry.strength}%` }}></div>
                   </div>
                   <p className="hud-stat-desc">{selectedCountry.strengthDesc}</p>
                 </div>
@@ -594,10 +1023,10 @@ export default function LandingPage() {
                 <div className="hud-stat-group">
                   <div className="hud-stat-labels">
                     <span className="hud-stat-title">Resource Availability</span>
-                    <span className="hud-stat-value">{selectedCountry.resourcesLabel}</span>
+                    <span className="hud-stat-value text-green-500">{selectedCountry.resourcesLabel}</span>
                   </div>
                   <div className="hud-progress-track">
-                    <div className="hud-progress-fill bg-green" style={{ width: `${selectedCountry.resources}%` }}></div>
+                    <div className="hud-progress-fill bg-green-500" style={{ width: `${selectedCountry.resources}%` }}></div>
                   </div>
                   <p className="hud-stat-desc">{selectedCountry.resourcesDesc}</p>
                 </div>
@@ -611,8 +1040,8 @@ export default function LandingPage() {
       <section className="section differentiators-section" id="differentiators-section">
         <div className="container">
           <div className="section-header text-center">
-            <div className="section-tag neon-text-cyan">CORE CAPABILITIES</div>
-            <h2 className="section-title" style={{ fontFamily: 'Outfit, sans-serif' }}>More Than A Tycoon Game</h2>
+            <div className="section-tag">WHY CAPITALGRID</div>
+            <h2 className="section-title">More Than A Tycoon Game</h2>
             <p className="section-subtitle">Experience a simulation deep enough to match the complexities of real global economics.</p>
           </div>
 
@@ -654,10 +1083,10 @@ export default function LandingPage() {
       <section className="section final-cta-section" id="community-section">
         <div className="cta-pulse-glow"></div>
         <div className="container text-center cta-content-wrapper">
-          <div className="badge neon-text-cyan pulse">
-            <i className="fa-solid fa-tower-broadcast"></i> BROADCAST ACTIVE
+          <div className="badge pulse">
+            <i className="fa-solid fa-tower-broadcast"></i> JOIN THE MARKET
           </div>
-          <h2 className="cta-title" style={{ fontFamily: 'Outfit, sans-serif' }}>The Economy Is Waiting For Its Next Giant.</h2>
+          <h2 className="cta-title">The Economy Is Waiting For Its Next Giant.</h2>
           <p className="cta-subtitle">Will you become a farmer, a manufacturer, a retailer, or the company everyone depends on?</p>
           
           <div className="cta-buttons">

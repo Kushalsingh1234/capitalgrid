@@ -4,7 +4,7 @@
 
 /* Theme Core Variables coexisting with utility classes */
 body {
-  background-color: #0A0A0A;
+  background-color: #0B0F19;
   color: #ffffff;
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
@@ -20,8 +20,9 @@ body {
 }
 
 .glass-input:focus {
-  border-color: #00d2ff;
-  box-shadow: 0 0 10px rgba(0, 210, 255, 0.2);
+  border-color: #0066ff;
+  box-shadow: 0 0 10px rgba(0, 102, 255, 0.2);
   outline: none;
   background: rgba(255, 255, 255, 0.04);
 }
+

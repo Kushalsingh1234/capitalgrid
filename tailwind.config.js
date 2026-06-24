@@ -7,25 +7,26 @@ export default {
   theme: {
     extend: {
       colors: {
-        gameBg: '#0A0A0A',
-        cyanGlow: '#00d2ff',
-        blueGlow: '#0066ff',
-        greenGlow: '#00ff88',
-        warningGlow: '#ffb700',
-        glassBg: 'rgba(15, 15, 20, 0.6)',
+        gameBg: '#0B0F19',
+        cyanGlow: '#0066ff',
+        blueGlow: '#1D4ED8',
+        greenGlow: '#38A169',
+        warningGlow: '#DD6B20',
+        glassBg: 'rgba(12, 16, 28, 0.65)',
         glassBorder: 'rgba(255, 255, 255, 0.08)',
-        glassBorderHover: 'rgba(0, 210, 255, 0.3)'
+        glassBorderHover: 'rgba(0, 102, 255, 0.35)'
       },
       fontFamily: {
-        display: ['Orbitron', 'sans-serif'],
+        display: ['Inter', 'sans-serif'],
         body: ['Outfit', 'Segoe UI', 'sans-serif']
       },
       boxShadow: {
-        cyan: '0 0 15px rgba(0, 210, 255, 0.35)',
-        blue: '0 0 15px rgba(0, 102, 255, 0.35)',
-        cyanHeavy: '0 0 25px rgba(0, 210, 255, 0.5)'
+        cyan: '0 0 15px rgba(0, 102, 255, 0.3)',
+        blue: '0 0 15px rgba(29, 78, 216, 0.35)',
+        cyanHeavy: '0 0 25px rgba(0, 102, 255, 0.45)'
       }
     },
   },
   plugins: [],
 }
+
