@@ -135,7 +135,15 @@ export default function LandingPage() {
     { id: 3, time: '[16:15:33]', text: '🚗 <span class="player">GenesisAuto</span> opened a <span class="facility">Car Showroom</span>' },
     { id: 4, time: '[16:15:34]', text: '🏦 Logistical services rented by <span class="facility">Heavy Forge</span> from <span class="player">QuantumLogistics</span>' }
   ]);
-  const [visibleNews, setVisibleNews] = useState([0, 1, 2, 3, 4]);
+  const [visibleNews, setVisibleNews] = useState([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+
+  const [companyStocks, setCompanyStocks] = useState([
+    { name: 'ARES CORP', fullName: 'Ares Commodities Corp', price: 142.50, change: '+1.80%', up: true },
+    { name: 'APEXRETAIL', fullName: 'Apex Global Retailers', price: 89.20, change: '-0.52%', up: false },
+    { name: 'GENESISAUTO', fullName: 'Genesis Automotive Group', price: 210.45, change: '+4.20%', up: true },
+    { name: 'CYBERSTEEL', fullName: 'CyberSteel Refineries', price: 64.75, change: '-2.15%', up: false },
+    { name: 'STARLIGHT', fullName: 'Starlight Agriculture', price: 118.10, change: '+0.85%', up: true }
+  ]);
 
   // Bloomberg structured news pool
   const newsHeadlines = [
@@ -147,7 +155,13 @@ export default function LandingPage() {
     { type: 'MARKET', text: 'GLOBAL FUEL PRICES RISE; SHIPPING CHARGES EXPECTED TO INCREMENT' },
     { type: 'M&A', text: 'NOVA MINES ENTERS DEFENSIVE MERGER COMPACT WITH INDUSTRIAL GIANT' },
     { type: 'DEMAND', text: 'ASIAN MANUFACTURING SECTOR REPORT SURGE IN RAW MATERIALS ORDERING' },
-    { type: 'M&A', text: 'ARES CORP SECURES CONTROLLING STAKE IN REGIONAL WEAVING MILL' }
+    { type: 'M&A', text: 'ARES CORP SECURES CONTROLLING STAKE IN REGIONAL WEAVING MILL' },
+    { type: 'M&A', text: 'NEURON BAKING MERGES WITH APEXRETAIL RETAIL NETWORK' },
+    { type: 'MARKET', text: 'GERMANY INDUSTRIAL PRODUCTION SURVEY REVEALS RISE IN MACHINERY EXPORTS' },
+    { type: 'M&A', text: 'ARES CORP IN TALKS TO ACQUIRE SHORELINE OIL AND FUEL REFINERIES' },
+    { type: 'COMMODITY', text: 'COAL INDEX SURGES 5.4% AS POWER DEMAND INCREASES ACROSS EUROPE' },
+    { type: 'MARKET', text: 'GLOBAL SHIPPING CONGESTION EASES; FREIGHT CHARGES EXPECTED TO DROP' },
+    { type: 'DEMAND', text: 'AUTOFORGE ANNOUNCES NEW SEMICONDUCTOR FABRICATION PLANT IN JAPAN' }
   ];
 
   // --- Refs ---
@@ -421,6 +435,26 @@ export default function LandingPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // 6. Live Company Stock Price Fluctuations
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCompanyStocks(prev => prev.map(stock => {
+        const delta = (Math.random() - 0.48) * 1.8;
+        const newPrice = Math.max(10, +(stock.price + delta).toFixed(2));
+        const diffPercent = (delta / stock.price) * 100;
+        const isUp = delta >= 0;
+        const changeStr = (isUp ? '+' : '') + diffPercent.toFixed(2) + '%';
+        return {
+          ...stock,
+          price: newPrice,
+          change: changeStr,
+          up: isUp
+        };
+      }));
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Continuous Stock ticker data (CapitalGrid Blue, continuously scrolls)
   const tickerItems = [
     { name: 'COTTON', change: '▲ 4.2%', up: true },
@@ -472,132 +506,12 @@ export default function LandingPage() {
 
       {/* SECTION 1: HERO SECTION */}
       <header className="hero-section" id="home-section">
-        {/* Transparent Skyline Backdrop SVG (SAAS Aesthetics) */}
-        <div className="hero-skyline-background">
-          <svg viewBox="0 0 1600 500" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-full animate-fade-in" style={{ animationDelay: '0.5s' }}>
-            <defs>
-              <linearGradient id="skylineGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0" />
-                <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.15" />
-              </linearGradient>
-              <linearGradient id="skylineGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#60a5fa" stopOpacity="0" />
-                <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.25" />
-              </linearGradient>
-              <linearGradient id="skylineGrad3" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#60a5fa" stopOpacity="0" />
-                <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.4" />
-              </linearGradient>
-
-              {/* Window grid patterns */}
-              <pattern id="windowGrid1" width="12" height="18" patternUnits="userSpaceOnUse">
-                <rect x="2" y="3" width="3.5" height="5.5" fill="#93c5fd" opacity="0.8" rx="0.5" />
-                <rect x="7" y="3" width="3.5" height="5.5" fill="#93c5fd" opacity="0.8" rx="0.5" />
-              </pattern>
-              
-              <pattern id="windowGrid2" width="18" height="26" patternUnits="userSpaceOnUse">
-                <rect x="3" y="4" width="4.5" height="7.5" fill="#60a5fa" opacity="0.7" rx="0.5" />
-                <rect x="11" y="15" width="4.5" height="7.5" fill="#93c5fd" opacity="0.6" rx="0.5" />
-              </pattern>
-              
-              <pattern id="verticalGlassLines" width="8" height="12" patternUnits="userSpaceOnUse">
-                <line x1="3" y1="0" x2="3" y2="12" stroke="#60a5fa" strokeWidth="1" opacity="0.5" />
-              </pattern>
-            </defs>
-
-            {/* Layer 1: Far Buildings (Subtle background silhouette with tall spires) */}
-            <path d="M 0,500 L 0,280 L 40,280 L 40,240 L 45,240 L 45,160 L 49,160 L 49,240 L 54,240 L 54,280 L 90,280 L 90,320 L 130,320 L 130,220 L 180,220 L 180,300 L 220,300 L 220,180 L 224,180 L 224,100 L 228,100 L 228,180 L 232,180 L 232,320 L 280,320 L 280,260 L 330,220 L 380,260 L 380,350 L 420,350 L 420,290 L 450,290 L 450,200 L 454,200 L 454,120 L 458,120 L 458,200 L 462,200 L 462,290 L 500,290 L 500,340 L 550,340 L 550,210 L 610,210 L 610,340 L 660,340 L 660,250 L 720,250 L 720,190 L 724,190 L 724,110 L 728,110 L 728,190 L 732,190 L 732,250 L 790,250 L 790,310 L 840,310 L 840,230 L 890,230 L 890,310 L 930,310 L 930,170 L 934,170 L 934,80 L 938,80 L 938,170 L 942,170 L 942,310 L 1000,310 L 1000,270 L 1050,230 L 1100,270 L 1100,360 L 1150,360 L 1150,280 L 1200,280 L 1200,190 L 1204,190 L 1204,110 L 1208,110 L 1208,190 L 1212,190 L 1212,280 L 1260,280 L 1260,330 L 1310,330 L 1310,220 L 1370,220 L 1370,330 L 1420,330 L 1420,240 L 1480,240 L 1480,180 L 1484,180 L 1484,90 L 1488,90 L 1488,180 L 1492,180 L 1492,240 L 1550,240 L 1550,320 L 1600,320 L 1600,500 Z" fill="url(#skylineGrad1)" stroke="rgba(96, 165, 250, 0.18)" strokeWidth="1" />
-
-            {/* Layer 2: Mid Buildings (With dome structures, skybridge Twin Towers and angular facades) */}
-            <path d="M 0,500 L 0,330 L 60,330 L 60,260 L 110,210 L 160,260 L 160,330 L 200,330 L 200,180 L 240,180 L 240,230 L 280,230 L 280,180 L 320,180 L 320,330 L 360,330 L 360,270 L 420,270 L 420,350 L 460,350 L 460,220 Q 460,180 500,180 Q 540,180 540,220 L 540,350 L 580,350 L 580,240 L 660,160 L 660,350 L 700,350 L 700,200 L 740,200 L 740,250 L 780,250 L 780,200 L 820,200 L 820,350 L 860,350 L 860,290 L 920,290 L 920,360 L 960,360 L 960,230 Q 960,190 1000,190 Q 1040,190 1040,230 L 1040,360 L 1080,360 L 1080,250 L 1160,170 L 1160,360 L 1200,360 L 1200,190 L 1240,190 L 1240,240 L 1280,240 L 1280,190 L 1320,190 L 1320,360 L 1360,360 L 1360,280 L 1420,280 L 1420,370 L 1460,370 L 1460,230 Q 1460,195 1500,195 Q 1540,195 1540,230 L 1540,370 L 1600,370 Z" fill="url(#skylineGrad2)" stroke="rgba(96, 165, 250, 0.3)" strokeWidth="1" />
-
-            {/* Layer 3: Foreground Detailed Skyscraper Elements with window pattern overlays */}
-            
-            {/* F1: Stepped Skyscraper (Empire State style) */}
-            <rect x="80" y="380" width="90" height="120" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
-            <rect x="90" y="300" width="70" height="80" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
-            <rect x="105" y="220" width="40" height="80" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
-            <line x1="125" y1="220" x2="125" y2="100" stroke="#60a5fa" strokeWidth="2" opacity="0.65" />
-            <circle cx="125" cy="100" r="3" fill="#60a5fa" opacity="0.75" />
-            <rect x="85" y="390" width="80" height="100" fill="url(#windowGrid1)" />
-            <rect x="95" y="310" width="60" height="65" fill="url(#windowGrid2)" />
-            
-            {/* F2: Modern Slanted Glass Tower */}
-            <path d="M 230,500 L 230,280 L 310,190 L 310,500 Z" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
-            <path d="M 230,280 L 310,190" stroke="#60a5fa" strokeWidth="2" opacity="0.4" />
-            <line x1="250" y1="500" x2="250" y2="258" stroke="rgba(96, 165, 250, 0.25)" strokeWidth="1" />
-            <line x1="270" y1="500" x2="270" y2="235" stroke="rgba(96, 165, 250, 0.25)" strokeWidth="1" />
-            <line x1="290" y1="500" x2="290" y2="213" stroke="rgba(96, 165, 250, 0.25)" strokeWidth="1" />
-            <path d="M 235,500 L 235,285 L 305,206 L 305,500 Z" fill="url(#verticalGlassLines)" />
-
-            {/* F3: Triangular Structural Truss Tower (Bank of China style) */}
-            <path d="M 400,500 L 440,140 L 480,500 Z" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
-            <line x1="400" y1="500" x2="480" y2="500" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
-            <line x1="400" y1="500" x2="440" y2="410" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
-            <line x1="480" y1="500" x2="440" y2="410" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
-            <line x1="440" y1="410" x2="400" y2="320" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
-            <line x1="440" y1="410" x2="480" y2="320" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
-            <line x1="400" y1="320" x2="480" y2="320" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
-            <line x1="400" y1="320" x2="440" y2="230" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
-            <line x1="480" y1="320" x2="440" y2="230" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
-            <line x1="440" y1="230" x2="400" y2="140" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
-            <line x1="440" y1="230" x2="480" y2="140" stroke="#60a5fa" strokeWidth="1.2" opacity="0.4" />
-            <circle cx="440" cy="140" r="2.5" fill="#60a5fa" />
-
-            {/* F4: Skybridge Twin Towers (Petronas style) */}
-            <rect x="540" y="160" width="40" height="340" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
-            <rect x="630" y="160" width="40" height="340" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
-            <rect x="580" y="260" width="50" height="12" fill="url(#skylineGrad2)" stroke="rgba(96, 165, 250, 0.25)" strokeWidth="1" />
-            <line x1="560" y1="160" x2="560" y2="70" stroke="#60a5fa" strokeWidth="1.5" opacity="0.5" />
-            <line x1="650" y1="160" x2="650" y2="70" stroke="#60a5fa" strokeWidth="1.5" opacity="0.5" />
-            <circle cx="560" cy="70" r="2.5" fill="#60a5fa" opacity="0.75" />
-            <circle cx="650" cy="70" r="2.5" fill="#60a5fa" opacity="0.75" />
-            <rect x="544" y="180" width="32" height="300" fill="url(#windowGrid1)" />
-            <rect x="634" y="180" width="32" height="300" fill="url(#windowGrid1)" />
-
-            {/* F5: Modern Curved Landmark Building (Spire and curved facade) */}
-            <path d="M 730,500 L 730,260 Q 775,190 820,260 L 820,500 Z" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
-            <path d="M 730,260 Q 775,190 820,260" stroke="#60a5fa" strokeWidth="2.2" opacity="0.45" fill="none" />
-            <line x1="775" y1="190" x2="775" y2="120" stroke="#60a5fa" strokeWidth="1.5" opacity="0.5" />
-            <circle cx="775" cy="120" r="2" fill="#60a5fa" />
-            <rect x="740" y="270" width="70" height="210" fill="url(#windowGrid2)" />
-
-            {/* F6: Setbacks Skyscraper (Sears/Willis Tower style) */}
-            <rect x="880" y="360" width="90" height="140" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
-            <rect x="890" y="260" width="70" height="100" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
-            <rect x="905" y="180" width="40" height="80" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
-            <line x1="925" y1="180" x2="925" y2="90" stroke="#60a5fa" strokeWidth="1.8" opacity="0.5" />
-            <circle cx="925" cy="90" r="2.5" fill="#60a5fa" opacity="0.75" />
-            <rect x="885" y="370" width="80" height="120" fill="url(#windowGrid1)" />
-            <rect x="895" y="270" width="60" height="80" fill="url(#windowGrid2)" />
-
-            {/* F7: Modern Slanted Roof Skyscraper 2 */}
-            <path d="M 1030,500 L 1030,200 L 1110,290 L 1110,500 Z" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
-            <path d="M 1030,200 L 1110,290" stroke="#60a5fa" strokeWidth="2" opacity="0.4" />
-            <path d="M 1035,500 L 1035,210 L 1105,288 L 1105,500 Z" fill="url(#verticalGlassLines)" />
-
-            {/* F8: Triangular A-Frame Building */}
-            <path d="M 1170,500 L 1220,220 L 1270,500 Z" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
-            <line x1="1170" y1="500" x2="1220" y2="220" stroke="rgba(96,165,250,0.3)" strokeWidth="1" />
-            <line x1="1270" y1="500" x2="1220" y2="220" stroke="rgba(96,165,250,0.3)" strokeWidth="1" />
-            <circle cx="1220" cy="220" r="2.5" fill="#60a5fa" />
-            
-            {/* F9: Wide Headquarters Grid Facade */}
-            <rect x="1320" y="240" width="110" height="260" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
-            <rect x="1325" y="250" width="100" height="240" fill="url(#windowGrid1)" />
-
-            {/* F10: Classic Tiered Skyscraper */}
-            <path d="M 1470,500 L 1470,350 L 1480,350 L 1480,250 L 1495,250 L 1495,150 L 1525,150 L 1525,250 L 1540,250 L 1540,350 L 1550,350 L 1550,500 Z" fill="url(#skylineGrad3)" stroke="rgba(96, 165, 250, 0.35)" strokeWidth="1.2" />
-            <line x1="1510" y1="150" x2="1510" y2="80" stroke="#60a5fa" strokeWidth="1.5" opacity="0.5" />
-            <circle cx="1510" cy="80" r="2.5" fill="#60a5fa" opacity="0.75" />
-            <rect x="1498" y="160" width="24" height="80" fill="url(#windowGrid2)" />
-            <rect x="1483" y="260" width="54" height="80" fill="url(#windowGrid1)" />
-          </svg>
-        </div>
+        {/* Transparent Skyline Backdrop Image (SAAS Aesthetics) */}
+        <div className="hero-image-background" style={{ backgroundImage: 'url("/assets/city_skyline_hero.png")' }}></div>
 
         <div className="hero-container container relative z-10">
-          {/* Left Column: Brand & Headlines */}
-          <div className="hero-content">
+          {/* Hero Main Content */}
+          <div className="hero-content max-w-[850px] w-full">
             <div className="badge">
               <i className="fa-solid fa-gamepad"></i> Multiplayer Live Economy
             </div>
@@ -616,112 +530,6 @@ export default function LandingPage() {
               <a href="#economy-section" className="btn btn-large btn-secondary">
                 Explore The Economy <i className="fa-solid fa-network-wired"></i>
               </a>
-            </div>
-          </div>
-
-          {/* Right Column: Premium SVG Cinematic Visual & Bloomberg News Terminal */}
-          <div className="hero-visuals-suite flex flex-col gap-6 w-full items-center justify-center">
-            {/* Cinematic Economy Dashboard (SVG-based, Lightweight, Micro-Animated) */}
-            <div className="cinematic-economy-panel glass-card relative w-full max-w-[480px]">
-              <svg className="cinematic-dashboard-svg" viewBox="0 0 500 300" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <linearGradient id="chartFillGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#0066ff" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#0066ff" stopOpacity="0" />
-                  </linearGradient>
-                  <linearGradient id="skylineGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#1A365D" stopOpacity="0.35" />
-                    <stop offset="100%" stopColor="#0B0F19" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-
-                {/* Grid Overlay */}
-                <g stroke="rgba(255,255,255,0.03)" strokeWidth="1">
-                  <line x1="50" y1="0" x2="50" y2="300" />
-                  <line x1="100" y1="0" x2="100" y2="300" />
-                  <line x1="150" y1="0" x2="150" y2="300" />
-                  <line x1="200" y1="0" x2="200" y2="300" />
-                  <line x1="250" y1="0" x2="250" y2="300" />
-                  <line x1="300" y1="0" x2="300" y2="300" />
-                  <line x1="350" y1="0" x2="350" y2="300" />
-                  <line x1="400" y1="0" x2="400" y2="300" />
-                  <line x1="450" y1="0" x2="450" y2="300" />
-                  
-                  <line x1="0" y1="50" x2="500" y2="50" />
-                  <line x1="0" y1="100" x2="500" y2="100" />
-                  <line x1="0" y1="150" x2="500" y2="150" />
-                  <line x1="0" y1="200" x2="500" y2="200" />
-                  <line x1="0" y1="250" x2="500" y2="250" />
-                </g>
-
-                {/* City Skyline Silhouette Contours */}
-                <path d="M 30,300 L 30,170 L 55,170 L 55,300 M 65,300 L 65,130 L 105,130 L 105,300 M 115,300 L 115,195 L 145,195 L 145,300 M 165,300 L 165,95 L 215,95 L 215,300 M 225,300 L 225,155 L 255,155 L 255,300 M 275,300 L 275,205 L 305,205 L 305,300 M 325,300 L 325,115 L 365,115 L 365,300 M 375,300 L 375,175 L 405,175 L 405,300 M 415,300 L 415,225 L 455,225 L 455,300" fill="url(#skylineGrad)" stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
-
-                {/* Simulated Economy Chart Lines */}
-                <path d="M 40,240 Q 120,215 180,165 T 320,135 T 460,75 L 460,300 L 40,300 Z" fill="url(#chartFillGrad)" className="animated-chart-line" />
-                <path d="M 40,240 Q 120,215 180,165 T 320,135 T 460,75" fill="none" stroke="#0066ff" strokeWidth="4.5" strokeLinecap="round" className="animated-chart-line" />
-
-                {/* Supply Chain Trade Routes with flow particles */}
-                <path d="M 90,195 L 240,155 M 240,155 L 385,175 M 385,175 L 440,85" fill="none" stroke="rgba(0, 102, 255, 0.25)" strokeWidth="1.5" />
-                <path d="M 90,195 L 240,155" fill="none" stroke="#60a5fa" strokeWidth="1.5" strokeDasharray="6, 30" className="animated-route-line" />
-                <path d="M 240,155 L 385,175" fill="none" stroke="#60a5fa" strokeWidth="1.5" strokeDasharray="6, 30" className="animated-route-line" />
-                <path d="M 385,175 L 440,85" fill="none" stroke="#60a5fa" strokeWidth="1.5" strokeDasharray="6, 30" className="animated-route-line" />
-
-                {/* Pulsing Trade Nodes */}
-                <circle cx="90" cy="195" r="5" fill="#0066ff" className="pulsing-node" />
-                <circle cx="240" cy="155" r="6" fill="#60a5fa" className="pulsing-node" />
-                <circle cx="385" cy="175" r="5" fill="#0066ff" className="pulsing-node" />
-                <circle cx="440" cy="85" r="5.5" fill="#3b82f6" className="pulsing-node" />
-              </svg>
-
-              {/* Floating Data Badge 1 */}
-              <div className="drifting-card floating-mini-card item-farming absolute" style={{ top: '12%', left: '6%', animationDelay: '0s' }}>
-                <div className="card-icon"><i className="fa-solid fa-chart-line"></i></div>
-                <div className="card-info">
-                  <span className="card-tag">GLOBAL VOL</span>
-                  <span className="card-name text-blue-400 font-bold">$14.2M/HR</span>
-                </div>
-              </div>
-
-              {/* Floating Data Badge 2 */}
-              <div className="drifting-card floating-mini-card item-factory absolute" style={{ bottom: '16%', right: '6%', animationDelay: '2.5s' }}>
-                <div className="card-icon"><i className="fa-solid fa-gauge-high"></i></div>
-                <div className="card-info">
-                  <span className="card-tag">CAPACITY</span>
-                  <span className="card-name text-green-400 font-bold">98.4% ACT</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Bloomberg-style Financial News Terminal Panel */}
-            <div className="bloomberg-terminal glass-card w-full max-w-[480px]">
-              <div className="terminal-header">
-                <span className="dot red pulsing-dot-red"></span>
-                <span className="terminal-title">BLOOMBERG NEWS TERMINAL</span>
-                <span className="terminal-status"><i className="fa-solid fa-circle-check"></i> LIVE NEWS</span>
-              </div>
-              <div className="news-list-panel">
-                <div className="news-panel-header">BREAKING NEWS Feed</div>
-                <div className="news-items-container flex flex-col gap-1 p-3">
-                  {visibleNews.map((newsIdx, idx) => {
-                    const item = newsHeadlines[newsIdx];
-                    return (
-                      <div key={idx} className="news-item-row flex items-center gap-2.5 py-1.5 border-b border-white/5 last:border-0 animate-fade-in">
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded tracking-widest ${
-                          item.type === 'M&A' 
-                            ? 'bg-blue-500/20 text-blue-400 border border-blue-500/35 shadow-[0_0_8px_rgba(0,102,255,0.15)]' 
-                            : 'bg-gray-800/80 text-gray-400 border border-gray-700/30'
-                        }`}>
-                          {item.type}
-                        </span>
-                        <span className="news-headline-text text-[11px] font-semibold tracking-wide text-white flex-grow line-clamp-1">
-                          {item.text}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -769,6 +577,79 @@ export default function LandingPage() {
           </div>
         </div>
       </header>
+
+      {/* SECTION 1.5: LIVE MARKET FEED */}
+      <section className="section live-market-section bg-gameBg" id="live-market-section">
+        <div className="container">
+          <div className="section-header text-center">
+            <div className="section-tag">REAL-TIME MARKET INTELLIGENCE</div>
+            <h2 className="section-title">Live Economy & Market Feed</h2>
+            <p className="section-subtitle">Monitor corporate mergers, global trade news, and real-time stock fluctuations.</p>
+          </div>
+
+          <div className="market-feed-grid mt-12">
+            {/* Left Bulletin: Bloomberg News Terminal */}
+            <div className="bloomberg-terminal glass-card w-full">
+              <div className="terminal-header">
+                <span className="dot red pulsing-dot-red"></span>
+                <span className="terminal-title">BLOOMBERG NEWS TERMINAL</span>
+                <span className="terminal-status"><i className="fa-solid fa-circle-check"></i> LIVE NEWS</span>
+              </div>
+              <div className="news-list-panel">
+                <div className="news-panel-header">BREAKING NEWS Feed</div>
+                <div className="news-items-container flex flex-col gap-1 p-3">
+                  {visibleNews.map((newsIdx, idx) => {
+                    const item = newsHeadlines[newsIdx];
+                    return (
+                      <div key={idx} className="news-item-row flex items-center gap-2.5 py-2 border-b border-white/5 last:border-0 animate-fade-in">
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded tracking-widest ${
+                          item.type === 'M&A' 
+                            ? 'bg-blue-500/20 text-blue-400 border border-blue-500/35 shadow-[0_0_8px_rgba(0,102,255,0.15)]' 
+                            : 'bg-gray-800/80 text-gray-400 border border-gray-700/30'
+                        }`}>
+                          {item.type}
+                        </span>
+                        <span className="news-headline-text text-[11px] font-semibold tracking-wide text-white flex-grow line-clamp-1">
+                          {item.text}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Bulletin: Stock Prices & Market Graphic */}
+            <div className="stock-tracker-panel glass-card w-full">
+              <div className="terminal-header">
+                <span className="dot green pulsing-dot-green"></span>
+                <span className="terminal-title">LIVE COMPANY STOCK TRACKER</span>
+                <span className="terminal-status"><i className="fa-solid fa-chart-line"></i> TICKER ON</span>
+              </div>
+              
+              <div className="p-4">
+                {/* Stock Price Bulletin List */}
+                <div className="stock-list-container mt-0 flex flex-col gap-2">
+                  {companyStocks.map((stock, idx) => (
+                    <div key={idx} className="stock-row">
+                      <div className="stock-name-col">
+                        <span className="stock-symbol">{stock.name}</span>
+                        <span className="stock-full-name">{stock.fullName}</span>
+                      </div>
+                      <div className="stock-price-col">
+                        <div className="stock-price-val">${stock.price.toFixed(2)}</div>
+                        <span className={`stock-change-val ${stock.up ? 'text-green-500 font-bold' : 'text-red-500 font-bold'}`}>
+                          {stock.up ? '▲' : '▼'} {stock.change}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* SECTION 2: HOW THE ECONOMY WORKS */}
       <section className="section economy-section" id="economy-section">
@@ -1074,6 +955,24 @@ export default function LandingPage() {
               <div className="feature-icon"><i className="fa-solid fa-chart-line"></i></div>
               <h3 className="feature-title">Endless Growth</h3>
               <p className="feature-desc">Build small or dominate entire industries. Remain a specialized supplier or integrate vertically to become a trillion-dollar conglomerate.</p>
+            </div>
+
+            <div className="feature-card glass-card">
+              <div className="feature-icon"><i className="fa-solid fa-code-merge"></i></div>
+              <h3 className="feature-title">Mergers & Acquisitions</h3>
+              <p className="feature-desc">Acquire competitors, merge supply chains, and secure controlling corporate stakes to rapidly expand your operational scale.</p>
+            </div>
+
+            <div className="feature-card glass-card">
+              <div className="feature-icon"><i className="fa-solid fa-scale-balanced"></i></div>
+              <h3 className="feature-title">Macroeconomic Drivers</h3>
+              <p className="feature-desc">Navigate regional trade tariffs, fluctuating export volumes, and dynamic commodity index adjustments in a deep simulation.</p>
+            </div>
+
+            <div className="feature-card glass-card">
+              <div className="feature-icon"><i className="fa-solid fa-bolt"></i></div>
+              <h3 className="feature-title">Real-Time Fluid Economy</h3>
+              <p className="feature-desc">Watch trade flows, resource trades, and news updates tick in real-time as thousands of players make simultaneous decisions.</p>
             </div>
           </div>
         </div>

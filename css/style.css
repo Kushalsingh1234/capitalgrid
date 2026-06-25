@@ -1286,6 +1286,12 @@ p {
   gap: 30px;
 }
 
+@media (min-width: 1024px) {
+  .features-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
 .feature-card {
   padding: 35px 25px;
   text-align: center;
@@ -1930,14 +1936,147 @@ p {
 }
 
 /* Transparent Skyline Backdrop in Hero (SAAS App style) */
-.hero-skyline-background {
+.hero-image-background {
   position: absolute;
-  bottom: 80px;
+  top: 0;
   left: 0;
   width: 100%;
-  height: 78%; /* Rises up to cover most of the hero height behind heading text */
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   z-index: 1;
   pointer-events: none;
-  opacity: 0.55; /* Subtle transparent watermark style */
+  opacity: 0.28; /* Transparent background city image watermark */
+}
+
+/* Linear gradient fade overlays to smoothly blend background image with dark layout */
+.hero-image-background::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--bg-color) 0%, transparent 25%, transparent 75%, var(--bg-color) 100%),
+              radial-gradient(circle at 50% 50%, transparent 15%, var(--bg-color) 85%);
+}
+
+/* Force 1-column Flex Layout for full-width Hero Content */
+.hero-container {
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  max-width: 850px !important;
+  width: 100%;
+  gap: 0;
+}
+
+/* Live Economy & Market Feed Section */
+.live-market-section {
+  background: linear-gradient(180deg, rgba(11, 15, 25, 0.4), rgba(26, 54, 93, 0.05) 50%, rgba(11, 15, 25, 0.4));
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 100px 0;
+}
+
+.market-feed-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 40px;
+  align-items: start;
+}
+
+@media (max-width: 991px) {
+  .market-feed-grid {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+}
+
+/* Live Company Stock Tracker Panel */
+.stock-tracker-panel {
+  background: rgba(10, 15, 30, 0.85);
+  border: 1px solid rgba(0, 102, 255, 0.15);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.stock-graph-container {
+  overflow: hidden;
+}
+
+.stock-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.stock-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  transition: all var(--transition-fast);
+}
+
+.stock-row:hover {
+  background: rgba(0, 102, 255, 0.04);
+  border-color: rgba(0, 102, 255, 0.2);
+  transform: translateX(4px);
+}
+
+.stock-name-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stock-symbol {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+
+.stock-full-name {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.stock-price-col {
+  text-align: right;
+  font-family: var(--font-display);
+}
+
+.stock-price-val {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.stock-change-val {
+  font-size: 0.72rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pulsing-dot-green {
+  background-color: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulse-green 2.5s infinite;
+}
+
+@keyframes pulse-green {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 
