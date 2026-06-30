@@ -68,9 +68,11 @@ export default class GameScene extends Phaser.Scene {
     this.targetScrollX = this.cameras.main.scrollX;
     this.targetScrollY = this.cameras.main.scrollY;
     
-    // Camera zoom target variables
-    this.targetZoom = 1.0;
-    this.cameras.main.setZoom(1.0);
+    // Camera zoom target variables (zoom out slightly on mobile/tablet screens)
+    const isMobile = this.scale.width < 768;
+    const defaultZoom = isMobile ? 0.75 : 1.0;
+    this.targetZoom = defaultZoom;
+    this.cameras.main.setZoom(defaultZoom);
 
     // Glide scroll physics velocities
     this.velocityX = 0;

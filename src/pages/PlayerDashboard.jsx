@@ -277,7 +277,7 @@ export default function PlayerDashboard() {
             <Logo className="h-full" />
           </Link>
           {startup && (
-            <div className="flex items-center gap-2 border-l border-white/10 pl-4">
+            <div className="hidden md:flex items-center gap-2 border-l border-white/10 pl-4">
               <span className="text-xs font-display font-extrabold uppercase tracking-widest text-white">
                 {startup.startupName}
               </span>
@@ -290,10 +290,10 @@ export default function PlayerDashboard() {
         </div>
 
         <div className="flex items-center gap-6">
-          {/* LIQUIDITY BALANCE */}
+          {/* CURRENT BALANCE */}
           {startup && (
             <div className="flex items-center gap-2.5 px-3.5 py-1.5 bg-green-950/20 border border-green-500/20 rounded-md">
-              <span className="text-[9px] font-display uppercase tracking-widest text-text-secondary">Liquidity Reserves</span>
+              <span className="text-[9px] font-display uppercase tracking-widest text-text-secondary">Current Balance</span>
               <span className="font-display font-black text-sm text-greenGlow leading-none">
                 {formatCurrency(startup.currentBalance, startup.country)}
               </span>
@@ -301,7 +301,7 @@ export default function PlayerDashboard() {
           )}
 
           {/* UTILITIES & SETTINGS */}
-          <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-3">
             <ThemeToggle />
             <button className="w-8 h-8 rounded border border-white/5 hover:border-white/15 flex items-center justify-center text-text-muted hover:text-white transition-colors cursor-pointer" title="System Notifications (Placeholder)">
               <i className="fa-solid fa-bell text-xs"></i>
