@@ -1,0 +1,11 @@
+- [x] Modify `DashboardDrawer.jsx` to replace the Company tab placeholder:
+  - [x] Implement Corporate Identity header (Logo, Name, status, ID, Country, City, Business Type, Industry Sector, Founded Date, and Company Age).
+  - [x] Implement Corporate Statistics grid (Company Level, Reputation, Valuation, Net Worth, Cash, Assets, Inventory, Facilities Owned, and total Employees).
+  - [x] Implement Corporate Assets list showing the active facility type.
+  - [x] Implement Land Holdings card showingDeveloped vs Remaining plots.
+  - [x] Implement Company Timeline dynamically parsing hired staff and transaction milestones.
+  - [x] Implement Expansion Center buttons (disabled actions).
+  - [x] Implement Corporate Reputation rating card showing reputation scores.
+  - [x] Implement Corporate Summary block dynamically generating the executive overview.
+- [x] Run production build `npm run build` to verify there are no compilation errors.
+- [x] Complete manual verification.

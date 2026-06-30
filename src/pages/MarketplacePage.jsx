@@ -17,14 +17,28 @@ const CURRENCY_SYMBOLS = {
   'Australia': 'A$'
 };
 
-const COUNTRY_FLAGS = {
-  'India': '🇮🇳',
-  'United States': '🇺🇸',
-  'United Kingdom': '🇬🇧',
-  'Germany': '🇩🇪',
-  'Japan': '🇯🇵',
-  'Brazil': '🇧🇷',
-  'Australia': '🇦🇺'
+const renderFlagImage = (countryName) => {
+  if (!countryName) return null;
+  const normalized = countryName.toLowerCase().trim();
+  const codes = {
+    'india': 'in', 'in': 'in', 'ind': 'in',
+    'united states': 'us', 'us': 'us', 'usa': 'us',
+    'united kingdom': 'gb', 'uk': 'gb', 'gb': 'gb', 'gbr': 'gb',
+    'germany': 'de', 'de': 'de', 'deu': 'de',
+    'japan': 'jp', 'jp': 'jp', 'jpn': 'jp',
+    'brazil': 'br', 'br': 'br', 'bra': 'br',
+    'australia': 'au', 'au': 'au', 'aus': 'au'
+  };
+  const code = codes[normalized];
+  if (!code) return <span className="text-sm shrink-0">🌐</span>;
+  return (
+    <img 
+      src={`https://flagcdn.com/w40/${code}.png`} 
+      alt={countryName} 
+      className="w-4 h-2.5 object-cover rounded-sm border border-white/10 shrink-0" 
+      title={countryName}
+    />
+  );
 };
 
 export default function MarketplacePage() {
@@ -255,7 +269,7 @@ export default function MarketplacePage() {
                   </span>
                 </div>
                 <p className="text-xs text-text-secondary flex items-center gap-1.5">
-                  <span>{COUNTRY_FLAGS[startup.country] || '🌐'}</span>
+                  {renderFlagImage(startup.country)}
                   <span>HQ: {startup.country}</span>
                   <span className="text-text-muted">|</span>
                   <span className="font-mono text-cyanGlow">{startup.startupId}</span>
@@ -432,10 +446,10 @@ export default function MarketplacePage() {
                                   <div className="font-bold text-white max-w-[120px] truncate" title={listing.sellerStartupName}>
                                     {listing.sellerStartupName}
                                   </div>
-                                  <div className="text-[10px] text-text-secondary flex items-center gap-1">
-                                    <span>{COUNTRY_FLAGS[listing.sellerCountry] || '🌐'}</span>
-                                    <span>{listing.sellerCountry}</span>
-                                  </div>
+                                    <div className="text-[10px] text-text-secondary flex items-center gap-1.5 mt-0.5">
+                                      {renderFlagImage(listing.sellerCountry)}
+                                      <span>{listing.sellerCountry}</span>
+                                    </div>
                                 </td>
                                 <td className="py-4 pr-3">
                                   <div className="flex items-center gap-2">

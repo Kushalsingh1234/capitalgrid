@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { DrawerWrapper, SectionHeader, InfoCard, FutureFeatureCard, PlaceholderCard } from './SharedUI';
 import ProductionCenter from './ProductionCenter';
 import InventoryPanel from './InventoryPanel';
 import { getProductsForBusiness, isRetailBusiness } from '../data/products';
@@ -33,9 +34,10 @@ export default function FacilityManagementDrawer({
   inventory = [],
   employees = [],
   token,
-  onProductionComplete
+  onProductionComplete,
+  producingState = {},
+  onProducingStateChange
 }) {
-  const [producingState, setProducingState] = useState({});
   const [selectedProductId, setSelectedProductId] = useState(null);
 
   const products = startup ? getProductsForBusiness(startup.businessType) || [] : [];
@@ -116,28 +118,9 @@ export default function FacilityManagementDrawer({
   const dependencies = selectedProduct ? PRODUCT_DEPENDENCIES[selectedProductId] : null;
 
   return (
-    <div className="absolute top-0 right-0 h-full w-full sm:w-[500px] z-30 flex shadow-2xl animate-slide-in pointer-events-auto">
-      {/* Slide-out Panel background */}
-      <div className="w-full h-full glass-card border-l border-white/5 p-6 flex flex-col justify-start overflow-y-auto bg-gradient-to-b from-glassBg to-black/95">
-        
-        {/* Drawer Header */}
-        <div className="flex justify-between items-center mb-6 pb-3 border-b border-white/5">
-          <div className="flex items-center gap-2 text-cyanGlow">
-            <i className="fa-solid fa-gears"></i>
-            <span className="font-display font-extrabold text-xs uppercase tracking-widest">
-              Facility Management
-            </span>
-          </div>
-          <button 
-            onClick={onClose}
-            className="w-6 h-6 border border-white/5 hover:border-white/20 rounded flex items-center justify-center text-text-muted hover:text-white transition-colors cursor-pointer"
-          >
-            <i className="fa-solid fa-xmark text-xs"></i>
-          </button>
-        </div>
-
-        {/* Operational Control Center Area */}
-        <div className="flex flex-col gap-6">
+    <DrawerWrapper isOpen={isOpen} onClose={onClose} title="Facility Management" icon="fa-gears">
+      {/* Operational Control Center Area */}
+      <div className="flex flex-col gap-6">
 
           {/* 1. Building Header Info Card */}
           <div className="p-5 bg-white/2 border border-white/5 rounded-lg flex items-center gap-4 bg-gradient-to-b from-glassBg to-black/30">
@@ -180,7 +163,7 @@ export default function FacilityManagementDrawer({
               onProductionComplete={onProductionComplete}
               employees={employees}
               inventory={inventory}
-              onProducingStateChange={setProducingState}
+              onProducingStateChange={onProducingStateChange}
             />
           </div>
 
@@ -195,10 +178,7 @@ export default function FacilityManagementDrawer({
               <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-cyanGlow/30 to-transparent"></div>
               
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-display text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-2">
-                  <i className="fa-solid fa-clipboard-list text-cyanGlow"></i>
-                  Resources Required
-                </h3>
+                <SectionHeader icon="fa-clipboard-list" title="Resources Required" divider={false} />
                 {/* Product picker */}
                 <select 
                   value={selectedProductId || ''} 
@@ -265,9 +245,11 @@ export default function FacilityManagementDrawer({
                   </div>
                 </div>
               ) : (
-                <div className="text-xs text-text-muted py-2 text-center">
-                  Select a product to view requirements.
-                </div>
+                <PlaceholderCard 
+                  title="Select Product" 
+                  description="Select a product to view requirements." 
+                  icon="fa-clipboard-list" 
+                />
               )}
             </div>
           )}
@@ -276,36 +258,14 @@ export default function FacilityManagementDrawer({
           <div className="glass-card p-5 border border-white/5 relative bg-gradient-to-b from-glassBg to-black/30">
             <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-cyanGlow/30 to-transparent"></div>
             
-            <h3 className="font-display text-xs font-bold uppercase tracking-wider text-text-secondary mb-4 flex items-center gap-2">
-              <i className="fa-solid fa-chart-simple text-cyanGlow"></i>
-              Facility Statistics
-            </h3>
+            <SectionHeader icon="fa-chart-simple" title="Facility Overview" />
 
-            <div className="p-3 bg-black/20 border border-white/5 rounded-lg flex flex-col gap-2.5 font-mono text-xs">
-              <div className="flex justify-between items-center">
-                <span className="text-text-secondary">Facility Level</span>
-                <span className="text-white font-bold">Level {currentLevel}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-text-secondary">Production Efficiency</span>
-                <span className={`font-bold ${totalRequiredHired ? 'text-greenGlow' : 'text-amber-400'}`}>
-                  {productionEfficiency}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-text-secondary">Storage Capacity</span>
-                <span className="text-text-muted italic">Coming Soon</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-text-secondary">Products Produced Today</span>
-                <span className="text-text-muted italic">Coming Soon</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-text-secondary">Current Queue</span>
-                <span className="text-white font-bold">
-                  {isProducing ? '1 / 1 batches' : 'Empty'}
-                </span>
-              </div>
+            <div className="flex flex-col gap-2 font-mono text-xs">
+              <InfoCard label="Facility Level" value={`Level ${currentLevel}`} />
+              <InfoCard label="Production Efficiency" value={productionEfficiency} color={totalRequiredHired ? 'text-greenGlow' : 'text-amber-400'} />
+              <InfoCard label="Storage Capacity" value="Coming Soon" color="text-text-muted italic" />
+              <InfoCard label="Products Produced Today" value="Coming Soon" color="text-text-muted italic" />
+              <InfoCard label="Current Queue" value={isProducing ? '1 / 1 batches' : 'Empty'} />
             </div>
           </div>
 
@@ -313,19 +273,16 @@ export default function FacilityManagementDrawer({
           <div className="glass-card p-5 border border-white/5 relative bg-gradient-to-b from-glassBg to-black/30">
             <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-blue-500/30 to-transparent"></div>
             
-            <h3 className="font-display text-xs font-bold uppercase tracking-wider text-text-secondary mb-4 flex items-center gap-2">
-              <i className="fa-solid fa-circle-up text-blue-400"></i>
-              Upgrade Facility
-            </h3>
+            <SectionHeader icon="fa-circle-up" title="Upgrade Facility" />
 
             <div className="flex justify-between items-start mb-4">
               <div>
                 <span className="text-[10px] uppercase font-display text-text-secondary tracking-wider block">Current Level</span>
-                <span className="text-sm font-bold text-white uppercase font-display">Level {currentLevel}</span>
+                <span className="text-sm font-bold text-white uppercase font-display font-mono">Level {currentLevel}</span>
               </div>
               <div className="text-right">
                 <span className="text-[10px] uppercase font-display text-text-secondary tracking-wider block">Upgrade Cost</span>
-                <span className="text-sm font-bold text-blue-400 uppercase font-display">{formatCurrency(25000)}</span>
+                <span className="text-sm font-bold text-blue-400 uppercase font-display font-mono">{formatCurrency(25000)}</span>
               </div>
             </div>
 
@@ -338,21 +295,15 @@ export default function FacilityManagementDrawer({
               </ul>
             </div>
 
-            <button
-              disabled
-              className="w-full py-2.5 bg-white/2 border border-white/5 text-text-muted text-[10px] font-display uppercase tracking-widest rounded cursor-not-allowed flex flex-col items-center gap-0.5"
-            >
-              <span>Upgrade Facility</span>
-              <span className="text-[8px] text-text-muted/60 lowercase italic font-mono">Available in a future update</span>
-            </button>
+            <FutureFeatureCard
+              title="Upgrade Facility"
+              description="Increase efficiency limits and speed metrics."
+            />
           </div>
 
           {/* 7. Demolish Area Warning Card */}
           <div className="glass-card p-5 border border-red-500/15 relative bg-gradient-to-b from-red-950/5 to-black/30 mb-4">
-            <h3 className="font-display text-xs font-bold uppercase tracking-wider text-red-400 mb-3 flex items-center gap-2">
-              <i className="fa-solid fa-triangle-exclamation text-red-400 animate-pulse"></i>
-              Demolish Facility Node
-            </h3>
+            <SectionHeader icon="fa-triangle-exclamation" title="Demolish Facility Node" />
 
             <p className="text-[11px] text-text-secondary leading-relaxed mb-4">
               Decommissioning this node removes it from the world grid. You will receive a refund on materials and start assets.
@@ -363,17 +314,13 @@ export default function FacilityManagementDrawer({
               <span className="text-red-400 font-bold">{formatCurrency(12500)}</span>
             </div>
 
-            <button
-              disabled
-              className="w-full py-2.5 bg-red-950/10 border border-red-500/10 text-red-400/50 text-[10px] font-display uppercase tracking-widest rounded cursor-not-allowed flex flex-col items-center gap-0.5"
-            >
-              <span>Demolish Facility</span>
-              <span className="text-[8px] text-red-400/30 lowercase italic font-mono">Available in a future update</span>
-            </button>
+            <FutureFeatureCard
+              title="Demolish Facility"
+              description="Remove node from grid and refund materials."
+            />
           </div>
 
-        </div>
       </div>
-    </div>
+    </DrawerWrapper>
   );
 }

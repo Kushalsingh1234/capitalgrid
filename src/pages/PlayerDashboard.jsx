@@ -9,6 +9,8 @@ import * as startupService from '../services/startupService';
 import ProductionCenter from '../components/ProductionCenter';
 import InventoryPanel from '../components/InventoryPanel';
 import FacilityManagementDrawer from '../components/FacilityManagementDrawer';
+import MarketplaceInterface from '../components/MarketplaceInterface';
+import FinanceTerminal from '../components/FinanceTerminal';
 import * as transactionService from '../services/transactionService';
 import * as employeeService from '../services/employeeService';
 import { getProductsForBusiness, isRetailBusiness } from '../data/products';
@@ -25,18 +27,42 @@ const CURRENCY_SYMBOLS = {
 };
 
 const COUNTRY_FLAGS = {
-  'India': '🇮🇳',
-  'United States': '🇺🇸',
-  'United Kingdom': '🇬🇧',
-  'Germany': '🇩🇪',
-  'Japan': '🇯🇵',
-  'Brazil': '🇧🇷',
-  'Australia': '🇦🇺'
+  'India': '🇮🇳', 'india': '🇮🇳', 'IN': '🇮🇳', 'in': '🇮🇳', 'IND': '🇮🇳', 'ind': '🇮🇳',
+  'United States': '🇺🇸', 'united states': '🇺🇸', 'US': '🇺🇸', 'us': '🇺🇸', 'USA': '🇺🇸', 'usa': '🇺🇸',
+  'United Kingdom': '🇬🇧', 'united kingdom': '🇬🇧', 'UK': '🇬🇧', 'uk': '🇬🇧', 'GB': '🇬🇧', 'gb': '🇬🇧', 'GBR': '🇬🇧', 'gbr': '🇬🇧',
+  'Germany': '🇩🇪', 'germany': '🇩🇪', 'DE': '🇩🇪', 'de': '🇩🇪', 'DEU': '🇩🇪', 'deu': '🇩🇪',
+  'Japan': '🇯🇵', 'japan': '🇯🇵', 'JP': '🇯🇵', 'jp': '🇯🇵', 'JPN': '🇯🇵', 'jpn': '🇯🇵',
+  'Brazil': '🇧🇷', 'brazil': '🇧🇷', 'BR': '🇧🇷', 'br': '🇧🇷', 'BRA': '🇧🇷', 'bra': '🇧🇷',
+  'Australia': '🇦🇺', 'australia': '🇦🇺', 'AU': '🇦🇺', 'au': '🇦🇺', 'AUS': '🇦🇺', 'aus': '🇦🇺'
 };
 
 const formatCurrency = (amount, countryName) => {
   const symbol = CURRENCY_SYMBOLS[countryName] || '$';
   return `${symbol}${amount?.toLocaleString()}`;
+};
+
+const renderFlagImage = (countryName) => {
+  if (!countryName) return null;
+  const normalized = countryName.toLowerCase().trim();
+  const codes = {
+    'india': 'in', 'in': 'in', 'ind': 'in',
+    'united states': 'us', 'us': 'us', 'usa': 'us',
+    'united kingdom': 'gb', 'uk': 'gb', 'gb': 'gb', 'gbr': 'gb',
+    'germany': 'de', 'de': 'de', 'deu': 'de',
+    'japan': 'jp', 'jp': 'jp', 'jpn': 'jp',
+    'brazil': 'br', 'br': 'br', 'bra': 'br',
+    'australia': 'au', 'au': 'au', 'aus': 'au'
+  };
+  const code = codes[normalized];
+  if (!code) return <span className="text-sm ml-1.5 shrink-0">🌐</span>;
+  return (
+    <img 
+      src={`https://flagcdn.com/w40/${code}.png`} 
+      alt={countryName} 
+      className="w-5 h-3.5 object-cover rounded-sm border border-white/10 ml-1.5 shrink-0" 
+      title={countryName}
+    />
+  );
 };
 
 const getTransactionDisplayDetails = (tx, countryName) => {
@@ -100,6 +126,8 @@ export default function PlayerDashboard() {
   const [activeTab, setActiveTab] = useState(null);
   const [isFacilityDrawerOpen, setIsFacilityDrawerOpen] = useState(false);
   const [selectedBuilding, setSelectedBuilding] = useState(null);
+  const [producingState, setProducingState] = useState({});
+  const [currentView, setCurrentView] = useState('world');
 
   const handleLogout = () => {
     logout();
@@ -157,6 +185,24 @@ export default function PlayerDashboard() {
     fetchTransactions();
     fetchEmployees();
   }, [token]);
+
+  // Refresh all dashboard data (called after marketplace trades)
+  const fetchDashboardData = async () => {
+    try {
+      if (!token) return;
+      const startupRes = await startupService.getMyStartup(token);
+      if (startupRes.success && startupRes.startup) {
+        setStartup(startupRes.startup);
+        setInventory(startupRes.startup.inventory || []);
+      }
+      const txRes = await transactionService.getMyTransactions(token);
+      if (txRes.success && txRes.transactions) {
+        setTransactions(txRes.transactions);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // Called by ProductionCenter when a batch completes
   const handleProductionComplete = async (updatedInventory) => {
@@ -276,15 +322,12 @@ export default function PlayerDashboard() {
           <Link to="/" className="h-7 hover:opacity-85 transition-opacity">
             <Logo className="h-full" />
           </Link>
-          {startup && (
+          {user && (
             <div className="hidden md:flex items-center gap-2 border-l border-white/10 pl-4">
               <span className="text-xs font-display font-extrabold uppercase tracking-widest text-white">
-                {startup.startupName}
+                {user.fullName || 'Founder'}
               </span>
-              <span className="text-[10px] text-text-secondary flex items-center gap-1 bg-white/2 px-2 py-0.5 rounded border border-white/5">
-                <span>{COUNTRY_FLAGS[startup.country] || '🌐'}</span>
-                <span>{startup.country}</span>
-              </span>
+              {renderFlagImage(user.country || startup?.country)}
             </div>
           )}
         </div>
@@ -335,12 +378,27 @@ export default function PlayerDashboard() {
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => {
+             onClick={() => {
                 setIsFacilityDrawerOpen(false);
                 setSelectedBuilding(null);
-                setActiveTab(activeTab === tab.id ? null : tab.id);
+                if (tab.id === 'Marketplace') {
+                  setActiveTab(null);
+                  setCurrentView(currentView === 'marketplace' ? 'world' : 'marketplace');
+                } else if (tab.id === 'Finance') {
+                  setActiveTab(null);
+                  setCurrentView(currentView === 'finance' ? 'world' : 'finance');
+                } else {
+                  setCurrentView('world');
+                  setActiveTab(activeTab === tab.id ? null : tab.id);
+                }
               }}
-              className={`sidebar-nav-item ${activeTab === tab.id ? 'active' : ''}`}
+              className={`sidebar-nav-item ${
+                tab.id === 'Marketplace'
+                  ? (currentView === 'marketplace' ? 'active' : '')
+                  : tab.id === 'Finance'
+                  ? (currentView === 'finance' ? 'active' : '')
+                  : (activeTab === tab.id ? 'active' : '')
+              }`}
             >
               <i className={`fa-solid ${tab.icon} text-sm`}></i>
               <span className="sidebar-nav-label">{tab.label}</span>
@@ -349,22 +407,52 @@ export default function PlayerDashboard() {
         </nav>
 
         {/* MAIN GAME WORLD AREA */}
-        <main className={`world-viewport ${activeTab || isFacilityDrawerOpen ? 'drawer-open' : ''}`}>
-          {startup ? (
-            <GameWorld 
-              startup={startup} 
-              onBuildingClick={(buildingData) => {
-                setActiveTab(null);
-                setSelectedBuilding(buildingData);
-                setIsFacilityDrawerOpen(true);
-              }}
+        <main 
+          className={`world-viewport ${activeTab || isFacilityDrawerOpen ? 'drawer-open' : ''}`}
+          style={currentView === 'marketplace' || currentView === 'finance' ? { overflow: 'auto', alignItems: 'flex-start', justifyContent: 'flex-start', padding: 0 } : {}}
+        >
+          {/* GameWorld wrapper for hiding but maintaining mounted state */}
+          <div className={currentView === 'marketplace' || currentView === 'finance' ? 'hidden' : 'w-full h-full'}>
+            {startup ? (
+              <GameWorld 
+                startup={startup} 
+                onBuildingClick={(buildingData) => {
+                  setActiveTab(null);
+                  setSelectedBuilding(buildingData);
+                  setIsFacilityDrawerOpen(true);
+                  setCurrentView('world');
+                }}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-4 text-center h-full">
+                <div className="w-10 h-10 border-4 border-t-cyanGlow border-r-cyanGlow/40 border-b-cyanGlow/10 border-l-cyanGlow/20 rounded-full animate-spin mx-auto animate-pulse"></div>
+                <p className="text-xs text-text-secondary">Reconnecting virtual map interface...</p>
+              </div>
+            )}
+          </div>
+
+          {/* Full Screen Trading Exchange Terminal */}
+          {currentView === 'marketplace' && (
+            <MarketplaceInterface
+              startup={startup}
+              inventory={inventory}
+              transactions={transactions}
+              onMarketAction={fetchDashboardData}
+              token={token}
             />
-          ) : (
-            <div className="flex flex-col items-center justify-center gap-4 text-center">
-              <div className="w-10 h-10 border-4 border-t-cyanGlow border-r-cyanGlow/40 border-b-cyanGlow/10 border-l-cyanGlow/20 rounded-full animate-spin mx-auto"></div>
-              <p className="text-xs text-text-secondary">Reconnecting virtual map interface...</p>
-            </div>
           )}
+
+          {/* Full Screen Corporate Finance Terminal */}
+          {currentView === 'finance' && (
+            <FinanceTerminal
+              startup={startup}
+              inventory={inventory}
+              transactions={transactions}
+              employees={employees}
+              token={token}
+            />
+          )}
+
           {/* Dim Overlay blocking interaction on canvas but keeping Phaser running */}
           {isFacilityDrawerOpen && (
             <div className="absolute inset-0 bg-black/15 z-10 pointer-events-auto cursor-default animate-fade-in" />
@@ -380,6 +468,10 @@ export default function PlayerDashboard() {
           inventory={inventory} 
           transactions={transactions} 
           employees={employees} 
+          producingState={producingState}
+          onHire={handleHire}
+          onFire={handleFire}
+          user={user}
         />
 
         {/* FACILITY MANAGEMENT DRAWER */}
@@ -395,6 +487,8 @@ export default function PlayerDashboard() {
           employees={employees}
           token={token}
           onProductionComplete={handleProductionComplete}
+          producingState={producingState}
+          onProducingStateChange={setProducingState}
         />
       </div>
     </div>

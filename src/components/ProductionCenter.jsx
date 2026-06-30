@@ -176,7 +176,7 @@ export default function ProductionCenter({ businessType, token, onProductionComp
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         {products.map((product) => {
           const isProducing = !!producing[product.id];
           const prodState = producing[product.id];
