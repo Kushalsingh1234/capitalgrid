@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Logo from '../components/Logo';
+import ThemeToggle from '../components/ThemeToggle';
 import * as startupService from '../services/startupService';
 
 // Futuristic inline SVG preset icons
@@ -253,10 +255,11 @@ export default function StartupRegistration() {
       <div className="max-w-6xl mx-auto relative z-10">
         {/* Navigation / Header Brand */}
         <div className="flex justify-between items-center mb-8 pb-4 border-b border-white/5">
-          <Link to="/" className="h-8 hover:opacity-80 transition-opacity">
-            <img src="/assets/logo.svg" alt="CapitalGrid Logo" className="h-full" />
+          <Link to="/" className="h-8 hover:opacity-80 transition-opacity w-36 block">
+            <Logo className="h-full w-full" />
           </Link>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             {user?.profilePicture && (
               <img src={user.profilePicture} alt="Profile" className="w-8 h-8 rounded-full border border-cyanGlow/30 hidden sm:block" />
             )}

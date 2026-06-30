@@ -4,6 +4,7 @@
    ========================================================================== */
 
 /* --- Design Variables --- */
+/* --- Design Variables --- */
 :root {
   --bg-color: #0B0F19;
   --bg-gradient-end: #060A14;
@@ -27,6 +28,50 @@
   --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-medium: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Logo & Custom Variables */
+  --logo-text-color: #ffffff;
+  --terminal-bg: rgba(10, 15, 30, 0.85);
+  --row-bg: rgba(255, 255, 255, 0.015);
+  --row-border: rgba(255, 255, 255, 0.03);
+  --navbar-scrolled-bg: rgba(11, 15, 25, 0.85);
+  --stats-bar-bg: rgba(11, 15, 25, 0.8);
+  --ticker-bg: rgba(11, 15, 25, 0.6);
+  --footer-bg: #060A14;
+  --flow-node-bg: rgba(255, 255, 255, 0.02);
+  --flow-node-border: rgba(255, 255, 255, 0.05);
+  --node-icon-bg: rgba(255, 255, 255, 0.03);
+  --node-icon-border: rgba(255, 255, 255, 0.08);
+}
+
+/* --- Light Mode Variables Override --- */
+:root.light-mode {
+  --bg-color: #f8fafc;
+  --bg-gradient-end: #f1f5f9;
+  --color-secondary: #e2e8f0;
+  
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(0, 0, 0, 0.06);
+  --glass-border-hover: rgba(0, 102, 255, 0.2);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+
+  --logo-text-color: #0f172a;
+  
+  --terminal-bg: rgba(255, 255, 255, 0.85);
+  --row-bg: rgba(0, 0, 0, 0.015);
+  --row-border: rgba(0, 0, 0, 0.05);
+  --navbar-scrolled-bg: rgba(248, 250, 252, 0.85);
+  --stats-bar-bg: rgba(241, 245, 249, 0.8);
+  --ticker-bg: rgba(241, 245, 249, 0.6);
+  --footer-bg: #f1f5f9;
+  --flow-node-bg: rgba(0, 0, 0, 0.02);
+  --flow-node-border: rgba(0, 0, 0, 0.06);
+  --node-icon-bg: rgba(0, 0, 0, 0.03);
+  --node-icon-border: rgba(0, 0, 0, 0.08);
 }
 
 /* --- Base Reset & Setup --- */
@@ -45,6 +90,11 @@ body {
   overflow-x: hidden;
   line-height: 1.6;
   position: relative;
+  transition: background-color var(--transition-medium), color var(--transition-medium);
+}
+
+:root.light-mode body {
+  background-image: radial-gradient(circle at 50% 30%, #f1f5f9 0%, var(--bg-color) 70%);
 }
 
 /* --- Subtle Dot Grid Overlay --- */
@@ -441,9 +491,9 @@ p {
   max-width: 420px;
   height: 250px;
   border-radius: 10px;
-  background: rgba(12, 16, 28, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  background: var(--terminal-bg);
+  border: 1px solid var(--row-border);
+  box-shadow: var(--glass-shadow);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -452,8 +502,8 @@ p {
 
 .terminal-header {
   padding: 12px 18px;
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--row-bg);
+  border-bottom: 1px solid var(--row-border);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1832,11 +1882,11 @@ p {
 .bloomberg-terminal {
   width: 100%;
   max-width: 480px;
-  background: rgba(10, 15, 30, 0.85);
+  background: var(--terminal-bg);
   border: 1px solid rgba(0, 102, 255, 0.15);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--glass-shadow);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
@@ -1994,11 +2044,11 @@ p {
 
 /* Live Company Stock Tracker Panel */
 .stock-tracker-panel {
-  background: rgba(10, 15, 30, 0.85);
+  background: var(--terminal-bg);
   border: 1px solid rgba(0, 102, 255, 0.15);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--glass-shadow);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
@@ -2019,8 +2069,8 @@ p {
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.015);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  background: var(--row-bg);
+  border: 1px solid var(--row-border);
   border-radius: 6px;
   transition: all var(--transition-fast);
 }
@@ -2041,7 +2091,7 @@ p {
   font-family: var(--font-display);
   font-size: 0.85rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--text-primary);
   letter-spacing: 0.5px;
 }
 
@@ -2058,7 +2108,7 @@ p {
 .stock-price-val {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .stock-change-val {
@@ -2079,4 +2129,287 @@ p {
   0%, 100% { opacity: 0.6; }
   50% { opacity: 1; }
 }
+
+/* --- Theme Toggle & Light Mode Overrides --- */
+.theme-toggle-btn {
+  background: var(--row-bg);
+  border: 1px solid var(--row-border);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.theme-toggle-btn:hover {
+  border-color: var(--glass-border-hover);
+  box-shadow: 0 0 10px rgba(0, 102, 255, 0.2);
+}
+
+/* Light Mode Specific Element Adjustments */
+:root.light-mode .hero-image-background {
+  mix-blend-mode: multiply;
+  opacity: 0.18;
+}
+
+:root.light-mode .grid-overlay {
+  background-image: radial-gradient(circle, rgba(0, 102, 255, 0.05) 1px, transparent 1px);
+}
+
+:root.light-mode .glow-radial-overlay {
+  background: radial-gradient(circle at 50% 50%, rgba(0, 102, 255, 0.03) 0%, transparent 60%);
+}
+
+/* Class-based utility overrides for Tailwind components in light mode */
+.light-mode .text-white,
+.light-mode h1,
+.light-mode h2,
+.light-mode h3,
+.light-mode h4,
+.light-mode h5,
+.light-mode h6,
+.light-mode th,
+.light-mode td,
+.light-mode .hud-country-name,
+.light-mode .country-name {
+  color: var(--text-primary) !important;
+}
+
+.light-mode .text-text-secondary {
+  color: var(--text-secondary) !important;
+}
+
+.light-mode .text-gray-300,
+.light-mode .text-gray-400 {
+  color: var(--text-secondary) !important;
+}
+
+.light-mode .bg-black\/20,
+.light-mode .bg-black\/30,
+.light-mode .bg-black\/40,
+.light-mode .bg-black\/60 {
+  background-color: rgba(255, 255, 255, 0.45) !important;
+  color: var(--text-primary) !important;
+}
+
+.light-mode .border-white\/5,
+.light-mode .border-white\/10 {
+  border-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+.light-mode .border-cyanGlow\/15,
+.light-mode .border-cyanGlow\/30 {
+  border-color: rgba(0, 102, 255, 0.25) !important;
+}
+
+.light-mode .bg-white\/3 {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+}
+
+.light-mode .border-white\/8 {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.light-mode .logo-text-capital {
+  fill: var(--logo-text-color) !important;
+}
+
+/* Industry illustrations inside sector cards */
+.light-mode .sector-svg rect {
+  fill: rgba(0, 102, 255, 0.03) !important;
+}
+
+.light-mode .sector-svg path[fill="url(#glowGradBlue)"] {
+  fill: rgba(0, 102, 255, 0.05) !important;
+}
+
+/* ==========================================================================
+   Phase A: World Interface Foundation Layout
+   ========================================================================== */
+
+.game-world-container {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #090e17;
+  position: relative;
+}
+
+.topbar-horizontal {
+  height: 60px;
+  background: var(--navbar-scrolled-bg);
+  border-bottom: 1px solid var(--row-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.sidebar-vertical {
+  width: 72px;
+  background: var(--navbar-scrolled-bg);
+  border-right: 1px solid var(--row-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
+  gap: 12px;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: width var(--transition-fast);
+}
+
+.sidebar-nav-item {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
+  text-decoration: none;
+}
+
+.sidebar-nav-item:hover,
+.sidebar-nav-item.active {
+  color: var(--color-primary);
+  background: var(--row-bg);
+  border-color: var(--glass-border-hover);
+  box-shadow: 0 0 10px rgba(0, 102, 255, 0.15);
+}
+
+.sidebar-nav-label {
+  font-size: 8px;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.main-game-layout {
+  display: flex;
+  flex: 1;
+  height: calc(100vh - 60px);
+  position: relative;
+  overflow: hidden;
+}
+
+.world-viewport {
+  flex: 1;
+  height: 100%;
+  padding: 0;
+  position: relative;
+  background: var(--bg-color);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (min-width: 769px) {
+  .world-viewport.drawer-open {
+    transform: translateX(-180px);
+  }
+}
+
+/* Ambient Environment Animations */
+@keyframes float-cloud-1 {
+  0% { transform: translateX(-150px) translateY(0); opacity: 0; }
+  10% { opacity: 0.12; }
+  90% { opacity: 0.12; }
+  100% { transform: translateX(650px) translateY(20px); opacity: 0; }
+}
+
+@keyframes float-cloud-2 {
+  0% { transform: translateX(-150px) translateY(0); opacity: 0; }
+  15% { opacity: 0.08; }
+  85% { opacity: 0.08; }
+  100% { transform: translateX(650px) translateY(-25px); opacity: 0; }
+}
+
+.cloud-item-1 {
+  animation: float-cloud-1 65s linear infinite;
+}
+
+.cloud-item-2 {
+  animation: float-cloud-2 80s linear infinite;
+  animation-delay: -30s;
+}
+
+@keyframes smoke-puff-1 {
+  0% { transform: translate(0, 0) scale(0.6); opacity: 0.6; }
+  50% { opacity: 0.8; }
+  100% { transform: translate(-10px, -20px) scale(1.6); opacity: 0; }
+}
+
+@keyframes smoke-puff-2 {
+  0% { transform: translate(0, 0) scale(0.6); opacity: 0.4; }
+  50% { opacity: 0.7; }
+  100% { transform: translate(12px, -25px) scale(1.8); opacity: 0; }
+}
+
+.smoke-p1 {
+  animation: smoke-puff-1 3.5s ease-out infinite;
+  transform-origin: center bottom;
+}
+
+.smoke-p2 {
+  animation: smoke-puff-2 4.2s ease-out infinite;
+  animation-delay: 1.8s;
+  transform-origin: center bottom;
+}
+
+@keyframes sway-tree {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(2deg); }
+}
+
+.trees-clump polygon {
+  animation: sway-tree 4s ease-in-out infinite alternate;
+  transform-origin: center bottom;
+}
+
+/* Animations helper for popup modal */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Responsive collapse limits */
+@media (max-width: 768px) {
+  .sidebar-vertical {
+    width: 60px;
+    padding: 12px 0;
+  }
+  .sidebar-nav-item {
+    width: 44px;
+    height: 44px;
+  }
+  .sidebar-nav-label {
+    display: none;
+  }
+  .topbar-horizontal {
+    padding: 0 16px;
+  }
+}
+
+
 

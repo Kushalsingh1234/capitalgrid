@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import countriesData from '../data/countries';
 import sectorsData from '../data/industries';
+import Logo from '../components/Logo';
+import ThemeToggle from '../components/ThemeToggle';
 
 // Mapping country IDs to FlagCDN two-letter ISO country codes
 const flagCodes = {
@@ -294,9 +296,10 @@ export default function LandingPage() {
 
     const animate = () => {
       ctx.clearRect(0, 0, width, height);
+      const isLightMode = document.documentElement.classList.contains('light-mode');
 
       // Draw dot-matrix world map contours for continents
-      ctx.fillStyle = 'rgba(0, 102, 255, 0.07)';
+      ctx.fillStyle = isLightMode ? 'rgba(0, 102, 255, 0.12)' : 'rgba(0, 102, 255, 0.07)';
       const cols = WORLD_GRID[0].length;
       const rows = WORLD_GRID.length;
       for (let r = 0; r < rows; r++) {
@@ -316,7 +319,7 @@ export default function LandingPage() {
         const toNode = nodes.find(n => n.id === conn.to);
         if (fromNode && toNode) {
           ctx.beginPath();
-          ctx.strokeStyle = 'rgba(0, 102, 255, 0.12)';
+          ctx.strokeStyle = isLightMode ? 'rgba(0, 102, 255, 0.2)' : 'rgba(0, 102, 255, 0.12)';
           ctx.moveTo(fromNode.x, fromNode.y);
           ctx.lineTo(toNode.x, toNode.y);
           ctx.stroke();
@@ -346,7 +349,7 @@ export default function LandingPage() {
       nodes.forEach(node => {
         ctx.beginPath();
         ctx.arc(node.x, node.y, node.size + 4, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(0, 102, 255, 0.2)';
+        ctx.strokeStyle = isLightMode ? 'rgba(0, 102, 255, 0.3)' : 'rgba(0, 102, 255, 0.2)';
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
@@ -358,7 +361,7 @@ export default function LandingPage() {
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.fillStyle = isLightMode ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.6)';
         ctx.font = '600 8.5px Inter, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(node.id, node.x, node.y - 12);
@@ -476,7 +479,7 @@ export default function LandingPage() {
       <nav className="navbar" id="main-navbar">
         <div className="navbar-container">
           <Link to="/" className="brand-logo">
-            <img src="/assets/logo.svg" alt="CapitalGrid Logo" className="logo-image" />
+            <Logo className="logo-image" />
           </Link>
 
           <button 
@@ -497,7 +500,8 @@ export default function LandingPage() {
             <li className="nav-item"><a href="#community-section" className="nav-link">Community</a></li>
           </ul>
 
-          <div className="nav-buttons">
+          <div className="nav-buttons flex items-center gap-3">
+            <ThemeToggle />
             <Link to="/login" className="btn btn-secondary">Login</Link>
             <Link to="/signup" className="btn btn-primary">Start Building</Link>
           </div>
@@ -1004,7 +1008,7 @@ export default function LandingPage() {
         <div className="container footer-container">
           <div className="footer-brand-side">
             <div className="footer-logo">
-              <img src="/assets/logo.svg" alt="CapitalGrid Logo" className="logo-image" />
+              <Logo className="logo-image" />
             </div>
             <p className="footer-tagline">Build Companies. Shape Economies.</p>
             <p className="footer-copyright">&copy; 2026 CapitalGrid Studio. All rights reserved. Game content and materials are trademarks of their respective owners.</p>

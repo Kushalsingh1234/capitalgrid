@@ -7,14 +7,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        gameBg: '#0B0F19',
+        gameBg: 'var(--bg-color)',
         cyanGlow: '#0066ff',
         blueGlow: '#1D4ED8',
         greenGlow: '#38A169',
         warningGlow: '#DD6B20',
-        glassBg: 'rgba(12, 16, 28, 0.65)',
-        glassBorder: 'rgba(255, 255, 255, 0.08)',
-        glassBorderHover: 'rgba(0, 102, 255, 0.35)'
+        glassBg: 'var(--glass-bg)',
+        glassBorder: 'var(--glass-border)',
+        glassBorderHover: 'var(--glass-border-hover)'
       },
       fontFamily: {
         display: ['Inter', 'sans-serif'],

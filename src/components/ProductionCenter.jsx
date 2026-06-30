@@ -24,9 +24,15 @@ const BUSINESS_REQUIRED_ROLES = {
  *   token: string — JWT auth token
  *   onProductionComplete: (inventory) => void — called when a batch finishes
  */
-export default function ProductionCenter({ businessType, token, onProductionComplete, employees = [], inventory = [] }) {
+export default function ProductionCenter({ businessType, token, onProductionComplete, employees = [], inventory = [], onProducingStateChange }) {
   const [quantities, setQuantities] = useState({});
   const [producing, setProducing] = useState({}); // { productId: { remaining, total, qty, name } }
+  
+  useEffect(() => {
+    if (onProducingStateChange) {
+      onProducingStateChange(producing);
+    }
+  }, [producing, onProducingStateChange]);
   const timerRefs = useRef({});
 
   const products = getProductsForBusiness(businessType);

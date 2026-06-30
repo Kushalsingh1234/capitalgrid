@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Logo from '../components/Logo';
+import ThemeToggle from '../components/ThemeToggle';
 import * as startupService from '../services/startupService';
 import * as marketplaceService from '../services/marketplaceService';
 import PRODUCTS from '../data/products';
@@ -203,10 +205,11 @@ export default function MarketplacePage() {
         
         {/* Navigation / Header Brand */}
         <div className="flex justify-between items-center mb-8 pb-4 border-b border-white/5">
-          <Link to="/app/dashboard" className="h-8 hover:opacity-80 transition-opacity">
-            <img src="/assets/logo.svg" alt="CapitalGrid Logo" className="h-full" />
+          <Link to="/app/dashboard" className="h-8 hover:opacity-80 transition-opacity w-36 block">
+            <Logo className="h-full w-full" />
           </Link>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <Link 
               to="/app/dashboard" 
               className="px-3 py-1.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white text-xs font-display uppercase tracking-widest rounded transition-all"

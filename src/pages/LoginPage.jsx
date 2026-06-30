@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
+import Logo from '../components/Logo';
 
 export default function LoginPage() {
   const { login, googleLogin } = useAuth();
@@ -65,8 +66,8 @@ export default function LoginPage() {
       <div className="glass-card max-w-md w-full p-8 border border-white/5 shadow-2xl relative z-10 my-10">
         {/* Logo and Brand */}
         <div className="text-center mb-8">
-          <Link to="/" className="inline-block h-10 mb-6">
-            <img src="/assets/logo.svg" alt="CapitalGrid Logo" className="h-full" />
+          <Link to="/" className="inline-block h-10 mb-6 w-48">
+            <Logo className="h-full w-full" />
           </Link>
           <h2 className="font-display text-2xl font-bold uppercase tracking-wide text-white">
             Welcome Back, Entrepreneur.
