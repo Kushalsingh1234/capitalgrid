@@ -89,13 +89,21 @@ const getTransactionDisplayDetails = (tx, countryName) => {
   } else if (tx.transactionType === 'Sale') {
     icon = 'fa-solid fa-store text-greenGlow';
     iconBg = 'bg-greenGlow/5 border-greenGlow/25 text-greenGlow';
-    actionText = `Sold ${tx.quantity} ${tx.productName} to ${tx.buyerStartupName}`;
+    if (tx.buyerStartupName === 'National Commodity Reserve') {
+      actionText = `Sold ${tx.quantity} ${tx.productName} to NCR`;
+    } else {
+      actionText = `Sold ${tx.quantity} ${tx.productName} to ${tx.buyerStartupName}`;
+    }
     amount = `+${symbol}${tx.totalAmount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     amountColor = 'text-greenGlow';
   } else if (tx.transactionType === 'Purchase') {
     icon = 'fa-solid fa-cart-shopping text-red-400';
     iconBg = 'bg-red-950/20 border-red-500/20 text-red-400';
-    actionText = `Bought ${tx.quantity} ${tx.productName} from ${tx.sellerStartupName}`;
+    if (tx.sellerStartupName === 'National Commodity Reserve') {
+      actionText = `Purchased ${tx.quantity} ${tx.productName} from NCR`;
+    } else {
+      actionText = `Bought ${tx.quantity} ${tx.productName} from ${tx.sellerStartupName}`;
+    }
     amount = `-${symbol}${tx.totalAmount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     amountColor = 'text-red-400';
   }

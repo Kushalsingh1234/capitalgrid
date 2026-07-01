@@ -12,8 +12,12 @@ import marketplaceRoutes from './routes/marketplaceRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
 
+// ES Modules __dirname setup
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Load config settings
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 // Establish DB connection
 connectDB();
@@ -31,10 +35,6 @@ app.use('/api/production', productionRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/transaction', transactionRoutes);
 app.use('/api/employee', employeeRoutes);
-
-// ES Modules __dirname setup
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Static assets production routing - conditionally enabled if built frontend files are present
 const distPath = path.join(__dirname, '../dist');

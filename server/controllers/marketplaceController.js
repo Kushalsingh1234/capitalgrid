@@ -1,6 +1,7 @@
 import Marketplace from '../models/Marketplace.js';
 import Startup from '../models/Startup.js';
 import Transaction from '../models/Transaction.js';
+import ncrCatalog from '../config/ncrCatalog.js';
 
 /**
  * @desc    Create a new marketplace listing from seller inventory
@@ -315,5 +316,220 @@ export const buyListing = async (req, res) => {
   } catch (error) {
     console.error(`[Buy Listing Error] ${error.message}`);
     res.status(500).json({ success: false, message: 'Server error processing purchase transaction' });
+  }
+};
+
+/**
+ * @desc    Get National Commodity Reserve (NCR) catalog
+ * @route   GET /api/marketplace/ncr/catalog
+ * @access  Private
+ */
+export const getNcrCatalog = async (req, res) => {
+  try {
+    res.status(200).json({ success: true, catalog: ncrCatalog });
+  } catch (error) {
+    console.error(`[NCR Catalog Error] ${error.message}`);
+    res.status(500).json({ success: false, message: 'Server error retrieving NCR catalog' });
+  }
+};
+
+/**
+ * @desc    Purchase a product from NCR
+ * @route   POST /api/marketplace/ncr/buy
+ * @access  Private
+ */
+export const buyFromNcr = async (req, res) => {
+  const { productId, quantity } = req.body;
+  const userId = req.user.id || req.user._id;
+
+  try {
+    if (!productId || !quantity || quantity <= 0) {
+      return res.status(400).json({ success: false, message: 'Product and a valid quantity are required' });
+    }
+
+    const qty = parseInt(quantity, 10);
+    const ncrItem = ncrCatalog.find(i => i.productId === productId);
+    if (!ncrItem) {
+      return res.status(404).json({ success: false, message: 'Product not found in NCR catalog' });
+    }
+
+    const totalCost = ncrItem.ncrSellPrice * qty;
+
+    let startup;
+    if (global.useMockDb) {
+      startup = global.mockStartups.find(s => String(s.owner) === String(userId));
+    } else {
+      startup = await Startup.findOne({ owner: userId });
+    }
+
+    if (!startup) {
+      return res.status(404).json({ success: false, message: 'Startup not found for player' });
+    }
+
+    if (startup.currentBalance < totalCost) {
+      return res.status(400).json({ success: false, message: 'Insufficient corporate liquidity reserves' });
+    }
+
+    // Perform transaction
+    startup.currentBalance -= totalCost;
+
+    const inventory = startup.inventory || [];
+    const itemIndex = inventory.findIndex(i => i.productId === productId);
+    if (itemIndex !== -1) {
+      inventory[itemIndex].quantity += qty;
+    } else {
+      inventory.push({
+        productId,
+        productName: ncrItem.productName,
+        quantity: qty
+      });
+    }
+    startup.inventory = inventory;
+
+    // Save
+    if (global.useMockDb) {
+      // updated in place
+    } else {
+      startup.markModified('inventory');
+      await startup.save();
+    }
+
+    // Create Transaction
+    let newTx;
+    if (global.useMockDb) {
+      newTx = {
+        _id: 'mock-tx-ncr-' + Date.now(),
+        startup: startup._id,
+        transactionType: 'Purchase',
+        buyerStartupName: startup.startupName,
+        sellerStartupName: 'National Commodity Reserve',
+        productName: ncrItem.productName,
+        quantity: qty,
+        pricePerUnit: ncrItem.ncrSellPrice,
+        totalAmount: totalCost,
+        createdAt: new Date()
+      };
+      global.mockTransactions.push(newTx);
+    } else {
+      newTx = await Transaction.create({
+        startup: startup._id,
+        transactionType: 'Purchase',
+        buyerStartupName: startup.startupName,
+        sellerStartupName: 'National Commodity Reserve',
+        productName: ncrItem.productName,
+        quantity: qty,
+        pricePerUnit: ncrItem.ncrSellPrice,
+        totalAmount: totalCost
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully purchased ${qty}x ${ncrItem.productName} from NCR`,
+      currentBalance: startup.currentBalance,
+      inventory: startup.inventory
+    });
+
+  } catch (error) {
+    console.error(`[NCR Buy Error] ${error.message}`);
+    res.status(500).json({ success: false, message: 'Server error buying from NCR' });
+  }
+};
+
+/**
+ * @desc    Sell a product to NCR
+ * @route   POST /api/marketplace/ncr/sell
+ * @access  Private
+ */
+export const sellToNcr = async (req, res) => {
+  const { productId, quantity } = req.body;
+  const userId = req.user.id || req.user._id;
+
+  try {
+    if (!productId || !quantity || quantity <= 0) {
+      return res.status(400).json({ success: false, message: 'Product and a valid quantity are required' });
+    }
+
+    const qty = parseInt(quantity, 10);
+    const ncrItem = ncrCatalog.find(i => i.productId === productId);
+    if (!ncrItem) {
+      return res.status(404).json({ success: false, message: 'Product not found in NCR catalog' });
+    }
+
+    let startup;
+    if (global.useMockDb) {
+      startup = global.mockStartups.find(s => String(s.owner) === String(userId));
+    } else {
+      startup = await Startup.findOne({ owner: userId });
+    }
+
+    if (!startup) {
+      return res.status(404).json({ success: false, message: 'Startup not found for player' });
+    }
+
+    const inventory = startup.inventory || [];
+    const itemIndex = inventory.findIndex(i => i.productId === productId);
+
+    if (itemIndex === -1 || inventory[itemIndex].quantity < qty) {
+      return res.status(400).json({ success: false, message: 'Insufficient stock in warehouse' });
+    }
+
+    const totalRevenue = ncrItem.ncrBuyPrice * qty;
+
+    // Perform transaction
+    inventory[itemIndex].quantity -= qty;
+    if (inventory[itemIndex].quantity === 0) {
+      inventory.splice(itemIndex, 1);
+    }
+    startup.inventory = inventory;
+    startup.currentBalance += totalRevenue;
+
+    // Save
+    if (global.useMockDb) {
+      // updated in place
+    } else {
+      startup.markModified('inventory');
+      await startup.save();
+    }
+
+    // Create Transaction
+    let newTx;
+    if (global.useMockDb) {
+      newTx = {
+        _id: 'mock-tx-ncr-' + Date.now(),
+        startup: startup._id,
+        transactionType: 'Sale',
+        buyerStartupName: 'National Commodity Reserve',
+        sellerStartupName: startup.startupName,
+        productName: ncrItem.productName,
+        quantity: qty,
+        pricePerUnit: ncrItem.ncrBuyPrice,
+        totalAmount: totalRevenue,
+        createdAt: new Date()
+      };
+      global.mockTransactions.push(newTx);
+    } else {
+      newTx = await Transaction.create({
+        startup: startup._id,
+        transactionType: 'Sale',
+        buyerStartupName: 'National Commodity Reserve',
+        sellerStartupName: startup.startupName,
+        productName: ncrItem.productName,
+        quantity: qty,
+        pricePerUnit: ncrItem.ncrBuyPrice,
+        totalAmount: totalRevenue
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully sold ${qty}x ${ncrItem.productName} to NCR`,
+      currentBalance: startup.currentBalance,
+      inventory: startup.inventory
+    });
+
+  } catch (error) {
+    console.error(`[NCR Sell Error] ${error.message}`);
+    res.status(500).json({ success: false, message: 'Server error selling to NCR' });
   }
 };

@@ -69,6 +69,8 @@ export default function MarketplaceInterface({
   const [sortField, setSortField] = useState('name'); // 'name', 'quantity', 'price'
   const [sortAsc, setSortAsc] = useState(true);
   const [trends, setTrends] = useState({});
+  const [activeTab, setActiveTab] = useState('exchange');
+  const [ncrCatalog, setNcrCatalog] = useState([]);
 
   // Input forms state
   const [tradeQuantity, setTradeQuantity] = useState(1);
@@ -95,6 +97,18 @@ export default function MarketplaceInterface({
 
   useEffect(() => {
     fetchListings();
+
+    const fetchNcrCatalog = async () => {
+      try {
+        const res = await marketplaceService.getNcrCatalog(token);
+        if (res.success && res.catalog) {
+          setNcrCatalog(res.catalog);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchNcrCatalog();
     
     // Generate static stable trend arrows
     const stableTrends = {};
@@ -115,6 +129,35 @@ export default function MarketplaceInterface({
     setErrorMessage('');
     setSuccessMessage('');
     setActionInProgress(true);
+
+    if (activeTab === 'ncr') {
+      const ncrItem = ncrCatalog.find(i => i.productId === productId);
+      if (!ncrItem) {
+        setErrorMessage('Product not found in reserve catalog.');
+        setActionInProgress(false);
+        return;
+      }
+      const totalCost = ncrItem.ncrSellPrice * qty;
+      if (startup.currentBalance < totalCost) {
+        setErrorMessage('Insufficient corporate liquidity reserves to process trade.');
+        setActionInProgress(false);
+        return;
+      }
+      try {
+        const res = await marketplaceService.buyFromNcr({ productId, quantity: qty }, token);
+        if (res.success) {
+          setSuccessMessage(`Purchase complete: Bought ${qty} units of ${ncrItem.productName} from NCR!`);
+          await fetchListings();
+          if (onMarketAction) onMarketAction();
+        }
+      } catch (err) {
+        console.error(err);
+        setErrorMessage(err.message || 'NCR transaction rejected by treasury.');
+      } finally {
+        setActionInProgress(false);
+      }
+      return;
+    }
 
     const activeListings = listings.filter(
       l => l.productId === productId && l.status === 'Active' && l.seller !== startup?._id
@@ -162,6 +205,24 @@ export default function MarketplaceInterface({
     if (!stockItem || stockItem.quantity < qty) {
       setErrorMessage(`Insufficient stock. You only have ${stockItem ? stockItem.quantity : 0} units available.`);
       setActionInProgress(false);
+      return;
+    }
+
+    if (activeTab === 'ncr') {
+      try {
+        const res = await marketplaceService.sellToNcr({ productId, quantity: qty }, token);
+        if (res.success) {
+          setSuccessMessage(`Sale complete: Sold ${qty} units of ${FLAT_PRODUCTS.find(p => p.id === productId)?.name} to NCR!`);
+          await fetchListings();
+          if (onMarketAction) onMarketAction();
+          setTradeQuantity(1);
+        }
+      } catch (err) {
+        console.error(err);
+        setErrorMessage(err.message || 'NCR transaction rejected by treasury.');
+      } finally {
+        setActionInProgress(false);
+      }
       return;
     }
 
@@ -275,9 +336,18 @@ export default function MarketplaceInterface({
     .filter(l => l.productId === selectedProduct.id && l.status === 'Active' && l.seller !== startup?._id)
     .sort((a, b) => a.pricePerUnit - b.pricePerUnit)[0];
 
-  const buyPrice = cheapestListing ? cheapestListing.pricePerUnit : selectedProduct.basePrice * 1.25;
+  const ncrProductPrice = ncrCatalog.find(i => i.productId === selectedProduct.id);
+
+  const buyPrice = activeTab === 'ncr'
+    ? (ncrProductPrice ? ncrProductPrice.ncrSellPrice : selectedProduct.basePrice * 1.5)
+    : (cheapestListing ? cheapestListing.pricePerUnit : selectedProduct.basePrice * 1.25);
+
+  const sellPrice = activeTab === 'ncr'
+    ? (ncrProductPrice ? ncrProductPrice.ncrBuyPrice : selectedProduct.basePrice * 0.8)
+    : sellPricePerUnit;
+
   const estCost = buyPrice * tradeQuantity;
-  const estRevenue = sellPricePerUnit * tradeQuantity;
+  const estRevenue = (activeTab === 'ncr' ? sellPrice : sellPricePerUnit) * tradeQuantity;
 
   return (
     <div className="w-full h-full flex flex-col justify-start bg-[#090e17] text-white p-6 relative font-body select-none">
@@ -328,6 +398,38 @@ export default function MarketplaceInterface({
             Vol: <span className="text-white font-bold">{formatCurrency(totalRevenue + totalExpenses, startup?.country)}</span>
           </div>
         </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="flex gap-4 mb-6 border-b border-white/5 pb-3 font-display">
+        <button
+          onClick={() => {
+            setActiveTab('exchange');
+            setErrorMessage('');
+            setSuccessMessage('');
+          }}
+          className={`px-4 py-2 text-xs uppercase tracking-widest font-extrabold transition-all border-b-2 cursor-pointer ${
+            activeTab === 'exchange'
+              ? 'border-cyanGlow text-cyanGlow'
+              : 'border-transparent text-text-secondary hover:text-white'
+          }`}
+        >
+          Player Exchange
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('ncr');
+            setErrorMessage('');
+            setSuccessMessage('');
+          }}
+          className={`px-4 py-2 text-xs uppercase tracking-widest font-extrabold transition-all border-b-2 cursor-pointer ${
+            activeTab === 'ncr'
+              ? 'border-cyanGlow text-cyanGlow'
+              : 'border-transparent text-text-secondary hover:text-white'
+          }`}
+        >
+          National Commodity Reserve (NCR)
+        </button>
       </div>
 
       {/* Main Responsive Grid Layout */}
@@ -385,30 +487,84 @@ export default function MarketplaceInterface({
                   >
                     Product {sortField === 'name' ? (sortAsc ? '▲' : '▼') : ''}
                   </th>
-                  <th 
-                    className="p-3 cursor-pointer hover:text-white transition-colors"
-                    onClick={() => toggleSort('quantity')}
-                  >
-                    Available {sortField === 'quantity' ? (sortAsc ? '▲' : '▼') : ''}
-                  </th>
-                  <th 
-                    className="p-3 cursor-pointer hover:text-white transition-colors"
-                    onClick={() => toggleSort('price')}
-                  >
-                    Lowest Sell {sortField === 'price' ? (sortAsc ? '▲' : '▼') : ''}
-                  </th>
-                  <th className="p-3">Highest Buy</th>
-                  <th className="p-3">Last Price</th>
-                  <th className="p-3">Trend</th>
+                  {activeTab === 'exchange' ? (
+                    <>
+                      <th 
+                        className="p-3 cursor-pointer hover:text-white transition-colors"
+                        onClick={() => toggleSort('quantity')}
+                      >
+                        Available {sortField === 'quantity' ? (sortAsc ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        className="p-3 cursor-pointer hover:text-white transition-colors"
+                        onClick={() => toggleSort('price')}
+                      >
+                        Lowest Sell {sortField === 'price' ? (sortAsc ? '▲' : '▼') : ''}
+                      </th>
+                      <th className="p-3">Highest Buy</th>
+                      <th className="p-3">Last Price</th>
+                      <th className="p-3">Trend</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="p-3">Category</th>
+                      <th className="p-3 text-right">Govt Buy Price</th>
+                      <th className="p-3 text-right">Govt Sell Price</th>
+                      <th className="p-3 text-right">Availability</th>
+                      <th className="p-3 text-right">Status</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody className="text-xs font-mono">
                 {loading ? (
                   renderSkeletons()
-                ) : processedProducts.length > 0 ? (
+                ) : activeTab === 'exchange' ? (
+                  processedProducts.length > 0 ? (
+                    processedProducts.map((p, idx) => {
+                      const trend = trends[p.id] || { percent: '0.0', isUp: true };
+                      const isSelected = p.id === selectedProductId;
+                      return (
+                        <tr 
+                          key={idx} 
+                          onClick={() => handleSelectProduct(p.id)}
+                          className={`border-b border-white/5 hover:bg-white/2 cursor-pointer transition-colors ${
+                            isSelected ? 'bg-cyanGlow/5 border-l-2 border-cyanGlow pl-2.5 font-bold' : ''
+                          }`}
+                        >
+                          <td className="p-3 font-semibold text-white flex items-center gap-2">
+                            <i className={`${p.icon} text-cyanGlow/85 text-xs w-4`}></i>
+                            <span>{p.name}</span>
+                          </td>
+                          <td className="p-3">{p.availableQuantity} units</td>
+                          <td className="p-3 text-greenGlow">
+                            {formatCurrency(p.lowestSellingPrice, startup?.country)}
+                          </td>
+                          <td className="p-3 text-text-secondary">
+                            {formatCurrency(p.highestBuyingPrice, startup?.country)}
+                          </td>
+                          <td className="p-3 text-white">
+                            {formatCurrency(p.lastTransactionPrice, startup?.country)}
+                          </td>
+                          <td className={`p-3 font-bold ${trend.isUp ? 'text-greenGlow' : 'text-red-400'}`}>
+                            {trend.isUp ? '▲' : '▼'} {trend.percent}%
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan="6" className="p-8 text-center text-xs text-text-muted bg-black/10">
+                        No active listings found. <br />
+                        <span className="text-[10px] text-cyanGlow">Produce products inside your facility to begin trading.</span>
+                      </td>
+                    </tr>
+                  )
+                ) : (
                   processedProducts.map((p, idx) => {
-                    const trend = trends[p.id] || { percent: '0.0', isUp: true };
+                    const ncrItem = ncrCatalog.find(i => i.productId === p.id);
                     const isSelected = p.id === selectedProductId;
+                    if (!ncrItem) return null;
                     return (
                       <tr 
                         key={idx} 
@@ -421,29 +577,18 @@ export default function MarketplaceInterface({
                           <i className={`${p.icon} text-cyanGlow/85 text-xs w-4`}></i>
                           <span>{p.name}</span>
                         </td>
-                        <td className="p-3">{p.availableQuantity} units</td>
-                        <td className="p-3 text-greenGlow">
-                          {formatCurrency(p.lowestSellingPrice, startup?.country)}
+                        <td className="p-3 text-text-secondary">{p.categoryGroup}</td>
+                        <td className="p-3 text-right text-cyanGlow font-medium">
+                          {formatCurrency(ncrItem.ncrBuyPrice, startup?.country)}
                         </td>
-                        <td className="p-3 text-text-secondary">
-                          {formatCurrency(p.highestBuyingPrice, startup?.country)}
+                        <td className="p-3 text-right text-greenGlow font-bold">
+                          {formatCurrency(ncrItem.ncrSellPrice, startup?.country)}
                         </td>
-                        <td className="p-3 text-white">
-                          {formatCurrency(p.lastTransactionPrice, startup?.country)}
-                        </td>
-                        <td className={`p-3 font-bold ${trend.isUp ? 'text-greenGlow' : 'text-red-400'}`}>
-                          {trend.isUp ? '▲' : '▼'} {trend.percent}%
-                        </td>
+                        <td className="p-3 text-right text-text-secondary">Unlimited</td>
+                        <td className="p-3 text-right font-bold text-greenGlow">Available</td>
                       </tr>
                     );
                   })
-                ) : (
-                  <tr>
-                    <td colSpan="6" className="p-8 text-center text-xs text-text-muted bg-black/10">
-                      No active listings found. <br />
-                      <span className="text-[10px] text-cyanGlow">Produce products inside your facility to begin trading.</span>
-                    </td>
-                  </tr>
                 )}
               </tbody>
             </table>
@@ -528,7 +673,7 @@ export default function MarketplaceInterface({
               </div>
 
               {/* Price select for Sell listing */}
-              {tradeMode === 'sell' && (
+              {tradeMode === 'sell' && activeTab === 'exchange' && (
                 <div>
                   <label className="text-[9px] font-display uppercase tracking-widest text-text-secondary block mb-1.5 font-sans">
                     Price per Unit ({CURRENCY_SYMBOLS[startup?.country] || '$'})
@@ -548,7 +693,7 @@ export default function MarketplaceInterface({
                 <div className="flex justify-between items-center text-[10px]">
                   <span>Unit Price</span>
                   <span className="text-white font-bold">
-                    {tradeMode === 'buy' ? formatCurrency(buyPrice, startup?.country) : formatCurrency(sellPricePerUnit, startup?.country)}
+                    {tradeMode === 'buy' ? formatCurrency(buyPrice, startup?.country) : formatCurrency(activeTab === 'ncr' ? sellPrice : sellPricePerUnit, startup?.country)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-[10px] border-t border-white/5 pt-1.5">
@@ -562,19 +707,44 @@ export default function MarketplaceInterface({
               {tradeMode === 'buy' ? (
                 <button
                   onClick={() => handleBuy(selectedProduct.id, tradeQuantity)}
-                  disabled={actionInProgress || !cheapestListing}
-                  className="w-full py-2 bg-gradient-to-r from-green-700 to-green-600 border border-green-500/30 text-white font-display font-extrabold uppercase tracking-widest rounded shadow hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed text-xs cursor-pointer"
+                  disabled={actionInProgress || (activeTab === 'exchange' && !cheapestListing)}
+                  className="w-full py-2 bg-gradient-to-r from-green-700 to-green-600 border border-green-500/30 text-white font-display font-extrabold uppercase tracking-widest rounded shadow hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed text-xs cursor-pointer animate-pulse-subtle"
                 >
-                  {actionInProgress ? 'Processing...' : 'Execute Buy Contract'}
+                  {actionInProgress ? 'Processing...' : activeTab === 'ncr' ? 'Buy from Reserve' : 'Execute Buy Contract'}
                 </button>
               ) : (
                 <button
-                  onClick={() => handleSell(selectedProduct.id, tradeQuantity, sellPricePerUnit)}
+                  onClick={() => handleSell(selectedProduct.id, tradeQuantity, activeTab === 'ncr' ? sellPrice : sellPricePerUnit)}
                   disabled={actionInProgress}
                   className="w-full py-2 bg-gradient-to-r from-cyan-700 to-cyan-600 border border-cyanGlow/30 text-white font-display font-extrabold uppercase tracking-widest rounded shadow hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed text-xs cursor-pointer"
                 >
-                  {actionInProgress ? 'Publishing...' : 'Publish Sell Offer'}
+                  {actionInProgress ? 'Processing...' : activeTab === 'ncr' ? 'Sell to Reserve' : 'Publish Sell Offer'}
                 </button>
+              )}
+
+              {/* Market Comparison Card */}
+              {selectedProduct && (
+                <div className="p-3 bg-black/40 border border-white/10 rounded font-sans text-xs mt-2">
+                  <span className="text-text-muted text-[8px] font-display uppercase tracking-widest block mb-2 font-sans">Market Comparison</span>
+                  <div className="grid grid-cols-2 gap-2 text-left font-mono">
+                    <div className="p-2 bg-black/50 rounded border border-white/5">
+                      <span className="text-[8px] text-text-secondary uppercase font-sans">Exchange</span>
+                      <span className="text-cyanGlow font-bold block mt-0.5">
+                        {cheapestListing ? formatCurrency(cheapestListing.pricePerUnit, startup?.country) : 'No listings'}
+                      </span>
+                      <span className="text-[8px] text-text-muted">
+                        {cheapestListing ? `${cheapestListing.quantity} units` : '0 units'}
+                      </span>
+                    </div>
+                    <div className="p-2 bg-black/50 rounded border border-white/5">
+                      <span className="text-[8px] text-text-secondary uppercase font-sans">Reserve (NCR)</span>
+                      <span className="text-amber-400 font-bold block mt-0.5">
+                        {ncrProductPrice ? formatCurrency(ncrProductPrice.ncrSellPrice, startup?.country) : 'N/A'}
+                      </span>
+                      <span className="text-[8px] text-text-muted">Unlimited</span>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           </div>
