@@ -72,9 +72,11 @@ export default function DashboardDrawer({
   producingState = {},
   onHire,
   onFire,
-  user
+  user,
+  onLogout
 }) {
   const [selectedCompanyId, setSelectedCompanyId] = React.useState(startup?._id || 'main');
+  const [hireDrafts, setHireDrafts] = React.useState({});
 
   if (!isOpen) return null;
 
@@ -604,39 +606,57 @@ export default function DashboardDrawer({
                       </p>
 
                       {/* Hire / Fire Controls */}
-                      <div className="flex items-center justify-between gap-3 border-t border-white/5 pt-2 mt-1">
-                        <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded border border-white/5">
-                          <button
-                            onClick={() => onFire(emp.employeeType)}
-                            disabled={emp.quantity <= 0}
-                            className="w-5 h-5 border border-red-500/30 bg-red-950/20 hover:bg-red-900/40 disabled:opacity-50 text-red-400 text-[10px] rounded flex items-center justify-center cursor-pointer"
-                          >
-                            <i className="fa-solid fa-minus"></i>
-                          </button>
-                          <span className="w-6 text-center font-mono font-bold text-xs text-white">{emp.quantity}</span>
-                          <button
-                            onClick={() => onHire(emp.employeeType)}
-                            className="w-5 h-5 border border-green-500/30 bg-green-950/20 hover:bg-green-900/40 text-greenGlow text-[10px] rounded flex items-center justify-center cursor-pointer"
-                          >
-                            <i className="fa-solid fa-plus"></i>
-                          </button>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => onHire(emp.employeeType)}
-                            className="px-2.5 py-1 bg-green-950/20 border border-green-500/25 hover:bg-green-900/30 text-greenGlow text-[10px] font-display uppercase tracking-wider rounded transition-all cursor-pointer"
-                          >
-                            Hire Role
-                          </button>
-                          <button
-                            onClick={() => onFire(emp.employeeType)}
-                            disabled={emp.quantity <= 0}
-                            className="px-2.5 py-1 bg-red-950/20 border border-red-500/25 hover:bg-red-900/30 text-red-400 text-[10px] font-display uppercase tracking-wider rounded transition-all disabled:opacity-50 cursor-pointer"
-                          >
-                            Fire Role
-                          </button>
-                        </div>
-                      </div>
+                      {(() => {
+                        const draftQty = hireDrafts[emp.employeeType] || 1;
+                        return (
+                          <div className="flex flex-col gap-2 border-t border-white/5 pt-2 mt-1">
+                            <div className="flex items-center justify-between text-[10px] text-text-secondary">
+                              <span>Current Hired: <strong className="text-white font-mono">{emp.quantity}</strong></span>
+                              <span>Hiring Batch: <strong className="text-cyanGlow font-mono">{draftQty}</strong></span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                              {/* Batch Selector */}
+                              <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded border border-white/5">
+                                <button
+                                  onClick={() => setHireDrafts(prev => ({ ...prev, [emp.employeeType]: Math.max(1, (prev[emp.employeeType] || 1) - 1) }))}
+                                  className="w-5 h-5 border border-cyanGlow/30 bg-cyan-950/20 hover:bg-cyan-900/40 text-cyanGlow text-[10px] rounded flex items-center justify-center cursor-pointer"
+                                  title="Decrease hire batch size"
+                                >
+                                  <i className="fa-solid fa-minus"></i>
+                                </button>
+                                <span className="w-6 text-center font-mono font-bold text-xs text-white">{draftQty}</span>
+                                <button
+                                  onClick={() => setHireDrafts(prev => ({ ...prev, [emp.employeeType]: (prev[emp.employeeType] || 1) + 1 }))}
+                                  className="w-5 h-5 border border-cyanGlow/30 bg-cyan-950/20 hover:bg-cyan-900/40 text-cyanGlow text-[10px] rounded flex items-center justify-center cursor-pointer"
+                                  title="Increase hire batch size"
+                                >
+                                  <i className="fa-solid fa-plus"></i>
+                                </button>
+                              </div>
+
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => {
+                                    onHire(emp.employeeType, draftQty);
+                                    // Reset draft quantity back to 1 after hiring
+                                    setHireDrafts(prev => ({ ...prev, [emp.employeeType]: 1 }));
+                                  }}
+                                  className="px-2.5 py-1 bg-green-950/20 border border-green-500/25 hover:bg-green-900/30 text-greenGlow text-[10px] font-display uppercase tracking-wider rounded transition-all cursor-pointer flex items-center gap-1"
+                                >
+                                  <i className="fa-solid fa-user-plus text-[9px]"></i> Hire {draftQty}
+                                </button>
+                                <button
+                                  onClick={() => onFire(emp.employeeType)}
+                                  disabled={emp.quantity <= 0}
+                                  className="px-2.5 py-1 bg-red-950/20 border border-red-500/25 hover:bg-red-900/30 text-red-400 text-[10px] font-display uppercase tracking-wider rounded transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1"
+                                >
+                                  <i className="fa-solid fa-user-minus text-[9px]"></i> Fire 1
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
@@ -866,6 +886,16 @@ export default function DashboardDrawer({
               </div>
             </div>
 
+            {/* Log Out Button */}
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="w-full py-2 bg-red-950/20 border border-red-500/25 hover:bg-red-900/40 text-red-400 text-xs font-display uppercase tracking-widest rounded transition-all flex items-center justify-center gap-2 cursor-pointer font-sans"
+              >
+                Log Out <i className="fa-solid fa-power-off text-[10px]"></i>
+              </button>
+            )}
+
             {/* 2. Career Overview Cards */}
             <div>
               <SectionHeader icon="fa-road" title="Career Progression Overview" />
@@ -933,8 +963,8 @@ export default function DashboardDrawer({
               <div className="flex flex-col gap-2 font-mono text-xs">
                 <InfoCard label="Total Products Produced" value={`${transactions.filter(t => t.transactionType === 'Production').reduce((sum, t) => sum + t.quantity, 0)} units`} />
                 <InfoCard label="Marketplace Trades" value={`${transactions.filter(t => t.transactionType === 'Sale' || t.transactionType === 'Purchase').length} operations`} />
-                <InfoCard label="Employees Recruited" value={totalEmployees} />
-                <InfoCard label="Employees Laid Off" value="0" />
+                <InfoCard label="Employees Recruited" value={startup?.employeesRecruited || 0} />
+                <InfoCard label="Employees Laid Off" value={startup?.employeesLaidOff || 0} />
                 <InfoCard label="Facilities Erected" value="1" />
                 <InfoCard label="Gross Revenue Earned" value={formatCurrency(monthlyRevenue, startup?.country)} color="text-greenGlow" />
                 <InfoCard label="Gross Expenses Paid" value={`(${formatCurrency(monthlyExpenses, startup?.country)})`} color="text-red-400" />

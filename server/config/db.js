@@ -14,6 +14,7 @@ const connectDB = async () => {
     global.mockMarketplace = [];
     global.mockTransactions = [];
     global.mockEmployees = [];
+    global.mockProductionTasks = [];
   }
 };
 

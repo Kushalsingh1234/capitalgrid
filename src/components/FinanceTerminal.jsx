@@ -20,7 +20,8 @@ export default function FinanceTerminal({
   inventory = [],
   transactions = [],
   employees = [],
-  token
+  token,
+  onClose
 }) {
   // Sub-view selection state
   const [activeSubTab, setActiveSubTab] = useState('Income Statement');
@@ -134,6 +135,34 @@ export default function FinanceTerminal({
 
   return (
     <div className="w-full h-full flex flex-col justify-start bg-[#090e17] text-white p-6 relative font-body select-none">
+      
+      {/* Finance Header */}
+      <div className="mb-6 p-4 bg-white/2 border border-white/5 rounded-lg flex justify-between items-center gap-4 bg-gradient-to-b from-glassBg to-black/30 shrink-0">
+        <div>
+          <h2 className="font-display font-extrabold text-lg uppercase tracking-wider text-white">
+            Corporate Treasury Ledger
+          </h2>
+          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+            <span className="flex items-center gap-1 text-[9px] font-mono text-cyanGlow uppercase tracking-widest bg-cyan-950/20 px-2 py-0.5 rounded border border-cyanGlow/10">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyanGlow animate-ping"></span>
+              Secure Network Connected
+            </span>
+            <span className="text-[10px] text-text-secondary">
+              Auditor Grade: <span className="text-white font-mono font-bold">AAA+</span>
+            </span>
+          </div>
+        </div>
+
+        {onClose && (
+          <button 
+            onClick={onClose}
+            className="w-6 h-6 border border-white/5 hover:border-white/20 rounded flex items-center justify-center text-text-muted hover:text-white transition-colors cursor-pointer"
+            title="Return to Game Map"
+          >
+            <i className="fa-solid fa-xmark text-xs"></i>
+          </button>
+        )}
+      </div>
       
       {/* 1. TOP FINANCIAL SUMMARY */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">

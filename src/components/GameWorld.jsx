@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
 import GameScene from '../game/scenes/GameScene';
 
-export default function GameWorld({ startup, onBuildingClick }) {
+export default function GameWorld({ startup, onBuildingClick, disableClicks }) {
   const containerRef = useRef(null);
   const gameRef = useRef(null);
   
@@ -45,6 +45,9 @@ export default function GameWorld({ startup, onBuildingClick }) {
     
     // Set the initial startup data into Phaser registry
     game.registry.set('startup', startup);
+    if (game.input) {
+      game.input.enabled = !disableClicks;
+    }
     gameRef.current = game;
 
     // Listen for click events from the Phaser scene
@@ -71,6 +74,13 @@ export default function GameWorld({ startup, onBuildingClick }) {
       gameRef.current.registry.set('startup', startup);
     }
   }, [startup]);
+
+  // Synchronize input interaction block state dynamically
+  useEffect(() => {
+    if (gameRef.current && gameRef.current.input) {
+      gameRef.current.input.enabled = !disableClicks;
+    }
+  }, [disableClicks]);
 
   return (
     <div className="w-full h-full overflow-hidden" style={{ width: '100%', height: '100%' }}>

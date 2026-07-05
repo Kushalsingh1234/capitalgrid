@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Logo from '../components/Logo';
@@ -142,13 +142,28 @@ export default function PlayerDashboard() {
     navigate('/');
   };
 
+  const handleLogoClick = (e) => {
+    if (e) e.preventDefault();
+    setActiveTab(null);
+    setIsFacilityDrawerOpen(false);
+    setSelectedBuilding(null);
+    setCurrentView('world');
+    window.dispatchEvent(new CustomEvent('center-player-building'));
+  };
+
   useEffect(() => {
     const fetchStartupDetails = async () => {
       try {
         if (!token) return;
         const response = await startupService.getMyStartup(token);
         if (response.success && response.startup) {
-          setStartup(response.startup);
+          const startupData = {
+            ...response.startup,
+            tasks: response.tasks || [],
+            serverTime: response.serverTime,
+            fetchedAt: Date.now()
+          };
+          setStartup(startupData);
           setInventory(response.startup.inventory || []);
         } else {
           setErrorMsg('Failed to load active corporate data.');
@@ -200,7 +215,13 @@ export default function PlayerDashboard() {
       if (!token) return;
       const startupRes = await startupService.getMyStartup(token);
       if (startupRes.success && startupRes.startup) {
-        setStartup(startupRes.startup);
+        const startupData = {
+          ...startupRes.startup,
+          tasks: startupRes.tasks || [],
+          serverTime: startupRes.serverTime,
+          fetchedAt: Date.now()
+        };
+        setStartup(startupData);
         setInventory(startupRes.startup.inventory || []);
       }
       const txRes = await transactionService.getMyTransactions(token);
@@ -212,13 +233,22 @@ export default function PlayerDashboard() {
     }
   };
 
-  // Called by ProductionCenter when a batch completes
-  const handleProductionComplete = async (updatedInventory) => {
+  // Called by ProductionCenter when a batch completes or starts
+  const handleProductionComplete = useCallback(async (updatedInventory, updatedTasks, responseServerTime) => {
     setInventory(updatedInventory);
     // Also update the local startup reference
-    if (startup) {
-      setStartup(prev => ({ ...prev, inventory: updatedInventory }));
-    }
+    setStartup(prev => {
+      if (!prev) return prev;
+      const next = { ...prev, inventory: updatedInventory };
+      if (updatedTasks) {
+        next.tasks = updatedTasks;
+      }
+      if (responseServerTime) {
+        next.serverTime = responseServerTime;
+        next.fetchedAt = Date.now();
+      }
+      return next;
+    });
     // Fetch updated transactions list
     try {
       const response = await transactionService.getMyTransactions(token);
@@ -228,15 +258,16 @@ export default function PlayerDashboard() {
     } catch (err) {
       console.error(err);
     }
-  };
+  }, [token]);
 
-  const handleHire = async (employeeType) => {
+  const handleHire = async (employeeType, quantity = 1) => {
     setActionInProgress(true);
     setErrorMsg('');
     try {
-      const response = await employeeService.hireEmployee(employeeType, token);
+      const response = await employeeService.hireEmployee(employeeType, token, quantity);
       if (response.success && response.employees) {
         setEmployees(response.employees);
+        await fetchDashboardData();
       }
     } catch (err) {
       console.error(err);
@@ -253,6 +284,7 @@ export default function PlayerDashboard() {
       const response = await employeeService.fireEmployee(employeeType, token);
       if (response.success && response.employees) {
         setEmployees(response.employees);
+        await fetchDashboardData();
       }
     } catch (err) {
       console.error(err);
@@ -327,9 +359,13 @@ export default function PlayerDashboard() {
       {/* TOP BAR HUD */}
       <header className="topbar-horizontal">
         <div className="flex items-center gap-4">
-          <Link to="/" className="h-7 hover:opacity-85 transition-opacity">
+          <div 
+            onClick={handleLogoClick} 
+            className="h-7 hover:opacity-85 transition-opacity cursor-pointer"
+            title="Focus corporate headquarters"
+          >
             <Logo className="h-full" />
-          </Link>
+          </div>
           {user && (
             <div className="hidden md:flex items-center gap-2 border-l border-white/10 pl-4">
               <span className="text-xs font-display font-extrabold uppercase tracking-widest text-white">
@@ -363,12 +399,7 @@ export default function PlayerDashboard() {
             {user?.profilePicture && (
               <img src={user.profilePicture} alt="Profile" className="w-7 h-7 rounded-full border border-cyanGlow/30" />
             )}
-            <button
-              onClick={handleLogout}
-              className="px-2.5 py-1.5 bg-red-950/20 border border-red-500/30 hover:bg-red-900/40 text-red-400 text-[10px] font-display uppercase tracking-widest rounded transition-all flex items-center gap-1.5"
-            >
-              Exit <i className="fa-solid fa-power-off text-[10px]"></i>
-            </button>
+            {/* Exit/Logout relocated to Profile Tab */}
           </div>
         </div>
       </header>
@@ -420,7 +451,7 @@ export default function PlayerDashboard() {
           style={currentView === 'marketplace' || currentView === 'finance' ? { overflow: 'auto', alignItems: 'flex-start', justifyContent: 'flex-start', padding: 0 } : {}}
         >
           {/* GameWorld wrapper for hiding but maintaining mounted state */}
-          <div className={currentView === 'marketplace' || currentView === 'finance' ? 'hidden' : 'w-full h-full'}>
+          <div className={`w-full h-full ${currentView === 'marketplace' || currentView === 'finance' ? 'absolute pointer-events-none invisible opacity-0' : ''}`}>
             {startup ? (
               <GameWorld 
                 startup={startup} 
@@ -430,6 +461,7 @@ export default function PlayerDashboard() {
                   setIsFacilityDrawerOpen(true);
                   setCurrentView('world');
                 }}
+                disableClicks={activeTab !== null || isFacilityDrawerOpen}
               />
             ) : (
               <div className="flex flex-col items-center justify-center gap-4 text-center h-full">
@@ -447,6 +479,7 @@ export default function PlayerDashboard() {
               transactions={transactions}
               onMarketAction={fetchDashboardData}
               token={token}
+              onClose={() => setCurrentView('world')}
             />
           )}
 
@@ -458,6 +491,7 @@ export default function PlayerDashboard() {
               transactions={transactions}
               employees={employees}
               token={token}
+              onClose={() => setCurrentView('world')}
             />
           )}
 
@@ -480,6 +514,7 @@ export default function PlayerDashboard() {
           onHire={handleHire}
           onFire={handleFire}
           user={user}
+          onLogout={handleLogout}
         />
 
         {/* FACILITY MANAGEMENT DRAWER */}

@@ -7,13 +7,13 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// https://vitejs.dev/config/
+// https://vitejs.dev/config/ - reload 1
 export default defineConfig(({ command }) => {
   if (command === 'serve') {
     // Start backend server silently in the background
     console.log('\n[Vite] Spawning CapitalGrid backend process on port 5000...');
     const serverPath = path.resolve(__dirname, 'server', 'server.js');
-    const child = spawn('node', [serverPath], {
+    const child = spawn('node', ['--watch', serverPath], {
       stdio: 'inherit',
       shell: true,
       cwd: path.resolve(__dirname, 'server')

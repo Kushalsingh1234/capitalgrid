@@ -164,6 +164,9 @@ export default function FacilityManagementDrawer({
               employees={employees}
               inventory={inventory}
               onProducingStateChange={onProducingStateChange}
+              tasks={startup.tasks || []}
+              serverTime={startup.serverTime}
+              fetchedAt={startup.fetchedAt}
             />
           </div>
 

@@ -57,7 +57,8 @@ export default function MarketplaceInterface({
   inventory = [],
   transactions = [],
   onMarketAction,
-  token
+  token,
+  onClose
 }) {
   // UI State
   const [listings, setListings] = useState([]);
@@ -125,6 +126,7 @@ export default function MarketplaceInterface({
 
   // Handle Buy
   const handleBuy = async (productId, qty) => {
+    const finalQty = parseInt(qty, 10) || 1;
     if (!token) return;
     setErrorMessage('');
     setSuccessMessage('');
@@ -137,18 +139,19 @@ export default function MarketplaceInterface({
         setActionInProgress(false);
         return;
       }
-      const totalCost = ncrItem.ncrSellPrice * qty;
+      const totalCost = ncrItem.ncrSellPrice * finalQty;
       if (startup.currentBalance < totalCost) {
         setErrorMessage('Insufficient corporate liquidity reserves to process trade.');
         setActionInProgress(false);
         return;
       }
       try {
-        const res = await marketplaceService.buyFromNcr({ productId, quantity: qty }, token);
+        const res = await marketplaceService.buyFromNcr({ productId, quantity: finalQty }, token);
         if (res.success) {
-          setSuccessMessage(`Purchase complete: Bought ${qty} units of ${ncrItem.productName} from NCR!`);
+          setSuccessMessage(`Purchase complete: Bought ${finalQty} units of ${ncrItem.productName} from NCR!`);
           await fetchListings();
           if (onMarketAction) onMarketAction();
+          setTradeQuantity(1);
         }
       } catch (err) {
         console.error(err);
@@ -171,7 +174,7 @@ export default function MarketplaceInterface({
 
     // Sort to buy from cheapest listing
     const cheapest = [...activeListings].sort((a, b) => a.pricePerUnit - b.pricePerUnit)[0];
-    const totalCost = cheapest.pricePerUnit * qty;
+    const totalCost = cheapest.pricePerUnit * finalQty;
 
     if (startup.currentBalance < totalCost) {
       setErrorMessage('Insufficient corporate liquidity reserves to process trade.');
@@ -182,9 +185,10 @@ export default function MarketplaceInterface({
     try {
       const res = await marketplaceService.buyListing(cheapest._id, token);
       if (res.success) {
-        setSuccessMessage(`Purchase complete: Bought ${qty} units of ${cheapest.productName}!`);
+        setSuccessMessage(`Purchase complete: Bought ${finalQty} units of ${cheapest.productName}!`);
         await fetchListings();
         if (onMarketAction) onMarketAction();
+        setTradeQuantity(1);
       }
     } catch (err) {
       console.error(err);
@@ -196,13 +200,14 @@ export default function MarketplaceInterface({
 
   // Handle Sell listing creation
   const handleSell = async (productId, qty, price) => {
+    const finalQty = parseInt(qty, 10) || 1;
     if (!token) return;
     setErrorMessage('');
     setSuccessMessage('');
     setActionInProgress(true);
 
     const stockItem = inventory.find(i => i.productId === productId);
-    if (!stockItem || stockItem.quantity < qty) {
+    if (!stockItem || stockItem.quantity < finalQty) {
       setErrorMessage(`Insufficient stock. You only have ${stockItem ? stockItem.quantity : 0} units available.`);
       setActionInProgress(false);
       return;
@@ -210,9 +215,9 @@ export default function MarketplaceInterface({
 
     if (activeTab === 'ncr') {
       try {
-        const res = await marketplaceService.sellToNcr({ productId, quantity: qty }, token);
+        const res = await marketplaceService.sellToNcr({ productId, quantity: finalQty }, token);
         if (res.success) {
-          setSuccessMessage(`Sale complete: Sold ${qty} units of ${FLAT_PRODUCTS.find(p => p.id === productId)?.name} to NCR!`);
+          setSuccessMessage(`Sale complete: Sold ${finalQty} units of ${FLAT_PRODUCTS.find(p => p.id === productId)?.name} to NCR!`);
           await fetchListings();
           if (onMarketAction) onMarketAction();
           setTradeQuantity(1);
@@ -229,12 +234,12 @@ export default function MarketplaceInterface({
     try {
       const res = await marketplaceService.createListing({
         productId,
-        quantity: qty,
+        quantity: finalQty,
         pricePerUnit: price
       }, token);
 
       if (res.success) {
-        setSuccessMessage(`Listing created: Registered ${qty} units of ${FLAT_PRODUCTS.find(p => p.id === productId)?.name} for sale!`);
+        setSuccessMessage(`Listing created: Registered ${finalQty} units of ${FLAT_PRODUCTS.find(p => p.id === productId)?.name} for sale!`);
         await fetchListings();
         if (onMarketAction) onMarketAction();
         setTradeQuantity(1);
@@ -252,6 +257,7 @@ export default function MarketplaceInterface({
     setSelectedProductId(prodId);
     setErrorMessage('');
     setSuccessMessage('');
+    setTradeQuantity(1);
     
     // Autofill defaults
     const prod = FLAT_PRODUCTS.find(p => p.id === prodId);
@@ -352,22 +358,8 @@ export default function MarketplaceInterface({
   return (
     <div className="w-full h-full flex flex-col justify-start bg-[#090e17] text-white p-6 relative font-body select-none">
       
-      {/* HUD Message Notifications */}
-      {errorMessage && (
-        <div className="mb-4 p-3 bg-red-950/30 border border-red-500/25 rounded text-red-400 text-xs flex items-center gap-3 animate-fade-in z-20">
-          <i className="fa-solid fa-triangle-exclamation"></i>
-          <span>{errorMessage}</span>
-        </div>
-      )}
-      {successMessage && (
-        <div className="mb-4 p-3 bg-green-950/30 border border-green-500/25 rounded text-greenGlow text-xs flex items-center gap-3 animate-fade-in z-20">
-          <i className="fa-solid fa-circle-check"></i>
-          <span>{successMessage}</span>
-        </div>
-      )}
-
       {/* Market Header */}
-      <div className="mb-6 p-4 bg-white/2 border border-white/5 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-to-b from-glassBg to-black/30">
+      <div className="mb-6 p-4 bg-white/2 border border-white/5 rounded-lg flex justify-between items-center gap-4 bg-gradient-to-b from-glassBg to-black/30 shrink-0">
         <div>
           <h2 className="font-display font-extrabold text-lg uppercase tracking-wider text-white">
             Global Trade Terminal
@@ -386,19 +378,45 @@ export default function MarketplaceInterface({
           </div>
         </div>
         
-        {/* Horizontal Quick Stats */}
-        <div className="flex gap-4 border-l border-white/10 pl-0 sm:pl-6 font-mono text-[10px] text-text-secondary flex-wrap">
-          <div>
-            Sales today: <span className="text-greenGlow font-bold">{todaySales}</span>
+        <div className="flex items-center gap-6">
+          {/* Horizontal Quick Stats */}
+          <div className="hidden md:flex gap-4 border-l border-white/10 pl-6 font-mono text-[10px] text-text-secondary">
+            <div>
+              Sales today: <span className="text-greenGlow font-bold">{todaySales}</span>
+            </div>
+            <div>
+              Purchases today: <span className="text-red-400 font-bold">{todayPurchases}</span>
+            </div>
+            <div>
+              Vol: <span className="text-white font-bold">{formatCurrency(totalRevenue + totalExpenses, startup?.country)}</span>
+            </div>
           </div>
-          <div>
-            Purchases today: <span className="text-red-400 font-bold">{todayPurchases}</span>
-          </div>
-          <div>
-            Vol: <span className="text-white font-bold">{formatCurrency(totalRevenue + totalExpenses, startup?.country)}</span>
-          </div>
+
+          {onClose && (
+            <button 
+              onClick={onClose}
+              className="w-6 h-6 border border-white/5 hover:border-white/20 rounded flex items-center justify-center text-text-muted hover:text-white transition-colors cursor-pointer"
+              title="Return to Game Map"
+            >
+              <i className="fa-solid fa-xmark text-xs"></i>
+            </button>
+          )}
         </div>
       </div>
+
+      {/* HUD Message Notifications */}
+      {errorMessage && (
+        <div className="mb-4 p-3 bg-red-950/30 border border-red-500/25 rounded text-red-400 text-xs flex items-center gap-3 animate-fade-in z-20">
+          <i className="fa-solid fa-triangle-exclamation"></i>
+          <span>{errorMessage}</span>
+        </div>
+      )}
+      {successMessage && (
+        <div className="mb-4 p-3 bg-green-950/30 border border-green-500/25 rounded text-greenGlow text-xs flex items-center gap-3 animate-fade-in z-20">
+          <i className="fa-solid fa-circle-check"></i>
+          <span>{successMessage}</span>
+        </div>
+      )}
 
       {/* Tab Navigation */}
       <div className="flex gap-4 mb-6 border-b border-white/5 pb-3 font-display">
@@ -607,7 +625,7 @@ export default function MarketplaceInterface({
 
             <div className="flex gap-2 mb-4 p-1 bg-black/40 rounded border border-white/5 text-xs font-display">
               <button
-                onClick={() => { setTradeMode('buy'); setErrorMessage(''); setSuccessMessage(''); }}
+                onClick={() => { setTradeMode('buy'); setTradeQuantity(1); setErrorMessage(''); setSuccessMessage(''); }}
                 className={`flex-1 py-1.5 rounded uppercase tracking-wider font-extrabold transition-all cursor-pointer ${
                   tradeMode === 'buy'
                     ? 'bg-green-950/30 text-greenGlow border border-green-500/25'
@@ -617,7 +635,7 @@ export default function MarketplaceInterface({
                 Buy Orders
               </button>
               <button
-                onClick={() => { setTradeMode('sell'); setErrorMessage(''); setSuccessMessage(''); }}
+                onClick={() => { setTradeMode('sell'); setTradeQuantity(1); setErrorMessage(''); setSuccessMessage(''); }}
                 className={`flex-1 py-1.5 rounded uppercase tracking-wider font-extrabold transition-all cursor-pointer ${
                   tradeMode === 'sell'
                     ? 'bg-red-950/20 text-red-400 border border-red-500/25'
@@ -646,30 +664,81 @@ export default function MarketplaceInterface({
             <div className="flex flex-col gap-4 text-xs">
               {/* Quantity select */}
               <div>
-                <label className="text-[9px] font-display uppercase tracking-widest text-text-secondary block mb-1.5 font-sans">
-                  Order Quantity
-                </label>
-                <div className="flex items-center bg-black/40 rounded border border-white/15 px-2 py-1.5">
-                  <button
-                    onClick={() => setTradeQuantity(Math.max(1, tradeQuantity - 1))}
-                    className="w-5 h-5 flex items-center justify-center border border-white/10 bg-white/5 hover:bg-white/15 text-white text-[10px] rounded cursor-pointer"
-                  >
-                    -
-                  </button>
-                  <input
-                    type="number"
-                    min="1"
-                    value={tradeQuantity}
-                    onChange={(e) => setTradeQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                    className="w-full bg-transparent border-none focus:outline-none text-center text-white"
-                  />
-                  <button
-                    onClick={() => setTradeQuantity(tradeQuantity + 1)}
-                    className="w-5 h-5 flex items-center justify-center border border-white/10 bg-white/5 hover:bg-white/15 text-white text-[10px] rounded cursor-pointer"
-                  >
-                    +
-                  </button>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-[9px] font-display uppercase tracking-widest text-text-secondary block font-sans">
+                    Order Quantity
+                  </label>
+                  {(() => {
+                    const maxQty = tradeMode === 'sell'
+                      ? (inventory.find(i => i.productId === selectedProduct.id)?.quantity || 0)
+                      : (activeTab === 'ncr'
+                        ? (buyPrice > 0 ? Math.floor(startup.currentBalance / buyPrice) : 0)
+                        : (cheapestListing?.quantity || 0));
+                    return maxQty > 0 && maxQty < 999999 && (
+                      <span className="text-[8px] text-text-muted font-mono">
+                        Limit: {maxQty}
+                      </span>
+                    );
+                  })()}
                 </div>
+                {(() => {
+                  const maxQty = tradeMode === 'sell'
+                    ? (inventory.find(i => i.productId === selectedProduct.id)?.quantity || 0)
+                    : (activeTab === 'ncr'
+                      ? (buyPrice > 0 ? Math.floor(startup.currentBalance / buyPrice) : 0)
+                      : (cheapestListing?.quantity || 0));
+                  const displayMaxQty = Math.max(1, maxQty);
+                  const showMaxButton = tradeMode === 'sell' || (tradeMode === 'buy' && activeTab === 'exchange');
+
+                  return (
+                    <div className="flex items-center bg-black/40 rounded border border-white/15 px-2 py-1.5">
+                      <button
+                        onClick={() => setTradeQuantity(prev => Math.max(1, Math.min(displayMaxQty, (parseInt(prev, 10) || 1) - 1)))}
+                        className="w-5 h-5 flex items-center justify-center border border-white/10 bg-white/5 hover:bg-white/15 text-white text-[10px] rounded cursor-pointer"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        max={displayMaxQty}
+                        value={tradeQuantity}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '') {
+                            setTradeQuantity('');
+                          } else {
+                            const parsed = parseInt(val, 10);
+                            if (!isNaN(parsed)) {
+                              setTradeQuantity(Math.max(1, Math.min(displayMaxQty, parsed)));
+                            }
+                          }
+                        }}
+                        onBlur={() => {
+                          if (tradeQuantity === '' || tradeQuantity < 1) {
+                            setTradeQuantity(1);
+                          }
+                        }}
+                        className="w-full bg-transparent border-none focus:outline-none text-center text-white font-mono"
+                      />
+                      <button
+                        onClick={() => setTradeQuantity(prev => Math.min(displayMaxQty, (parseInt(prev, 10) || 1) + 1))}
+                        className="w-5 h-5 flex items-center justify-center border border-white/10 bg-white/5 hover:bg-white/15 text-white text-[10px] rounded cursor-pointer"
+                      >
+                        +
+                      </button>
+                      {showMaxButton && (
+                        <button
+                          onClick={() => setTradeQuantity(displayMaxQty)}
+                          className="px-2 py-0.5 border border-cyanGlow/30 bg-cyan-950/20 hover:bg-cyanGlow/25 text-cyanGlow text-[9px] rounded font-display uppercase tracking-wider cursor-pointer ml-1.5 shrink-0"
+                          title="Set to maximum possible quantity"
+                        >
+                          Max
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Price select for Sell listing */}

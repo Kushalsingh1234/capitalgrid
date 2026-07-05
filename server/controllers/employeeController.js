@@ -87,7 +87,8 @@ export const getMyEmployees = async (req, res) => {
  * @access  Private
  */
 export const hireEmployee = async (req, res) => {
-  const { employeeType } = req.body;
+  const { employeeType, quantity } = req.body;
+  const hireQty = Math.max(1, parseInt(quantity) || 1);
   const userId = req.user.id || req.user._id;
 
   try {
@@ -120,31 +121,34 @@ export const hireEmployee = async (req, res) => {
     if (global.useMockDb) {
       employee = global.mockEmployees.find(e => String(e.startupId) === String(startup._id) && e.employeeType === employeeType);
       if (employee) {
-        employee.quantity += 1;
+        employee.quantity += hireQty;
       } else {
         employee = {
           _id: 'mock-emp-' + Date.now(),
           startupId: startup._id,
           employeeType,
-          quantity: 1,
+          quantity: hireQty,
           salary,
           createdAt: new Date()
         };
         global.mockEmployees.push(employee);
       }
+      startup.employeesRecruited = (startup.employeesRecruited || 0) + hireQty;
     } else {
       employee = await Employee.findOne({ startupId: startup._id, employeeType });
       if (employee) {
-        employee.quantity += 1;
+        employee.quantity += hireQty;
         await employee.save();
       } else {
         employee = await Employee.create({
           startupId: startup._id,
           employeeType,
-          quantity: 1,
+          quantity: hireQty,
           salary
         });
       }
+      startup.employeesRecruited = (startup.employeesRecruited || 0) + hireQty;
+      await startup.save();
     }
 
     // 4. Fetch updated employees listing to return
@@ -166,7 +170,7 @@ export const hireEmployee = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `Successfully hired 1 ${employeeType}.`,
+      message: `Successfully hired ${hireQty} ${employeeType}(s).`,
       employees: updatedMerged
     });
 
@@ -212,6 +216,7 @@ export const fireEmployee = async (req, res) => {
         return res.status(400).json({ success: false, message: `You have no ${employeeType}s currently hired` });
       }
       employee.quantity -= 1;
+      startup.employeesLaidOff = (startup.employeesLaidOff || 0) + 1;
     } else {
       employee = await Employee.findOne({ startupId: startup._id, employeeType });
       if (!employee || employee.quantity <= 0) {
@@ -219,6 +224,9 @@ export const fireEmployee = async (req, res) => {
       }
       employee.quantity -= 1;
       await employee.save();
+
+      startup.employeesLaidOff = (startup.employeesLaidOff || 0) + 1;
+      await startup.save();
     }
 
     // 3. Fetch updated employees listing to return

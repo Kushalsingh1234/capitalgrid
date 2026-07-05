@@ -88,6 +88,34 @@ export default class GameScene extends Phaser.Scene {
     this.input.on('pointermove', this.handlePointerMove, this);
     this.input.on('pointerup', this.handlePointerUp, this);
     this.input.on('wheel', this.handleWheelZoom, this);
+
+    // Center camera on player building custom window event
+    const handleCenterEvent = () => {
+      let focusX = 2200;
+      let focusY = 2200;
+      const startup = this.registry.get('startup');
+      if (startup && this.worldManager) {
+        const buildingData = this.worldManager.getBuildingForStartup(startup);
+        if (buildingData) {
+          focusX = buildingData.x;
+          focusY = buildingData.y;
+        }
+      }
+      
+      const isMobile = this.scale.width < 768;
+      const defaultZoom = isMobile ? 0.75 : 1.0;
+      
+      this.targetScrollX = focusX - this.scale.width / 2;
+      this.targetScrollY = focusY - this.scale.height / 2;
+      this.targetZoom = defaultZoom;
+      this.velocityX = 0;
+      this.velocityY = 0;
+    };
+
+    window.addEventListener('center-player-building', handleCenterEvent);
+    this.events.once('shutdown', () => {
+      window.removeEventListener('center-player-building', handleCenterEvent);
+    });
   }
 
   // Define structured arrays for roads, plots, and procedural landscaping

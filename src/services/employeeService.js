@@ -30,14 +30,14 @@ export const getMyEmployees = async (token) => {
 /**
  * Hire an employee role for the startup
  */
-export const hireEmployee = async (employeeType, token) => {
+export const hireEmployee = async (employeeType, token, quantity = 1) => {
   const response = await fetch(`${API_BASE}/hire`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
-    body: JSON.stringify({ employeeType })
+    body: JSON.stringify({ employeeType, quantity })
   });
   return handleResponse(response);
 };

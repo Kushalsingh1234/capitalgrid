@@ -48,6 +48,14 @@ const startupSchema = new mongoose.Schema({
     enum: ['Active', 'Suspended'],
     default: 'Active'
   },
+  employeesLaidOff: {
+    type: Number,
+    default: 0
+  },
+  employeesRecruited: {
+    type: Number,
+    default: 0
+  },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

@@ -1,5 +1,7 @@
 import Startup from '../models/Startup.js';
 import User from '../models/User.js';
+import ProductionTask from '../models/ProductionTask.js';
+import { processCompletedTasks } from './productionController.js';
 
 // Capital mappings based on country choice
 const STARTING_CAPITALS = {
@@ -112,6 +114,8 @@ export const createStartup = async (req, res) => {
         currentBalance: startingCapital,
         inventory: [],
         status: 'Active',
+        employeesLaidOff: 0,
+        employeesRecruited: 0,
         owner: userId,
         createdAt: new Date()
       };
@@ -136,6 +140,8 @@ export const createStartup = async (req, res) => {
         currentBalance: startingCapital,
         inventory: [],
         status: 'Active',
+        employeesLaidOff: 0,
+        employeesRecruited: 0,
         owner: userId
       });
 
@@ -180,9 +186,30 @@ export const getStartup = async (req, res) => {
       return res.status(404).json({ success: false, message: 'No startup registered for this player' });
     }
 
+    // Process tasks
+    await processCompletedTasks(startup._id);
+
+    // Fetch remaining active tasks
+    let activeTasks = [];
+    if (global.useMockDb) {
+      if (!global.mockProductionTasks) {
+        global.mockProductionTasks = [];
+      }
+      activeTasks = global.mockProductionTasks.filter(
+        t => String(t.startupId) === String(startup._id) && t.status === 'Producing'
+      );
+    } else {
+      activeTasks = await ProductionTask.find({
+        startupId: startup._id,
+        status: 'Producing'
+      });
+    }
+
     res.status(200).json({
       success: true,
-      startup
+      startup,
+      tasks: activeTasks,
+      serverTime: new Date()
     });
 
   } catch (error) {

@@ -24,7 +24,17 @@ const BUSINESS_REQUIRED_ROLES = {
  *   token: string — JWT auth token
  *   onProductionComplete: (inventory) => void — called when a batch finishes
  */
-export default function ProductionCenter({ businessType, token, onProductionComplete, employees = [], inventory = [], onProducingStateChange }) {
+export default function ProductionCenter({
+  businessType,
+  token,
+  onProductionComplete,
+  employees = [],
+  inventory = [],
+  onProducingStateChange,
+  tasks = [],
+  serverTime = null,
+  fetchedAt = null
+}) {
   const [quantities, setQuantities] = useState({});
   const [producing, setProducing] = useState({}); // { productId: { remaining, total, qty, name } }
   
@@ -33,7 +43,9 @@ export default function ProductionCenter({ businessType, token, onProductionComp
       onProducingStateChange(producing);
     }
   }, [producing, onProducingStateChange]);
+
   const timerRefs = useRef({});
+  const runningTaskRef = useRef(null);
 
   const products = getProductsForBusiness(businessType);
   const isRetail = isRetailBusiness(businessType);
@@ -55,12 +67,99 @@ export default function ProductionCenter({ businessType, token, onProductionComp
     }
   }, [businessType]);
 
-  // Cleanup all timers on unmount
+  // Handle server-synced countdown timer initialization
   useEffect(() => {
-    return () => {
-      Object.values(timerRefs.current).forEach(clearInterval);
-    };
-  }, []);
+    if (!serverTime) return;
+
+    const activeTasks = tasks?.filter(t => t.status === 'Producing') || [];
+    
+    setProducing(prev => {
+      const next = { ...prev };
+      let changed = false;
+
+      // Remove products that are no longer producing
+      Object.keys(next).forEach(pId => {
+        if (!activeTasks.some(t => t.productId === pId)) {
+          delete next[pId];
+          changed = true;
+        }
+      });
+
+      // Add or update active tasks
+      activeTasks.forEach(task => {
+        const pId = task.productId;
+        const endsTime = new Date(task.endsAt).getTime();
+        const serverTimeMs = new Date(serverTime).getTime();
+        const remainingAtFetch = (endsTime - serverTimeMs) / 1000;
+        const elapsedSeconds = fetchedAt ? (Date.now() - fetchedAt) / 1000 : 0;
+        const remaining = Math.max(0, Math.ceil(remainingAtFetch - elapsedSeconds));
+
+        // Only initialize/update if not already present or if endsTime changed
+        if (remaining > 0) {
+          const existing = next[pId];
+          if (!existing || runningTaskRef.current?.[pId] !== endsTime) {
+            next[pId] = {
+              remaining,
+              total: task.duration || 30,
+              qty: task.quantity,
+              name: task.productName
+            };
+            if (!runningTaskRef.current) runningTaskRef.current = {};
+            runningTaskRef.current[pId] = endsTime;
+            changed = true;
+          }
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [tasks, serverTime, fetchedAt]);
+
+  // Local clock decrement tick
+  useEffect(() => {
+    const activeProductIds = Object.keys(producing);
+    if (activeProductIds.length === 0) return;
+
+    const intervalId = setInterval(() => {
+      setProducing(prev => {
+        const next = { ...prev };
+        let changed = false;
+
+        Object.keys(next).forEach(pId => {
+          const item = next[pId];
+          if (item.remaining <= 1) {
+            delete next[pId];
+            changed = true;
+
+            // Trigger completion on server
+            const task = tasks?.find(t => t.productId === pId);
+            productionService.completeProduction({
+              productId: pId,
+              productName: item.name,
+              quantity: item.qty
+            }, token).then(response => {
+              if (response.success && onProductionComplete) {
+                const remainingTasks = tasks.filter(t => t.productId !== pId);
+                onProductionComplete(response.inventory, remainingTasks, response.serverTime);
+              }
+            }).catch(err => {
+              console.error('[Production Complete API Error]', err.message);
+            });
+          } else {
+            next[pId] = {
+              ...item,
+              remaining: item.remaining - 1
+            };
+            changed = true;
+          }
+        });
+
+        return changed ? next : prev;
+      });
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [producing, tasks, token, onProductionComplete]);
 
   const adjustQty = (productId, delta) => {
     setQuantities(prev => {
@@ -73,58 +172,23 @@ export default function ProductionCenter({ businessType, token, onProductionComp
   const handleProduce = useCallback((product) => {
     const qty = quantities[product.id] || 1;
 
-    // Don't allow starting production if already in progress for this product
+    // Don't allow starting production if already producing this product
     if (producing[product.id]) return;
 
-    const totalSeconds = product.duration;
-
-    // Set producing state
-    setProducing(prev => ({
-      ...prev,
-      [product.id]: { remaining: totalSeconds, total: totalSeconds, qty, name: product.name }
-    }));
-
-    // Start countdown interval
-    let remaining = totalSeconds;
-    timerRefs.current[product.id] = setInterval(() => {
-      remaining -= 1;
-
-      if (remaining <= 0) {
-        // Production complete — call API
-        clearInterval(timerRefs.current[product.id]);
-        delete timerRefs.current[product.id];
-
-        // Remove from producing state
-        setProducing(prev => {
-          const { [product.id]: removed, ...rest } = prev;
-          return rest;
-        });
-
-        // Trigger API Call
-        productionService.completeProduction({
-          productId: product.id,
-          productName: product.name,
-          quantity: qty
-        }, token).then(response => {
-          if (response.success && onProductionComplete) {
-            onProductionComplete(response.inventory);
-          }
-        }).catch(err => {
-          console.error('[Production API Error]', err.message);
-        });
-
-      } else {
-        // Just update the remaining time
-        setProducing(prev => {
-          if (!prev[product.id]) return prev;
-          return {
-            ...prev,
-            [product.id]: { ...prev[product.id], remaining }
-          };
-        });
+    // Trigger Server API Call
+    productionService.startProduction({
+      productId: product.id,
+      quantity: qty
+    }, token).then(response => {
+      if (response.success && onProductionComplete) {
+        // Collect current tasks and append the new task
+        const currentTasks = tasks || [];
+        onProductionComplete(response.inventory, [...currentTasks, response.task], response.serverTime);
       }
-    }, 1000);
-  }, [quantities, token, onProductionComplete]);
+    }).catch(err => {
+      console.error('[Production Start API Error]', err.message);
+    });
+  }, [quantities, token, producing, tasks, onProductionComplete]);
 
   // --- Retail: No Production ---
   if (isRetail) {

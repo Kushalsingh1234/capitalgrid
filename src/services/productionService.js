@@ -42,3 +42,18 @@ export const getInventory = async (token) => {
   });
   return handleResponse(response);
 };
+
+/**
+ * Start a new production task on the server.
+ */
+export const startProduction = async (productData, token) => {
+  const response = await fetch(`${API_BASE}/start`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(productData)
+  });
+  return handleResponse(response);
+};

@@ -469,6 +469,11 @@ export default function LandingPage() {
     { name: 'WHEAT', change: '▼ 0.8%', up: false }
   ];
 
+  const handleLogoClick = (e) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="bg-gameBg text-white min-h-screen relative overflow-x-hidden font-body">
       {/* Background Overlay */}
@@ -478,7 +483,7 @@ export default function LandingPage() {
       {/* Navbar */}
       <nav className="navbar" id="main-navbar">
         <div className="navbar-container">
-          <Link to="/" className="brand-logo">
+          <Link to="/" onClick={handleLogoClick} className="brand-logo">
             <Logo className="logo-image" />
           </Link>
 
