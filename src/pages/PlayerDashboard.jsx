@@ -376,21 +376,45 @@ export default function PlayerDashboard() {
           )}
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 md:gap-6">
           {/* CURRENT BALANCE */}
           {startup && (
-            <div className="flex items-center gap-2.5 px-3.5 py-1.5 bg-green-950/20 border border-green-500/20 rounded-md">
-              <span className="text-[9px] font-display uppercase tracking-widest text-text-secondary">Current Balance</span>
-              <span className="font-display font-black text-sm text-greenGlow leading-none">
+            <div className="flex items-center gap-2 px-2.5 py-1.5 md:px-3.5 md:py-1.5 bg-green-950/20 border border-green-500/20 rounded-md">
+              <span className="hidden md:inline text-[9px] font-display uppercase tracking-widest text-text-secondary">Current Balance</span>
+              <i className="inline md:hidden fa-solid fa-wallet text-greenGlow text-xs"></i>
+              <span className="font-display font-black text-xs md:text-sm text-greenGlow leading-none">
                 {formatCurrency(startup.currentBalance, startup.country)}
               </span>
             </div>
           )}
 
+          {/* MOBILE NOTIFICATION BUTTON */}
+          <button 
+            onClick={() => {
+              setIsFacilityDrawerOpen(false);
+              setSelectedBuilding(null);
+              setActiveTab(activeTab === 'Notifications' ? null : 'Notifications');
+              setCurrentView('world');
+            }}
+            className="flex md:hidden w-8 h-8 rounded border border-white/5 hover:border-white/15 items-center justify-center text-text-muted hover:text-white transition-colors cursor-pointer"
+            title="Notifications"
+          >
+            <i className="fa-solid fa-bell text-xs"></i>
+          </button>
+
           {/* UTILITIES & SETTINGS */}
           <div className="hidden md:flex items-center gap-3">
             <ThemeToggle />
-            <button className="w-8 h-8 rounded border border-white/5 hover:border-white/15 flex items-center justify-center text-text-muted hover:text-white transition-colors cursor-pointer" title="System Notifications (Placeholder)">
+            <button 
+              onClick={() => {
+                setIsFacilityDrawerOpen(false);
+                setSelectedBuilding(null);
+                setActiveTab(activeTab === 'Notifications' ? null : 'Notifications');
+                setCurrentView('world');
+              }}
+              className="w-8 h-8 rounded border border-white/5 hover:border-white/15 flex items-center justify-center text-text-muted hover:text-white transition-colors cursor-pointer" 
+              title="Notifications"
+            >
               <i className="fa-solid fa-bell text-xs"></i>
             </button>
             <button className="w-8 h-8 rounded border border-white/5 hover:border-white/15 flex items-center justify-center text-text-muted hover:text-white transition-colors cursor-pointer" title="Corporate Settings (Placeholder)">
@@ -404,46 +428,48 @@ export default function PlayerDashboard() {
         </div>
       </header>
 
-      <div className="main-game-layout">
-        {/* LEFT VERTICAL SIDEBAR */}
-        <nav className="sidebar-vertical">
-          {[
-            { id: 'Dashboard', icon: 'fa-chart-pie', label: 'Overview' },
-            { id: 'Company', icon: 'fa-building', label: 'Company' },
-            { id: 'Employees', icon: 'fa-users', label: 'Employees' },
-            { id: 'Marketplace', icon: 'fa-shop', label: 'Market' },
-            { id: 'Finance', icon: 'fa-wallet', label: 'Finance' },
-            { id: 'Profile', icon: 'fa-user', label: 'Profile' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-             onClick={() => {
-                setIsFacilityDrawerOpen(false);
-                setSelectedBuilding(null);
-                if (tab.id === 'Marketplace') {
-                  setActiveTab(null);
-                  setCurrentView(currentView === 'marketplace' ? 'world' : 'marketplace');
-                } else if (tab.id === 'Finance') {
-                  setActiveTab(null);
-                  setCurrentView(currentView === 'finance' ? 'world' : 'finance');
-                } else {
-                  setCurrentView('world');
-                  setActiveTab(activeTab === tab.id ? null : tab.id);
-                }
-              }}
-              className={`sidebar-nav-item ${
-                tab.id === 'Marketplace'
-                  ? (currentView === 'marketplace' ? 'active' : '')
-                  : tab.id === 'Finance'
-                  ? (currentView === 'finance' ? 'active' : '')
-                  : (activeTab === tab.id ? 'active' : '')
-              }`}
-            >
-              <i className={`fa-solid ${tab.icon} text-sm`}></i>
-              <span className="sidebar-nav-label">{tab.label}</span>
-            </button>
-          ))}
-        </nav>
+      <div className="main-game-layout relative">
+        {/* BOTTOM HORIZONTAL SIDEBAR */}
+        {currentView !== 'marketplace' && currentView !== 'finance' && (
+          <nav className="sidebar-bottom">
+            {[
+              { id: 'Dashboard', icon: 'fa-chart-pie', label: 'Overview' },
+              { id: 'Company', icon: 'fa-building', label: 'Company' },
+              { id: 'Employees', icon: 'fa-users', label: 'Employees' },
+              { id: 'Marketplace', icon: 'fa-shop', label: 'Market' },
+              { id: 'Finance', icon: 'fa-wallet', label: 'Finance' },
+              { id: 'Profile', icon: 'fa-user', label: 'Profile' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setIsFacilityDrawerOpen(false);
+                  setSelectedBuilding(null);
+                  if (tab.id === 'Marketplace') {
+                    setActiveTab(null);
+                    setCurrentView(currentView === 'marketplace' ? 'world' : 'marketplace');
+                  } else if (tab.id === 'Finance') {
+                    setActiveTab(null);
+                    setCurrentView(currentView === 'finance' ? 'world' : 'finance');
+                  } else {
+                    setCurrentView('world');
+                    setActiveTab(activeTab === tab.id ? null : tab.id);
+                  }
+                }}
+                className={`sidebar-nav-item ${
+                  tab.id === 'Marketplace'
+                    ? (currentView === 'marketplace' ? 'active' : '')
+                    : tab.id === 'Finance'
+                    ? (currentView === 'finance' ? 'active' : '')
+                    : (activeTab === tab.id ? 'active' : '')
+                }`}
+                title={tab.label}
+              >
+                <i className={`fa-solid ${tab.icon}`}></i>
+              </button>
+            ))}
+          </nav>
+        )}
 
         {/* MAIN GAME WORLD AREA */}
         <main 
@@ -461,7 +487,7 @@ export default function PlayerDashboard() {
                   setIsFacilityDrawerOpen(true);
                   setCurrentView('world');
                 }}
-                disableClicks={activeTab !== null || isFacilityDrawerOpen}
+                disableClicks={currentView !== 'world' || activeTab !== null || isFacilityDrawerOpen}
               />
             ) : (
               <div className="flex flex-col items-center justify-center gap-4 text-center h-full">

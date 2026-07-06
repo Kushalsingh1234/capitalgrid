@@ -164,9 +164,37 @@ export default function ProductionCenter({
   const adjustQty = (productId, delta) => {
     setQuantities(prev => {
       const current = prev[productId] || 1;
-      const next = Math.max(1, Math.min(100, current + delta));
+      const next = Math.max(1, Math.min(10000, current + delta));
       return { ...prev, [productId]: next };
     });
+  };
+
+  const calculateMaxQty = (product) => {
+    const dep = PRODUCT_DEPENDENCIES[product.id];
+    if (!dep) return 1;
+
+    // Check workforce
+    if (dep.employees) {
+      for (const [role, reqQty] of Object.entries(dep.employees)) {
+        const hired = employees.find(e => e.employeeType === role)?.quantity || 0;
+        if (hired < reqQty) return 0;
+      }
+    }
+
+    if (!dep.materials || Object.keys(dep.materials).length === 0) {
+      return 10000;
+    }
+
+    let minMatMax = Infinity;
+    for (const [matId, qtyPerUnit] of Object.entries(dep.materials)) {
+      const available = inventory.find(i => i.productId === matId)?.quantity || 0;
+      const maxForMat = Math.floor(available / qtyPerUnit);
+      if (maxForMat < minMatMax) {
+        minMatMax = maxForMat;
+      }
+    }
+
+    return minMatMax === Infinity ? 1 : Math.max(1, minMatMax);
   };
 
   const handleProduce = useCallback((product) => {
@@ -236,7 +264,7 @@ export default function ProductionCenter({
       {isBlocked && (
         <div className="mb-6 p-4 bg-red-950/35 border border-red-500/30 rounded text-red-400 text-xs flex items-center gap-3">
           <i className="fa-solid fa-triangle-exclamation"></i>
-          <span>Hire {missingRoles.map(r => r === 'Farmer' || r === 'Builder' || r === 'Labourer' || r === 'Engineer' || r === 'Manager' || r === 'Chief' || r === 'Fashion Designer' ? r + 's' : r).join(' and ')} before production can begin.</span>
+          <span>Hire {missingRoles.map(r => r === 'Farmer' || r === 'Builder' || r === 'Labourer' || r === 'Engineer' || r === 'Manager' || r === 'Chef' || r === 'Fashion Designer' ? r + 's' : r).join(' and ')} before production can begin.</span>
         </div>
       )}
 
@@ -344,21 +372,52 @@ export default function ProductionCenter({
               ) : (
                 <>
                   {/* Quantity Selector */}
-                  <div className="flex items-center justify-center gap-3 mb-3">
+                  <div className="flex items-center justify-center gap-2 mb-3">
                     <button
                       onClick={() => adjustQty(product.id, -1)}
-                      className="w-8 h-8 flex items-center justify-center bg-white/3 border border-white/10 rounded hover:bg-white/8 hover:border-cyanGlow/30 text-text-secondary hover:text-white transition-all text-sm font-bold"
+                      className="w-8 h-8 flex items-center justify-center bg-white/3 border border-white/10 rounded hover:bg-white/8 hover:border-cyanGlow/30 text-text-secondary hover:text-white transition-all text-sm font-bold cursor-pointer"
                     >
                       −
                     </button>
-                    <span className="font-display text-xl font-black text-white w-12 text-center tabular-nums">
-                      {quantities[product.id] || 1}
-                    </span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={quantities[product.id] === undefined ? 1 : quantities[product.id]}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const cleaned = val.replace(/\D/g, '');
+                        if (cleaned === '') {
+                          setQuantities(prev => ({ ...prev, [product.id]: '' }));
+                        } else {
+                          const parsed = parseInt(cleaned, 10);
+                          if (!isNaN(parsed)) {
+                            setQuantities(prev => ({ ...prev, [product.id]: Math.max(1, Math.min(10000, parsed)) }));
+                          }
+                        }
+                      }}
+                      onBlur={() => {
+                        if (quantities[product.id] === '' || quantities[product.id] < 1) {
+                          setQuantities(prev => ({ ...prev, [product.id]: 1 }));
+                        }
+                      }}
+                      className="font-display text-base font-black text-white w-20 text-center tabular-nums bg-black/40 border border-white/15 rounded focus:outline-none focus:border-cyanGlow/40 px-1 py-1"
+                    />
                     <button
                       onClick={() => adjustQty(product.id, 1)}
-                      className="w-8 h-8 flex items-center justify-center bg-white/3 border border-white/10 rounded hover:bg-white/8 hover:border-cyanGlow/30 text-text-secondary hover:text-white transition-all text-sm font-bold"
+                      className="w-8 h-8 flex items-center justify-center bg-white/3 border border-white/10 rounded hover:bg-white/8 hover:border-cyanGlow/30 text-text-secondary hover:text-white transition-all text-sm font-bold cursor-pointer"
                     >
                       +
+                    </button>
+                    <button
+                      onClick={() => {
+                        const maxVal = calculateMaxQty(product);
+                        setQuantities(prev => ({ ...prev, [product.id]: maxVal }));
+                      }}
+                      className="h-8 px-2 border border-cyanGlow/30 bg-cyan-950/20 hover:bg-cyanGlow/25 text-cyanGlow text-[9px] font-display uppercase tracking-wider rounded cursor-pointer shrink-0 transition-colors ml-1"
+                      title="Set to maximum possible quantity"
+                    >
+                      Max
                     </button>
                   </div>
 

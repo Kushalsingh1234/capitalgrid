@@ -2,6 +2,9 @@ import Marketplace from '../models/Marketplace.js';
 import Startup from '../models/Startup.js';
 import Transaction from '../models/Transaction.js';
 import ncrCatalog from '../config/ncrCatalog.js';
+import { getProductPrice } from '../config/countryEconomy.js';
+import countryEconomy from '../config/countryEconomy.js';
+import tradeService from '../services/tradeService.js';
 
 /**
  * @desc    Create a new marketplace listing from seller inventory
@@ -77,36 +80,50 @@ export const createListing = async (req, res) => {
 
     // 5. Create listing
     const totalPrice = qty * unitPrice;
+    const sellerCurrency = (countryEconomy.countries[startup.country] || countryEconomy.countries['United States']).currency;
     let newListing;
 
     if (global.useMockDb) {
       newListing = {
         _id: 'mock-listing-' + Date.now(),
         seller: startup._id,
+        sellerStartupId: startup._id.toString(),
         sellerStartupName: startup.startupName,
         sellerCountry: startup.country,
+        sellerCurrency,
         productId,
+        commodity: productId,
         productName: inventoryItem.productName,
         quantity: qty,
         pricePerUnit: unitPrice,
+        unitPrice,
         totalPrice,
         status: 'Active',
         buyer: null,
         buyerStartupName: null,
+        listedAt: new Date(),
         createdAt: new Date()
       };
+      if (!global.mockMarketplace) {
+        global.mockMarketplace = [];
+      }
       global.mockMarketplace.push(newListing);
     } else {
       newListing = await Marketplace.create({
         seller: startup._id,
+        sellerStartupId: startup._id.toString(),
         sellerStartupName: startup.startupName,
         sellerCountry: startup.country,
+        sellerCurrency,
         productId,
+        commodity: productId,
         productName: inventoryItem.productName,
         quantity: qty,
         pricePerUnit: unitPrice,
+        unitPrice,
         totalPrice,
-        status: 'Active'
+        status: 'Active',
+        listedAt: new Date()
       });
     }
 
@@ -124,22 +141,162 @@ export const createListing = async (req, res) => {
 };
 
 /**
+ * Query helper to retrieve domestic active listings
+ */
+export const getDomesticListings = async (country) => {
+  if (global.useMockDb) {
+    return (global.mockMarketplace || []).filter(l => l.status === 'Active' && l.sellerCountry === country);
+  }
+  return await Marketplace.find({ status: 'Active', sellerCountry: country }).sort({ createdAt: -1 });
+};
+
+/**
+ * Query helper to retrieve international active listings
+ */
+export const getInternationalListings = async (country) => {
+  if (global.useMockDb) {
+    return (global.mockMarketplace || []).filter(l => l.status === 'Active' && l.sellerCountry !== country);
+  }
+  return await Marketplace.find({ status: 'Active', sellerCountry: { $ne: country } }).sort({ createdAt: -1 });
+};
+
+/**
+ * @desc    Get domestic active listings
+ * @route   GET /api/marketplace/domestic
+ * @access  Private
+ */
+export const getDomesticListingsController = async (req, res) => {
+  const userId = req.user.id || req.user._id;
+  try {
+    let startup;
+    if (global.useMockDb) {
+      startup = global.mockStartups.find(s => String(s.owner) === String(userId));
+    } else {
+      startup = await Startup.findOne({ owner: userId });
+    }
+    const country = startup ? startup.country : 'United States';
+    const rawListings = await getDomesticListings(country);
+
+    const listings = rawListings.map(l => {
+      const listingObj = l.toObject ? l.toObject() : l;
+      const tradeInfo = tradeService.calculateTradePrice(listingObj, country);
+      return {
+        ...listingObj,
+        buyerBasePrice: tradeInfo.buyerBasePrice,
+        buyerPrice: tradeInfo.buyerPrice,
+        shippingCost: tradeInfo.shippingCost,
+        tariff: tradeInfo.tariffCost,
+        finalPrice: tradeInfo.finalPrice,
+        shippingPercentage: tradeInfo.shippingPercentage,
+        tariffPercentage: tradeInfo.tariffPercentage,
+        distance: tradeInfo.distance,
+        tradeStatus: tradeInfo.tradeStatus,
+        tradeRouteId: tradeInfo.tradeRouteId,
+        buyerCurrency: tradeInfo.buyerCurrency
+      };
+    });
+
+    res.status(200).json({ success: true, listings });
+  } catch (error) {
+    console.error(`[Domestic Listings Error] ${error.message}`);
+    res.status(500).json({ success: false, message: 'Server error retrieving domestic listings' });
+  }
+};
+
+/**
+ * @desc    Get international active listings
+ * @route   GET /api/marketplace/international
+ * @access  Private
+ */
+export const getInternationalListingsController = async (req, res) => {
+  const userId = req.user.id || req.user._id;
+  try {
+    let startup;
+    if (global.useMockDb) {
+      startup = global.mockStartups.find(s => String(s.owner) === String(userId));
+    } else {
+      startup = await Startup.findOne({ owner: userId });
+    }
+    const country = startup ? startup.country : 'United States';
+    const rawListings = await getInternationalListings(country);
+
+    const listings = rawListings.map(l => {
+      const listingObj = l.toObject ? l.toObject() : l;
+      const tradeInfo = tradeService.calculateTradePrice(listingObj, country);
+      return {
+        ...listingObj,
+        buyerBasePrice: tradeInfo.buyerBasePrice,
+        buyerPrice: tradeInfo.buyerPrice,
+        shippingCost: tradeInfo.shippingCost,
+        tariff: tradeInfo.tariffCost,
+        finalPrice: tradeInfo.finalPrice,
+        shippingPercentage: tradeInfo.shippingPercentage,
+        tariffPercentage: tradeInfo.tariffPercentage,
+        distance: tradeInfo.distance,
+        tradeStatus: tradeInfo.tradeStatus,
+        tradeRouteId: tradeInfo.tradeRouteId,
+        buyerCurrency: tradeInfo.buyerCurrency
+      };
+    });
+
+    res.status(200).json({ success: true, listings });
+  } catch (error) {
+    console.error(`[International Listings Error] ${error.message}`);
+    res.status(500).json({ success: false, message: 'Server error retrieving international listings' });
+  }
+};
+
+/**
  * @desc    Get all active marketplace listings
  * @route   GET /api/marketplace
  * @access  Private
  */
 export const getAllListings = async (req, res) => {
+  const userId = req.user.id || req.user._id;
+
   try {
-    let listings;
+    let startup;
     if (global.useMockDb) {
-      listings = global.mockMarketplace.filter(l => l.status === 'Active');
+      startup = global.mockStartups.find(s => String(s.owner) === String(userId));
     } else {
-      listings = await Marketplace.find({ status: 'Active' }).sort({ createdAt: -1 });
+      startup = await Startup.findOne({ owner: userId });
     }
+    const country = startup ? startup.country : 'United States';
+
+    const rawDomestic = await getDomesticListings(country);
+    const rawInternational = await getInternationalListings(country);
+
+    let rawListings;
+    if (global.useMockDb) {
+      rawListings = (global.mockMarketplace || []).filter(l => l.status === 'Active');
+    } else {
+      rawListings = await Marketplace.find({ status: 'Active' }).sort({ createdAt: -1 });
+    }
+
+    const mapListing = (l) => {
+      const listingObj = l.toObject ? l.toObject() : l;
+      const tradeInfo = tradeService.calculateTradePrice(listingObj, country);
+      return {
+        ...listingObj,
+        buyerBasePrice: tradeInfo.buyerBasePrice,
+        buyerPrice: tradeInfo.buyerPrice,
+        shippingCost: tradeInfo.shippingCost,
+        tariff: tradeInfo.tariffCost,
+        finalPrice: tradeInfo.finalPrice,
+        shippingPercentage: tradeInfo.shippingPercentage,
+        tariffPercentage: tradeInfo.tariffPercentage,
+        distance: tradeInfo.distance,
+        tradeStatus: tradeInfo.tradeStatus,
+        tradeRouteId: tradeInfo.tradeRouteId,
+        buyerCurrency: tradeInfo.buyerCurrency
+      };
+    };
 
     res.status(200).json({
       success: true,
-      listings
+      listings: rawListings.map(mapListing),
+      domestic: rawDomestic.map(mapListing),
+      international: rawInternational.map(mapListing)
     });
   } catch (error) {
     console.error(`[Fetch Listings Error] ${error.message}`);
@@ -190,11 +347,14 @@ export const buyListing = async (req, res) => {
       return res.status(400).json({ success: false, message: 'You cannot purchase your own marketplace listing' });
     }
 
-    // 4. Verify buyer balance
-    if (buyerStartup.currentBalance < listing.totalPrice) {
+    // 4. Verify buyer balance using Trade Service
+    const tradePriceInfo = tradeService.calculateTradePrice(listing, buyerStartup.country);
+    const totalCost = tradePriceInfo.buyerPrice * listing.quantity;
+
+    if (buyerStartup.currentBalance < totalCost) {
       return res.status(400).json({ 
         success: false, 
-        message: `Insufficient funds. Cost is ${listing.totalPrice} but you only have ${buyerStartup.currentBalance}.` 
+        message: `Insufficient funds. Cost is ${totalCost} but you only have ${buyerStartup.currentBalance}.` 
       });
     }
 
@@ -212,9 +372,9 @@ export const buyListing = async (req, res) => {
 
     // 6. Execute transfers
     // Decrease buyer balance
-    buyerStartup.currentBalance -= listing.totalPrice;
+    buyerStartup.currentBalance -= totalCost;
     
-    // Increase seller balance
+    // Increase seller balance (seller gets their original local price list value)
     sellerStartup.currentBalance += listing.totalPrice;
 
     // Increase buyer inventory
@@ -275,8 +435,8 @@ export const buyListing = async (req, res) => {
         sellerStartupName: sellerStartup.startupName,
         productName: listing.productName,
         quantity: listing.quantity,
-        pricePerUnit: listing.pricePerUnit,
-        totalAmount: listing.totalPrice,
+        pricePerUnit: tradePriceInfo.buyerPrice,
+        totalAmount: totalCost,
         createdAt: new Date()
       };
       
@@ -300,15 +460,15 @@ export const buyListing = async (req, res) => {
           sellerStartupName: sellerStartup.startupName,
           productName: listing.productName,
           quantity: listing.quantity,
-          pricePerUnit: listing.pricePerUnit,
-          totalAmount: listing.totalPrice
+          pricePerUnit: tradePriceInfo.buyerPrice,
+          totalAmount: totalCost
         }
       ]);
     }
 
     res.status(200).json({
       success: true,
-      message: `Successfully purchased ${listing.quantity}x ${listing.productName} for ${listing.totalPrice}.`,
+      message: `Successfully purchased ${listing.quantity}x ${listing.productName} for ${totalCost}.`,
       currentBalance: buyerStartup.currentBalance,
       inventory: buyerStartup.inventory
     });
@@ -325,8 +485,32 @@ export const buyListing = async (req, res) => {
  * @access  Private
  */
 export const getNcrCatalog = async (req, res) => {
+  const userId = req.user.id || req.user._id;
+
   try {
-    res.status(200).json({ success: true, catalog: ncrCatalog });
+    let startup;
+    if (global.useMockDb) {
+      startup = global.mockStartups.find(s => String(s.owner) === String(userId));
+    } else {
+      startup = await Startup.findOne({ owner: userId });
+    }
+
+    if (!startup) {
+      return res.status(404).json({ success: false, message: 'Startup not found' });
+    }
+
+    const country = startup.country || 'United States';
+
+    const catalog = ncrCatalog.map(item => {
+      const localPrice = getProductPrice(country, item.productId);
+      return {
+        ...item,
+        ncrBuyPrice: +(localPrice * 0.95).toFixed(2),
+        ncrSellPrice: +(localPrice * 1.05).toFixed(2)
+      };
+    });
+
+    res.status(200).json({ success: true, catalog });
   } catch (error) {
     console.error(`[NCR Catalog Error] ${error.message}`);
     res.status(500).json({ success: false, message: 'Server error retrieving NCR catalog' });
@@ -353,8 +537,6 @@ export const buyFromNcr = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Product not found in NCR catalog' });
     }
 
-    const totalCost = ncrItem.ncrSellPrice * qty;
-
     let startup;
     if (global.useMockDb) {
       startup = global.mockStartups.find(s => String(s.owner) === String(userId));
@@ -365,6 +547,11 @@ export const buyFromNcr = async (req, res) => {
     if (!startup) {
       return res.status(404).json({ success: false, message: 'Startup not found for player' });
     }
+
+    const country = startup.country || 'United States';
+    const localPrice = getProductPrice(country, productId);
+    const ncrSellPrice = +(localPrice * 1.05).toFixed(2);
+    const totalCost = ncrSellPrice * qty;
 
     if (startup.currentBalance < totalCost) {
       return res.status(400).json({ success: false, message: 'Insufficient corporate liquidity reserves' });
@@ -405,7 +592,7 @@ export const buyFromNcr = async (req, res) => {
         sellerStartupName: 'National Commodity Reserve',
         productName: ncrItem.productName,
         quantity: qty,
-        pricePerUnit: ncrItem.ncrSellPrice,
+        pricePerUnit: ncrSellPrice,
         totalAmount: totalCost,
         createdAt: new Date()
       };
@@ -418,7 +605,7 @@ export const buyFromNcr = async (req, res) => {
         sellerStartupName: 'National Commodity Reserve',
         productName: ncrItem.productName,
         quantity: qty,
-        pricePerUnit: ncrItem.ncrSellPrice,
+        pricePerUnit: ncrSellPrice,
         totalAmount: totalCost
       });
     }
@@ -474,7 +661,10 @@ export const sellToNcr = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Insufficient stock in warehouse' });
     }
 
-    const totalRevenue = ncrItem.ncrBuyPrice * qty;
+    const country = startup.country || 'United States';
+    const localPrice = getProductPrice(country, productId);
+    const ncrBuyPrice = +(localPrice * 0.95).toFixed(2);
+    const totalRevenue = ncrBuyPrice * qty;
 
     // Perform transaction
     inventory[itemIndex].quantity -= qty;
@@ -503,7 +693,7 @@ export const sellToNcr = async (req, res) => {
         sellerStartupName: startup.startupName,
         productName: ncrItem.productName,
         quantity: qty,
-        pricePerUnit: ncrItem.ncrBuyPrice,
+        pricePerUnit: ncrBuyPrice,
         totalAmount: totalRevenue,
         createdAt: new Date()
       };
@@ -516,7 +706,7 @@ export const sellToNcr = async (req, res) => {
         sellerStartupName: startup.startupName,
         productName: ncrItem.productName,
         quantity: qty,
-        pricePerUnit: ncrItem.ncrBuyPrice,
+        pricePerUnit: ncrBuyPrice,
         totalAmount: totalRevenue
       });
     }

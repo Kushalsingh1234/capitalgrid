@@ -1,16 +1,6 @@
 import Employee from '../models/Employee.js';
 import Startup from '../models/Startup.js';
-
-// Salaries defined per employee type
-export const EMPLOYEE_SALARIES = {
-  'Farmer': 1200,
-  'Labourer': 1000,
-  'Fashion Designer': 2500,
-  'Builder': 1500,
-  'Engineer': 2000,
-  'Manager': 3000,
-  'Chief': 5000
-};
+import { getSalary } from '../config/countryEconomy.js';
 
 // Employee roles required/allowed per business type
 export const BUSINESS_REQUIRED_EMPLOYEES = {
@@ -24,10 +14,10 @@ export const BUSINESS_REQUIRED_EMPLOYEES = {
   'Electronics Manufacturing': ['Engineer', 'Labourer'],
   
   // Retail stores (no production, but can hire staff)
-  'Clothing Store': ['Labourer', 'Manager', 'Chief'],
-  'Electronics Store': ['Labourer', 'Manager', 'Chief'],
-  'Restaurant': ['Labourer', 'Manager', 'Chief'],
-  'Car Showroom': ['Labourer', 'Manager', 'Chief']
+  'Clothing Store': ['Labourer', 'Manager'],
+  'Electronics Store': ['Labourer', 'Manager'],
+  'Restaurant': ['Manager', 'Chef'],
+  'Car Showroom': ['Labourer', 'Manager']
 };
 
 /**
@@ -59,13 +49,22 @@ export const getMyEmployees = async (req, res) => {
       hiredEmployees = await Employee.find({ startupId: startup._id });
     }
 
+    // Map legacy 'Chief' to 'Chef'
+    hiredEmployees = hiredEmployees.map(e => {
+      if (e.employeeType === 'Chief') {
+        e.employeeType = 'Chef';
+      }
+      return e;
+    });
+
     // 3. Merge with allowed employee types for the business type
+    const country = startup.country || 'United States';
     const allowedTypes = BUSINESS_REQUIRED_EMPLOYEES[startup.businessType] || [];
     const mergedList = allowedTypes.map(type => {
       const hired = hiredEmployees.find(e => e.employeeType === type);
       return {
         employeeType: type,
-        salary: EMPLOYEE_SALARIES[type] || 1000,
+        salary: getSalary(country, type),
         quantity: hired ? hired.quantity : 0
       };
     });
@@ -96,6 +95,11 @@ export const hireEmployee = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Employee type is required' });
     }
 
+    let targetRole = employeeType;
+    if (employeeType === 'Chief') {
+      targetRole = 'Chef';
+    }
+
     // 1. Fetch startup
     let startup;
     if (global.useMockDb) {
@@ -110,23 +114,24 @@ export const hireEmployee = async (req, res) => {
 
     // 2. Validate allowed roles
     const allowedTypes = BUSINESS_REQUIRED_EMPLOYEES[startup.businessType] || [];
-    if (!allowedTypes.includes(employeeType)) {
-      return res.status(400).json({ success: false, message: `Your business category does not employ ${employeeType}s` });
+    if (!allowedTypes.includes(targetRole)) {
+      return res.status(400).json({ success: false, message: `Your business category does not employ ${targetRole}s` });
     }
 
     // 3. Hire transaction logic
     let employee;
-    const salary = EMPLOYEE_SALARIES[employeeType] || 1000;
+    const country = startup.country || 'United States';
+    const salary = getSalary(country, targetRole);
 
     if (global.useMockDb) {
-      employee = global.mockEmployees.find(e => String(e.startupId) === String(startup._id) && e.employeeType === employeeType);
+      employee = global.mockEmployees.find(e => String(e.startupId) === String(startup._id) && e.employeeType === targetRole);
       if (employee) {
         employee.quantity += hireQty;
       } else {
         employee = {
           _id: 'mock-emp-' + Date.now(),
           startupId: startup._id,
-          employeeType,
+          employeeType: targetRole,
           quantity: hireQty,
           salary,
           createdAt: new Date()
@@ -135,14 +140,14 @@ export const hireEmployee = async (req, res) => {
       }
       startup.employeesRecruited = (startup.employeesRecruited || 0) + hireQty;
     } else {
-      employee = await Employee.findOne({ startupId: startup._id, employeeType });
+      employee = await Employee.findOne({ startupId: startup._id, employeeType: targetRole });
       if (employee) {
         employee.quantity += hireQty;
         await employee.save();
       } else {
         employee = await Employee.create({
           startupId: startup._id,
-          employeeType,
+          employeeType: targetRole,
           quantity: hireQty,
           salary
         });
@@ -159,18 +164,26 @@ export const hireEmployee = async (req, res) => {
       hiredEmployees = await Employee.find({ startupId: startup._id });
     }
 
+    // Map legacy 'Chief' to 'Chef'
+    hiredEmployees = hiredEmployees.map(e => {
+      if (e.employeeType === 'Chief') {
+        e.employeeType = 'Chef';
+      }
+      return e;
+    });
+
     const updatedMerged = allowedTypes.map(type => {
       const hired = hiredEmployees.find(e => e.employeeType === type);
       return {
         employeeType: type,
-        salary: EMPLOYEE_SALARIES[type] || 1000,
+        salary: getSalary(country, type),
         quantity: hired ? hired.quantity : 0
       };
     });
 
     res.status(200).json({
       success: true,
-      message: `Successfully hired ${hireQty} ${employeeType}(s).`,
+      message: `Successfully hired ${hireQty} ${targetRole}(s).`,
       employees: updatedMerged
     });
 
@@ -194,6 +207,11 @@ export const fireEmployee = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Employee type is required' });
     }
 
+    let targetRole = employeeType;
+    if (employeeType === 'Chief') {
+      targetRole = 'Chef';
+    }
+
     // 1. Fetch startup
     let startup;
     if (global.useMockDb) {
@@ -211,16 +229,16 @@ export const fireEmployee = async (req, res) => {
     const allowedTypes = BUSINESS_REQUIRED_EMPLOYEES[startup.businessType] || [];
 
     if (global.useMockDb) {
-      employee = global.mockEmployees.find(e => String(e.startupId) === String(startup._id) && e.employeeType === employeeType);
+      employee = global.mockEmployees.find(e => String(e.startupId) === String(startup._id) && e.employeeType === targetRole);
       if (!employee || employee.quantity <= 0) {
-        return res.status(400).json({ success: false, message: `You have no ${employeeType}s currently hired` });
+        return res.status(400).json({ success: false, message: `You have no ${targetRole}s currently hired` });
       }
       employee.quantity -= 1;
       startup.employeesLaidOff = (startup.employeesLaidOff || 0) + 1;
     } else {
-      employee = await Employee.findOne({ startupId: startup._id, employeeType });
+      employee = await Employee.findOne({ startupId: startup._id, employeeType: targetRole });
       if (!employee || employee.quantity <= 0) {
-        return res.status(400).json({ success: false, message: `You have no ${employeeType}s currently hired` });
+        return res.status(400).json({ success: false, message: `You have no ${targetRole}s currently hired` });
       }
       employee.quantity -= 1;
       await employee.save();
@@ -237,18 +255,27 @@ export const fireEmployee = async (req, res) => {
       hiredEmployees = await Employee.find({ startupId: startup._id });
     }
 
+    // Map legacy 'Chief' to 'Chef'
+    hiredEmployees = hiredEmployees.map(e => {
+      if (e.employeeType === 'Chief') {
+        e.employeeType = 'Chef';
+      }
+      return e;
+    });
+
+    const country = startup.country || 'United States';
     const updatedMerged = allowedTypes.map(type => {
       const hired = hiredEmployees.find(e => e.employeeType === type);
       return {
         employeeType: type,
-        salary: EMPLOYEE_SALARIES[type] || 1000,
+        salary: getSalary(country, type),
         quantity: hired ? hired.quantity : 0
       };
     });
 
     res.status(200).json({
       success: true,
-      message: `Successfully fired 1 ${employeeType}.`,
+      message: `Successfully fired 1 ${targetRole}.`,
       employees: updatedMerged
     });
 

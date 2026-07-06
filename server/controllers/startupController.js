@@ -2,6 +2,7 @@ import Startup from '../models/Startup.js';
 import User from '../models/User.js';
 import ProductionTask from '../models/ProductionTask.js';
 import { processCompletedTasks } from './productionController.js';
+import countryEconomy from '../config/countryEconomy.js';
 
 // Capital mappings based on country choice
 const STARTING_CAPITALS = {
@@ -153,10 +154,19 @@ export const createStartup = async (req, res) => {
       });
     }
 
+    const countryData = countryEconomy.countries[country] || countryEconomy.countries['United States'];
+    const localPrices = Object.keys(countryData.commodities).reduce((acc, key) => {
+      acc[key] = countryData.commodities[key].price;
+      return acc;
+    }, {});
+
     res.status(201).json({
       success: true,
       message: 'Startup registered successfully',
-      startup: newStartup
+      startup: {
+        ...newStartup.toObject ? newStartup.toObject() : newStartup,
+        localPrices
+      }
     });
 
   } catch (error) {
@@ -205,9 +215,19 @@ export const getStartup = async (req, res) => {
       });
     }
 
+    const country = startup.country || 'United States';
+    const countryData = countryEconomy.countries[country] || countryEconomy.countries['United States'];
+    const localPrices = Object.keys(countryData.commodities).reduce((acc, key) => {
+      acc[key] = countryData.commodities[key].price;
+      return acc;
+    }, {});
+
     res.status(200).json({
       success: true,
-      startup,
+      startup: {
+        ...startup.toObject ? startup.toObject() : startup,
+        localPrices
+      },
       tasks: activeTasks,
       serverTime: new Date()
     });

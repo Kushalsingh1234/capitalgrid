@@ -6,6 +6,10 @@ const marketplaceSchema = new mongoose.Schema({
     ref: 'Startup',
     required: [true, 'Seller Startup reference is required']
   },
+  sellerStartupId: {
+    type: String,
+    required: [true, 'Seller Startup ID is required']
+  },
   sellerStartupName: {
     type: String,
     required: [true, 'Seller Startup Name is required']
@@ -14,9 +18,17 @@ const marketplaceSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Seller Country is required']
   },
+  sellerCurrency: {
+    type: String,
+    required: [true, 'Seller Currency is required']
+  },
   productId: {
     type: String,
     required: [true, 'Product ID is required']
+  },
+  commodity: {
+    type: String,
+    required: [true, 'Commodity identifier is required']
   },
   productName: {
     type: String,
@@ -31,6 +43,11 @@ const marketplaceSchema = new mongoose.Schema({
     type: Number,
     required: [true, 'Price per unit is required'],
     min: [0.01, 'Price per unit must be at least 0.01']
+  },
+  unitPrice: {
+    type: Number,
+    required: [true, 'Unit price is required'],
+    min: [0.01, 'Unit price must be at least 0.01']
   },
   totalPrice: {
     type: Number,
@@ -49,6 +66,10 @@ const marketplaceSchema = new mongoose.Schema({
   buyerStartupName: {
     type: String,
     default: null
+  },
+  listedAt: {
+    type: Date,
+    default: Date.now
   },
   createdAt: {
     type: Date,

@@ -5,7 +5,9 @@ import {
   buyListing, 
   getNcrCatalog, 
   buyFromNcr, 
-  sellToNcr 
+  sellToNcr,
+  getDomesticListingsController,
+  getInternationalListingsController
 } from '../controllers/marketplaceController.js';
 import protect from '../middleware/authMiddleware.js';
 
@@ -13,6 +15,8 @@ const router = express.Router();
 
 router.post('/list', protect, createListing);
 router.get('/', protect, getAllListings);
+router.get('/domestic', protect, getDomesticListingsController);
+router.get('/international', protect, getInternationalListingsController);
 router.post('/buy/:id', protect, buyListing);
 
 // NCR routes

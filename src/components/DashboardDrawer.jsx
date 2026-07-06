@@ -103,8 +103,12 @@ export default function DashboardDrawer({
   };
 
   // Helper calculations for Net Worth & Valuation
+  const localPrices = startup?.localPrices || {};
+  const inventoryAssetValuation = inventory.reduce((sum, item) => {
+    const price = localPrices[item.productId] || 0;
+    return sum + (item.quantity * price);
+  }, 0);
   const totalInventoryQuantity = inventory.reduce((sum, item) => sum + item.quantity, 0);
-  const inventoryAssetValuation = totalInventoryQuantity * 250; // Estimated value per unit
   const currentCash = startup?.currentBalance || 0;
   const netWorth = currentCash + inventoryAssetValuation;
   
@@ -497,9 +501,9 @@ export default function DashboardDrawer({
             icon: 'fa-user-tie text-blue-400',
             description: 'Managers — Supervise workflows and coordinate facility operations'
           },
-          'Chief': {
-            icon: 'fa-crown text-yellow-400',
-            description: 'Chiefs — Execute corporate strategy and govern organizational expansion'
+          'Chef': {
+            icon: 'fa-utensils text-yellow-400',
+            description: 'Chefs — Culinary experts preparing standard menus for the restaurant'
           }
         };
 
@@ -802,6 +806,24 @@ export default function DashboardDrawer({
             </div>
           </div>
         );
+
+      case 'Notifications': {
+        return (
+          <div className="flex flex-col gap-6 text-sm">
+            <div className="text-center py-12">
+              <div className="w-14 h-14 rounded-full border border-white/5 bg-white/2 flex items-center justify-center text-text-muted text-xl mx-auto mb-5">
+                <i className="fa-solid fa-bell-slash"></i>
+              </div>
+              <h4 className="font-display font-extrabold text-xs uppercase text-white tracking-wide">
+                No new notifications
+              </h4>
+              <p className="text-[10px] text-text-secondary mt-1 max-w-[200px] mx-auto leading-normal">
+                We will notify you here when transactions or events occur.
+              </p>
+            </div>
+          </div>
+        );
+      }
 
       case 'Profile': {
         const hasStartup = !!startup;

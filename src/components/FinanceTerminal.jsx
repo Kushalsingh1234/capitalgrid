@@ -57,8 +57,12 @@ export default function FinanceTerminal({
   const averageSalary = totalEmployees > 0 ? monthlyPayroll / totalEmployees : 0;
 
   // 2. Dynamic Calculations from Inventory Stocks
+  const localPrices = startup?.localPrices || {};
+  const inventoryAssetValuation = inventory.reduce((sum, item) => {
+    const price = localPrices[item.productId] || 0;
+    return sum + (item.quantity * price);
+  }, 0);
   const totalInventoryQuantity = inventory.reduce((sum, item) => sum + item.quantity, 0);
-  const inventoryAssetValuation = totalInventoryQuantity * 250; // Aligned with DashboardDrawer.jsx
 
   // 3. Dynamic Calculations from Ledger Transactions
   const salesTx = transactions.filter(t => t.transactionType === 'Sale');

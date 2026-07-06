@@ -282,10 +282,10 @@ export const startProduction = async (req, res) => {
       });
     }
 
-    if (quantity > 100) {
+    if (quantity > 10000) {
       return res.status(400).json({
         success: false,
-        message: 'Maximum production batch size is 100 units.'
+        message: 'Maximum production batch size is 10000 units.'
       });
     }
 
