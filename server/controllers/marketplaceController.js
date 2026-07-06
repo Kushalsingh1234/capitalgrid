@@ -348,8 +348,15 @@ export const buyListing = async (req, res) => {
     }
 
     // 4. Verify buyer balance using Trade Service
+    let { quantity } = req.body;
+    const buyQty = parseInt(quantity, 10) || listing.quantity;
+
+    if (buyQty <= 0 || buyQty > listing.quantity) {
+      return res.status(400).json({ success: false, message: 'Invalid purchase quantity requested.' });
+    }
+
     const tradePriceInfo = tradeService.calculateTradePrice(listing, buyerStartup.country);
-    const totalCost = tradePriceInfo.buyerPrice * listing.quantity;
+    const totalCost = tradePriceInfo.buyerPrice * buyQty;
 
     if (buyerStartup.currentBalance < totalCost) {
       return res.status(400).json({ 
@@ -370,32 +377,42 @@ export const buyListing = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Seller startup record not found' });
     }
 
+    const sellerRevenue = listing.pricePerUnit * buyQty;
+
     // 6. Execute transfers
     // Decrease buyer balance
     buyerStartup.currentBalance -= totalCost;
     
     // Increase seller balance (seller gets their original local price list value)
-    sellerStartup.currentBalance += listing.totalPrice;
+    sellerStartup.currentBalance += sellerRevenue;
 
     // Increase buyer inventory
     const buyerInventory = buyerStartup.inventory || [];
     const buyerItemIndex = buyerInventory.findIndex(item => item.productId === listing.productId);
 
     if (buyerItemIndex !== -1) {
-      buyerInventory[buyerItemIndex].quantity += listing.quantity;
+      buyerInventory[buyerItemIndex].quantity += buyQty;
     } else {
       buyerInventory.push({
         productId: listing.productId,
         productName: listing.productName,
-        quantity: listing.quantity
+        quantity: buyQty
       });
     }
     buyerStartup.inventory = buyerInventory;
 
     // Update listing status and buyer info
-    listing.status = 'Sold';
-    listing.buyer = buyerStartup._id;
-    listing.buyerStartupName = buyerStartup.startupName;
+    const isFullPurchase = buyQty === listing.quantity;
+    if (isFullPurchase) {
+      listing.status = 'Sold';
+      listing.quantity = 0;
+      listing.totalPrice = 0;
+      listing.buyer = buyerStartup._id;
+      listing.buyerStartupName = buyerStartup.startupName;
+    } else {
+      listing.quantity -= buyQty;
+      listing.totalPrice = listing.quantity * listing.pricePerUnit;
+    }
 
     // 7. Persist changes
     if (global.useMockDb) {
@@ -421,9 +438,9 @@ export const buyListing = async (req, res) => {
         buyerStartupName: buyerStartup.startupName,
         sellerStartupName: sellerStartup.startupName,
         productName: listing.productName,
-        quantity: listing.quantity,
+        quantity: buyQty,
         pricePerUnit: listing.pricePerUnit,
-        totalAmount: listing.totalPrice,
+        totalAmount: sellerRevenue,
         createdAt: new Date()
       };
       
@@ -434,7 +451,7 @@ export const buyListing = async (req, res) => {
         buyerStartupName: buyerStartup.startupName,
         sellerStartupName: sellerStartup.startupName,
         productName: listing.productName,
-        quantity: listing.quantity,
+        quantity: buyQty,
         pricePerUnit: tradePriceInfo.buyerPrice,
         totalAmount: totalCost,
         createdAt: new Date()
@@ -449,9 +466,9 @@ export const buyListing = async (req, res) => {
           buyerStartupName: buyerStartup.startupName,
           sellerStartupName: sellerStartup.startupName,
           productName: listing.productName,
-          quantity: listing.quantity,
+          quantity: buyQty,
           pricePerUnit: listing.pricePerUnit,
-          totalAmount: listing.totalPrice
+          totalAmount: sellerRevenue
         },
         {
           startup: buyerStartup._id,
@@ -459,7 +476,7 @@ export const buyListing = async (req, res) => {
           buyerStartupName: buyerStartup.startupName,
           sellerStartupName: sellerStartup.startupName,
           productName: listing.productName,
-          quantity: listing.quantity,
+          quantity: buyQty,
           pricePerUnit: tradePriceInfo.buyerPrice,
           totalAmount: totalCost
         }
@@ -468,7 +485,7 @@ export const buyListing = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `Successfully purchased ${listing.quantity}x ${listing.productName} for ${totalCost}.`,
+      message: `Successfully purchased ${buyQty}x ${listing.productName} for ${totalCost}.`,
       currentBalance: buyerStartup.currentBalance,
       inventory: buyerStartup.inventory
     });

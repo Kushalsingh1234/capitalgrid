@@ -236,7 +236,7 @@ export default function MarketplaceInterface({
     }
 
     try {
-      const res = await marketplaceService.buyListing(activeListing.id, token);
+      const res = await marketplaceService.buyListing(activeListing.id, finalQty, token);
       if (res.success) {
         setSuccessMessage(`Purchase complete: Bought ${finalQty} units of ${activeListing.productName}!`);
         await fetchListings();

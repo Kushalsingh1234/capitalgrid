@@ -45,13 +45,14 @@ export const createListing = async (listingData, token) => {
 /**
  * Purchase an active marketplace listing
  */
-export const buyListing = async (listingId, token) => {
+export const buyListing = async (listingId, quantity, token) => {
   const response = await fetch(`${API_BASE}/buy/${listingId}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
-    }
+    },
+    body: JSON.stringify({ quantity })
   });
   return handleResponse(response);
 };
