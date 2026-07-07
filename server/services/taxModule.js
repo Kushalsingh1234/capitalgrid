@@ -1,0 +1,179 @@
+import Startup from '../models/Startup.js';
+import GovernmentAccount from '../models/GovernmentAccount.js';
+import Transaction from '../models/Transaction.js';
+import { TAX_CONFIG } from '../config/taxConfig.js';
+import * as accountingHelper from './accountingHelper.js';
+
+// Helper to format currency for console and description logs
+const formatCurrencyLog = (amount, country) => {
+  const symbols = {
+    'India': '₹',
+    'United States': '$',
+    'United Kingdom': '£',
+    'Germany': '€',
+    'Japan': '¥',
+    'Brazil': 'R$',
+    'Australia': 'A$'
+  };
+  const sym = symbols[country] || '$';
+  return `${sym}${amount.toLocaleString()}`;
+};
+
+// Helper to get or create government account
+const getOrCreateGovAccount = async (country) => {
+  if (global.useMockDb) {
+    if (!global.mockGovernmentAccounts) {
+      global.mockGovernmentAccounts = [];
+    }
+    let acc = global.mockGovernmentAccounts.find(a => a.country === country);
+    if (!acc) {
+      acc = {
+        country,
+        corporateTaxCollected: 0,
+        payrollTaxCollected: 0,
+        vatCollected: 0,
+        governmentBalance: 0,
+        subsidiesPaid: 0,
+        lastUpdated: new Date()
+      };
+      global.mockGovernmentAccounts.push(acc);
+    }
+    return acc;
+  } else {
+    let acc = await GovernmentAccount.findOne({ country });
+    if (!acc) {
+      acc = await GovernmentAccount.create({ country });
+    }
+    return acc;
+  }
+};
+
+const saveGovAccount = async (acc) => {
+  if (global.useMockDb) {
+    acc.lastUpdated = new Date();
+  } else {
+    acc.lastUpdated = new Date();
+    await acc.save();
+  }
+};
+
+export const processMonthlyTax = async (clockData) => {
+  console.log(`[CorporateTaxModule] Running tax cycle for Month: ${clockData.month}, Year: ${clockData.year}`);
+  
+  // 1. Fetch all active startups
+  let startups = [];
+  if (global.useMockDb) {
+    startups = global.mockStartups.filter(s => s.status === 'Active');
+  } else {
+    startups = await Startup.find({ status: 'Active' });
+  }
+
+  for (const startup of startups) {
+    const country = startup.country || 'United States';
+    const config = TAX_CONFIG[country] || TAX_CONFIG['United States'];
+    const taxRate = config.corporateTaxRate;
+
+    // Calculate taxable profit: Taxable Profit = Revenue - Expenses
+    const revenue = startup.financials?.revenue || 0;
+    const expenses = startup.financials?.operatingExpenses || 0;
+    const taxableProfit = Math.max(0, revenue - expenses);
+
+    // Calculate current tax
+    const corporateTax = Math.round(taxableProfit * taxRate);
+
+    // Skip if no current tax and no previous outstanding liabilities
+    if (corporateTax === 0 && (startup.outstandingTax || 0) === 0) {
+      // Still need to reset monthly counters for the new month
+      accountingHelper.resetMonthlyCounters(startup);
+      if (!global.useMockDb) {
+        startup.markModified('financials');
+        await startup.save();
+      }
+      continue;
+    }
+
+    // 1. Record the period accrual tax expense (updates financials & OPEX)
+    if (corporateTax > 0) {
+      accountingHelper.recordTaxExpense(startup, corporateTax);
+    }
+
+    // 2. Perform Cash Settlement
+    const previousOutstanding = startup.outstandingTax || 0;
+    const totalLiability = corporateTax + previousOutstanding;
+    const originalBalance = startup.currentBalance || 0;
+    const newBalanceRaw = originalBalance - totalLiability;
+
+    let amountPaid = 0;
+    let newOutstanding = 0;
+
+    if (newBalanceRaw >= 0) {
+      // Can afford all tax liabilities
+      startup.currentBalance = newBalanceRaw;
+      amountPaid = totalLiability;
+      newOutstanding = 0;
+    } else {
+      // Cannot afford all tax liabilities; pay up to our balance (leaving 0)
+      amountPaid = originalBalance;
+      newOutstanding = totalLiability - amountPaid;
+      startup.currentBalance = 0;
+    }
+
+    // Update outstanding tax property
+    if (typeof startup.set === 'function') {
+      startup.set('outstandingTax', newOutstanding);
+    } else {
+      startup.outstandingTax = newOutstanding;
+    }
+
+    // 3. Reset the completed month's books
+    accountingHelper.resetMonthlyCounters(startup);
+
+    // Save startup
+    if (!global.useMockDb) {
+      startup.markModified('financials');
+      await startup.save();
+    }
+
+    // 4. Route collected revenue to Government Treasury & record Transaction
+    if (amountPaid > 0) {
+      const govAcc = await getOrCreateGovAccount(country);
+      govAcc.corporateTaxCollected += amountPaid;
+      govAcc.governmentBalance += amountPaid;
+      await saveGovAccount(govAcc);
+
+      // Record a rich transaction log description for easy audit
+      const description = `Corporate Tax | Taxable Profit: ${formatCurrencyLog(taxableProfit, country)} | Rate: ${(taxRate * 100).toFixed(0)}% | Tax Due: ${formatCurrencyLog(corporateTax, country)} | Paid: ${formatCurrencyLog(amountPaid, country)} | Outstanding: ${formatCurrencyLog(newOutstanding, country)}`;
+
+      const txPayload = {
+        startup: startup._id,
+        transactionType: 'Tax',
+        productName: 'Corporate Tax',
+        quantity: 1,
+        pricePerUnit: amountPaid,
+        totalAmount: amountPaid,
+        category: 'Tax',
+        description,
+        reference: 'Tax Module'
+      };
+
+      if (global.useMockDb) {
+        if (!global.mockTransactions) {
+          global.mockTransactions = [];
+        }
+        global.mockTransactions.push({
+          _id: 'mock-tx-tax-' + Date.now() + Math.random(),
+          ...txPayload,
+          createdAt: new Date()
+        });
+      } else {
+        await Transaction.create(txPayload);
+      }
+    }
+
+    console.log(`[CorporateTaxModule] Startup: ${startup.startupName} | Taxable Profit: ${taxableProfit} | Tax Paid: ${amountPaid} | New Outstanding: ${newOutstanding}`);
+  }
+};
+
+export const corporateTaxModuleHooks = {
+  onMonth: processMonthlyTax
+};

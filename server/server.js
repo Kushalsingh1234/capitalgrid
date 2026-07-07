@@ -11,6 +11,9 @@ import productionRoutes from './routes/productionRoutes.js';
 import marketplaceRoutes from './routes/marketplaceRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
+import worldClockRoutes from './routes/worldClockRoutes.js';
+import { initializeClock } from './services/worldClockService.js';
+import { tickEngine, registerDefaultModules } from './services/economicEngine.js';
 
 // ES Modules __dirname setup
 const __filename = fileURLToPath(import.meta.url);
@@ -20,13 +23,26 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 // Establish DB connection
-connectDB();
+connectDB().then(() => {
+  initializeClock();
+  registerDefaultModules();
+});
 
 const app = express();
 
 // Global request filters
 app.use(cors());
 app.use(express.json());
+
+// Economic Engine Tick Interceptor
+app.use('/api', async (req, res, next) => {
+  try {
+    await tickEngine();
+  } catch (err) {
+    console.error(`[Economic Engine Middleware Error] ${err.message}`);
+  }
+  next();
+});
 
 // Routing linkages
 app.use('/api/auth', authRoutes);
@@ -35,6 +51,7 @@ app.use('/api/production', productionRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/transaction', transactionRoutes);
 app.use('/api/employee', employeeRoutes);
+app.use('/api/world-clock', worldClockRoutes);
 
 // Static assets production routing - conditionally enabled if built frontend files are present
 const distPath = path.join(__dirname, '../dist');

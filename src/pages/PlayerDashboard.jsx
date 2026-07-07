@@ -15,6 +15,7 @@ import * as transactionService from '../services/transactionService';
 import * as employeeService from '../services/employeeService';
 import { getProductsForBusiness, isRetailBusiness } from '../data/products';
 import { PRODUCT_DEPENDENCIES } from '../data/dependencies';
+import { getWorldClock } from '../services/worldClockService';
 
 const CURRENCY_SYMBOLS = {
   'India': '₹',
@@ -137,6 +138,12 @@ export default function PlayerDashboard() {
   const [producingState, setProducingState] = useState({});
   const [currentView, setCurrentView] = useState('world');
 
+  // World Clock state definitions
+  const [worldClockSnapshot, setWorldClockSnapshot] = useState(null);
+  const [lastSyncRealTime, setLastSyncRealTime] = useState(0);
+  const [interpolatedTimeStr, setInterpolatedTimeStr] = useState('Loading Clock...');
+  const [marketStatus, setMarketStatus] = useState('CLOSED');
+
   const handleLogout = () => {
     logout();
     navigate('/');
@@ -151,87 +158,99 @@ export default function PlayerDashboard() {
     window.dispatchEvent(new CustomEvent('center-player-building'));
   };
 
-  useEffect(() => {
-    const fetchStartupDetails = async () => {
-      try {
-        if (!token) return;
-        const response = await startupService.getMyStartup(token);
-        if (response.success && response.startup) {
-          const startupData = {
-            ...response.startup,
-            tasks: response.tasks || [],
-            serverTime: response.serverTime,
-            fetchedAt: Date.now()
-          };
-          setStartup(startupData);
-          setInventory(response.startup.inventory || []);
-        } else {
-          setErrorMsg('Failed to load active corporate data.');
-        }
-      } catch (err) {
-        console.error(err);
-        setErrorMsg('Network error loading startup details.');
-      } finally {
-        setLoadingStartup(false);
-      }
-    };
-
-    const fetchTransactions = async () => {
-      try {
-        if (!token) return;
-        const response = await transactionService.getMyTransactions(token);
-        if (response.success && response.transactions) {
-          setTransactions(response.transactions);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoadingTransactions(false);
-      }
-    };
-
-    const fetchEmployees = async () => {
-      try {
-        if (!token) return;
-        const response = await employeeService.getMyEmployees(token);
-        if (response.success && response.employees) {
-          setEmployees(response.employees);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoadingEmployees(false);
-      }
-    };
-
-    fetchStartupDetails();
-    fetchTransactions();
-    fetchEmployees();
-  }, [token]);
-
-  // Refresh all dashboard data (called after marketplace trades)
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       if (!token) return;
-      const startupRes = await startupService.getMyStartup(token);
-      if (startupRes.success && startupRes.startup) {
+      const response = await startupService.getMyStartup(token);
+      if (response.success && response.startup) {
         const startupData = {
-          ...startupRes.startup,
-          tasks: startupRes.tasks || [],
-          serverTime: startupRes.serverTime,
+          ...response.startup,
+          tasks: response.tasks || [],
+          serverTime: response.serverTime,
           fetchedAt: Date.now()
         };
         setStartup(startupData);
-        setInventory(startupRes.startup.inventory || []);
+        setInventory(response.startup.inventory || []);
+      } else {
+        setErrorMsg('Failed to load active corporate data.');
       }
-      const txRes = await transactionService.getMyTransactions(token);
-      if (txRes.success && txRes.transactions) {
-        setTransactions(txRes.transactions);
+      
+      const txResponse = await transactionService.getMyTransactions(token);
+      if (txResponse.success && txResponse.transactions) {
+        setTransactions(txResponse.transactions);
+      }
+      
+      const empResponse = await employeeService.getMyEmployees(token);
+      if (empResponse.success && empResponse.employees) {
+        setEmployees(empResponse.employees);
       }
     } catch (err) {
-      console.error(err);
+      console.error('[Dashboard Fetch Error]', err);
+      setErrorMsg('Network error loading startup details.');
+    } finally {
+      setLoadingStartup(false);
+      setLoadingTransactions(false);
+      setLoadingEmployees(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  // World Clock Sync & Interpolation loops
+  useEffect(() => {
+    const syncClock = async () => {
+      try {
+        const res = await getWorldClock();
+        if (res.success && res.data) {
+          setWorldClockSnapshot(res.data);
+          setLastSyncRealTime(Date.now());
+          setMarketStatus(res.data.marketStatus);
+        }
+      } catch (err) {
+        console.error('[World Clock Sync Error]', err);
+      }
+    };
+
+    syncClock();
+    const syncInterval = setInterval(syncClock, 10000);
+    return () => clearInterval(syncInterval);
+  }, []);
+
+  useEffect(() => {
+    if (!worldClockSnapshot) return;
+
+    const updateInterpolation = () => {
+      const elapsedRealMs = Date.now() - lastSyncRealTime;
+      const elapsedGameMs = elapsedRealMs * worldClockSnapshot.speedMultiplier;
+      const interpolatedTimestamp = worldClockSnapshot.timestamp + elapsedGameMs;
+      
+      const gameDate = new Date(interpolatedTimestamp);
+      const year = gameDate.getFullYear();
+      const monthNum = gameDate.getMonth() + 1;
+      const day = gameDate.getDate();
+      const hour = gameDate.getHours();
+      const minute = gameDate.getMinutes();
+      
+      const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      const monthName = monthNames[gameDate.getMonth()];
+      const format2Digits = (num) => String(num).padStart(2, '0');
+      const formatted = `${day} ${monthName} ${year} | ${format2Digits(hour)}:${format2Digits(minute)}`;
+      
+      setInterpolatedTimeStr(formatted);
+      setMarketStatus((hour >= 8 && hour < 20) ? 'OPEN' : 'CLOSED');
+    };
+
+    updateInterpolation();
+    const tickInterval = setInterval(updateInterpolation, 1000);
+    return () => clearInterval(tickInterval);
+  }, [worldClockSnapshot, lastSyncRealTime]);
+
+
 
   // Called by ProductionCenter when a batch completes or starts
   const handleProductionComplete = useCallback(async (updatedInventory, updatedTasks, responseServerTime) => {
@@ -377,6 +396,21 @@ export default function PlayerDashboard() {
         </div>
 
         <div className="flex items-center gap-3 md:gap-6">
+          {/* WORLD CLOCK */}
+          <div className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 bg-black/40 border border-white/5 rounded-md font-mono text-[9.5px] md:text-[11px] tracking-wide text-text-secondary select-none">
+            <span className="text-[11px] md:text-xs shrink-0">🌍</span>
+            <span className="font-bold text-white whitespace-nowrap">
+              {interpolatedTimeStr}
+            </span>
+            <span className={`text-[7.5px] md:text-[9.5px] font-display font-extrabold uppercase px-1 md:px-1.5 py-0.2 md:py-0.5 rounded border ${
+              marketStatus === 'OPEN'
+                ? 'bg-green-950/20 text-greenGlow border-green-500/20'
+                : 'bg-red-950/20 text-red-400 border-red-500/20'
+            }`}>
+              {marketStatus}
+            </span>
+          </div>
+
           {/* CURRENT BALANCE */}
           {startup && (
             <div className="flex items-center gap-2 px-2.5 py-1.5 md:px-3.5 md:py-1.5 bg-green-950/20 border border-green-500/20 rounded-md">

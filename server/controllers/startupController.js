@@ -117,6 +117,18 @@ export const createStartup = async (req, res) => {
         status: 'Active',
         employeesLaidOff: 0,
         employeesRecruited: 0,
+        employeeMorale: 100,
+        recentPayroll: null,
+        financials: {
+          revenue: 0,
+          operatingExpenses: 0,
+          payrollExpense: 0,
+          productionExpense: 0,
+          marketplaceExpense: 0,
+          taxExpense: 0,
+          netProfit: 0,
+          retainedEarnings: 0
+        },
         owner: userId,
         createdAt: new Date()
       };
@@ -194,6 +206,38 @@ export const getStartup = async (req, res) => {
 
     if (!startup) {
       return res.status(404).json({ success: false, message: 'No startup registered for this player' });
+    }
+
+    // Auto-migrate old documents missing financial accounting object
+    if (!startup.financials) {
+      startup.financials = {
+        revenue: 0,
+        operatingExpenses: 0,
+        payrollExpense: 0,
+        productionExpense: 0,
+        marketplaceExpense: 0,
+        taxExpense: 0,
+        netProfit: 0,
+        retainedEarnings: 0
+      };
+      if (startup.employeeMorale === undefined) {
+        startup.employeeMorale = 100;
+      }
+      if (!global.useMockDb) {
+        startup.markModified('financials');
+        await startup.save();
+      }
+    }
+
+    if (startup.outstandingTax === undefined) {
+      if (typeof startup.set === 'function') {
+        startup.set('outstandingTax', 0);
+      } else {
+        startup.outstandingTax = 0;
+      }
+      if (!global.useMockDb) {
+        await startup.save();
+      }
     }
 
     // Process tasks

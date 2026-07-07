@@ -5,6 +5,7 @@ import ncrCatalog from '../config/ncrCatalog.js';
 import { getProductPrice } from '../config/countryEconomy.js';
 import countryEconomy from '../config/countryEconomy.js';
 import tradeService from '../services/tradeService.js';
+import * as accountingHelper from '../services/accountingHelper.js';
 
 /**
  * @desc    Create a new marketplace listing from seller inventory
@@ -381,10 +382,10 @@ export const buyListing = async (req, res) => {
 
     // 6. Execute transfers
     // Decrease buyer balance
-    buyerStartup.currentBalance -= totalCost;
+    accountingHelper.recordMarketplaceExpense(buyerStartup, totalCost);
     
     // Increase seller balance (seller gets their original local price list value)
-    sellerStartup.currentBalance += sellerRevenue;
+    accountingHelper.recordRevenue(sellerStartup, sellerRevenue);
 
     // Increase buyer inventory
     const buyerInventory = buyerStartup.inventory || [];
@@ -575,7 +576,7 @@ export const buyFromNcr = async (req, res) => {
     }
 
     // Perform transaction
-    startup.currentBalance -= totalCost;
+    accountingHelper.recordMarketplaceExpense(startup, totalCost);
 
     const inventory = startup.inventory || [];
     const itemIndex = inventory.findIndex(i => i.productId === productId);
@@ -689,7 +690,7 @@ export const sellToNcr = async (req, res) => {
       inventory.splice(itemIndex, 1);
     }
     startup.inventory = inventory;
-    startup.currentBalance += totalRevenue;
+    accountingHelper.recordRevenue(startup, totalRevenue);
 
     // Save
     if (global.useMockDb) {

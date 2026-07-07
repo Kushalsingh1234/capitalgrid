@@ -56,6 +56,28 @@ const startupSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  employeeMorale: {
+    type: Number,
+    default: 100
+  },
+  recentPayroll: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
+  },
+  outstandingTax: {
+    type: Number,
+    default: 0
+  },
+  financials: {
+    revenue: { type: Number, default: 0 },
+    operatingExpenses: { type: Number, default: 0 },
+    payrollExpense: { type: Number, default: 0 },
+    productionExpense: { type: Number, default: 0 },
+    marketplaceExpense: { type: Number, default: 0 },
+    taxExpense: { type: Number, default: 0 },
+    netProfit: { type: Number, default: 0 },
+    retainedEarnings: { type: Number, default: 0 }
+  },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

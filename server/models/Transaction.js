@@ -8,7 +8,7 @@ const transactionSchema = new mongoose.Schema({
   },
   transactionType: {
     type: String,
-    enum: ['Purchase', 'Sale', 'Production'],
+    enum: ['Purchase', 'Sale', 'Production', 'Payroll'],
     required: [true, 'Transaction type is required']
   },
   buyerStartupName: {
@@ -21,7 +21,8 @@ const transactionSchema = new mongoose.Schema({
   },
   productName: {
     type: String,
-    required: [true, 'Product name is required']
+    required: false,
+    default: ''
   },
   quantity: {
     type: Number,
@@ -34,6 +35,18 @@ const transactionSchema = new mongoose.Schema({
   totalAmount: {
     type: Number,
     default: 0
+  },
+  category: {
+    type: String,
+    default: ''
+  },
+  description: {
+    type: String,
+    default: ''
+  },
+  reference: {
+    type: String,
+    default: ''
   },
   createdAt: {
     type: Date,

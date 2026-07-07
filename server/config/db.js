@@ -15,6 +15,9 @@ const connectDB = async () => {
     global.mockTransactions = [];
     global.mockEmployees = [];
     global.mockProductionTasks = [];
+    global.mockWorldClock = null;
+    global.mockEconomicEngineState = null;
+    global.mockGovernmentAccounts = [];
   }
 };
 

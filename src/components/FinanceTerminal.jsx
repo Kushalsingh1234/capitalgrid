@@ -50,13 +50,59 @@ export default function FinanceTerminal({
     return () => clearInterval(timer);
   }, []);
 
-  // 1. Dynamic Calculations from Hired Employees
-  const totalEmployees = employees.reduce((sum, e) => sum + e.quantity, 0);
-  const monthlyPayroll = employees.reduce((sum, e) => sum + (e.quantity * e.salary), 0);
-  const annualPayroll = monthlyPayroll * 12;
-  const averageSalary = totalEmployees > 0 ? monthlyPayroll / totalEmployees : 0;
+  const [nextTaxDateStr, setNextTaxDateStr] = useState('01 of Next Month');
 
-  // 2. Dynamic Calculations from Inventory Stocks
+  useEffect(() => {
+    const fetchClock = async () => {
+      try {
+        const res = await fetch('/api/world-clock');
+        const data = await res.json();
+        if (data.success && data.data) {
+          const clock = data.data;
+          let nextMonth = clock.month + 1;
+          let nextYear = clock.year;
+          if (nextMonth > 12) {
+            nextMonth = 1;
+            nextYear += 1;
+          }
+          const monthNames = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+          ];
+          setNextTaxDateStr(`01 ${monthNames[nextMonth - 1]} ${nextYear}`);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchClock();
+  }, []);
+
+  const TAX_CONFIG = {
+    'India': { corporateTaxRate: 0.25 },
+    'United States': { corporateTaxRate: 0.21 },
+    'United Kingdom': { corporateTaxRate: 0.25 },
+    'Germany': { corporateTaxRate: 0.30 },
+    'Brazil': { corporateTaxRate: 0.20 },
+    'Japan': { corporateTaxRate: 0.23 },
+    'Australia': { corporateTaxRate: 0.30 }
+  };
+
+  const currentCash = startup?.currentBalance || 0;
+  const monthlyRevenue = startup?.financials?.revenue || 0;
+  const payrollExpense = startup?.financials?.payrollExpense || 0;
+  const morale = startup?.employeeMorale !== undefined ? startup.employeeMorale : 100;
+  const country = startup?.country || 'United States';
+  const taxConfig = TAX_CONFIG[country] || TAX_CONFIG['United States'];
+  const taxRate = taxConfig.corporateTaxRate;
+
+  // 1. PROJECTED Calculations from Current Workforce (regardless of whether payroll has run yet)
+  const totalEmployees = employees.reduce((sum, e) => sum + e.quantity, 0);
+  const monthlyPayrollOutflow = employees.reduce((sum, e) => sum + (e.quantity * e.salary), 0);
+  const annualPayrollProjection = monthlyPayrollOutflow * 12;
+  const averageSalaryPerEmployee = totalEmployees > 0 ? monthlyPayrollOutflow / totalEmployees : 0;
+
+  // 2. Calculations from Inventory Stocks
   const localPrices = startup?.localPrices || {};
   const inventoryAssetValuation = inventory.reduce((sum, item) => {
     const price = localPrices[item.productId] || 0;
@@ -64,35 +110,36 @@ export default function FinanceTerminal({
   }, 0);
   const totalInventoryQuantity = inventory.reduce((sum, item) => sum + item.quantity, 0);
 
-  // 3. Dynamic Calculations from Ledger Transactions
-  const salesTx = transactions.filter(t => t.transactionType === 'Sale');
-  const purchaseTx = transactions.filter(t => t.transactionType === 'Purchase');
+  // 3. Derived indicators from Ledger Transactions & Financials
+  // COGS is calculated directly from actual marketplace and production expenses
+  const costOfGoodsSold = (startup?.financials?.marketplaceExpense || 0) + (startup?.financials?.productionExpense || 0);
 
-  const monthlyRevenue = salesTx.reduce((sum, t) => sum + t.totalAmount, 0);
-  const costOfGoodsSold = purchaseTx.reduce((sum, t) => sum + t.totalAmount, 0);
+  // Total monthly expenses include raw materials/COGS plus the actual payroll (or projected payroll if cycle has not executed yet)
+  const monthlyExpenses = costOfGoodsSold + Math.max(payrollExpense, monthlyPayrollOutflow);
+  
+  // Net profit is monthly revenue minus total monthly expenses
+  const netProfitLoss = monthlyRevenue - monthlyExpenses;
+  const retainedEarnings = netProfitLoss;
+  const taxableProfit = Math.max(0, netProfitLoss);
 
-  // Total cash & financial indexes
-  const currentCash = startup?.currentBalance || 0;
   const netWorth = currentCash + inventoryAssetValuation;
   const companyValuation = (startup?.startingCapital || 50000) + currentCash + (totalEmployees * 5000) + (inventoryAssetValuation * 1.5);
 
-  const monthlyExpenses = costOfGoodsSold + monthlyPayroll;
-  const netProfitLoss = monthlyRevenue - monthlyExpenses;
-
-  // Cash flow stats
+  // Cash flow stats (Actual Cash Flow includes payroll expense)
   const cashIn = monthlyRevenue;
   const cashOut = monthlyExpenses;
+  const salesTx = transactions.filter(t => t.transactionType === 'Sale');
+  const purchaseTx = transactions.filter(t => t.transactionType === 'Purchase');
   const largestExpenseValue = purchaseTx.length > 0 
     ? Math.max(...purchaseTx.map(t => t.totalAmount)) 
     : 0;
-  // Account for payroll as an expense comparison
-  const maxExpenseAmt = Math.max(largestExpenseValue, monthlyPayroll);
+  const maxExpenseAmt = Math.max(largestExpenseValue, payrollExpense);
   const maxIncomeAmt = salesTx.length > 0 ? Math.max(...salesTx.map(t => t.totalAmount)) : 0;
 
-  // Payroll percentage of revenue
+  // Projected Payroll percentage of revenue
   const payrollRevenuePct = monthlyRevenue > 0 
-    ? ((monthlyPayroll / monthlyRevenue) * 100).toFixed(1) + '%' 
-    : 'Coming Soon';
+    ? ((monthlyPayrollOutflow / monthlyRevenue) * 100).toFixed(1) + '%' 
+    : 'No revenue this month';
 
   // Dynamic Financial Alerts
   const alerts = [];
@@ -117,11 +164,18 @@ export default function FinanceTerminal({
       text: 'Inventory volume increasing: Verify marketplace listings are active.'
     });
   }
-  if (monthlyPayroll > 0) {
+  if (payrollExpense > 0) {
+    alerts.push({
+      type: 'info',
+      icon: 'fa-wallet text-greenGlow',
+      text: `Monthly payroll executed: Actual opex outflow was ${formatCurrency(payrollExpense, startup?.country)}.`
+    });
+  }
+  if (monthlyPayrollOutflow > 0) {
     alerts.push({
       type: 'info',
       icon: 'fa-users-gear text-amber-500',
-      text: `Payroll due monthly: Current recurring commitment is ${formatCurrency(monthlyPayroll, startup?.country)}.`
+      text: `Projected payroll commitment: Future monthly commitment is ${formatCurrency(monthlyPayrollOutflow, startup?.country)}.`
     });
   }
   if (alerts.length === 0) {
@@ -169,15 +223,18 @@ export default function FinanceTerminal({
       </div>
       
       {/* 1. TOP FINANCIAL SUMMARY */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-9 gap-3 mb-6">
         {[
           { label: 'Current Cash Balance', val: formatCurrency(currentCash, startup?.country), icon: 'fa-sack-dollar text-greenGlow' },
           { label: 'Net Worth', val: formatCurrency(netWorth, startup?.country), icon: 'fa-chart-pie text-white' },
           { label: 'Company Valuation', val: formatCurrency(companyValuation, startup?.country), icon: 'fa-award text-cyanGlow' },
           { label: 'Monthly Revenue', val: formatCurrency(monthlyRevenue, startup?.country), icon: 'fa-arrow-trend-up text-emerald-400' },
           { label: 'Monthly Expenses', val: formatCurrency(monthlyExpenses, startup?.country), icon: 'fa-arrow-trend-down text-red-400' },
+          { label: 'Projected Payroll', val: formatCurrency(monthlyPayrollOutflow, startup?.country), icon: 'fa-users text-amber-500' },
+          { label: 'Executed Payroll', val: formatCurrency(payrollExpense, startup?.country), icon: 'fa-user-check text-greenGlow' },
+          { label: 'Effective Tax Rate', val: `${(taxRate * 100).toFixed(0)}%`, icon: 'fa-percent text-cyanGlow' },
           { 
-            label: 'Monthly Profit / Loss', 
+            label: 'Net Profit', 
             val: formatCurrency(netProfitLoss, startup?.country), 
             icon: `fa-scale-balanced ${netProfitLoss >= 0 ? 'text-greenGlow' : 'text-red-400'}` 
           }
@@ -325,17 +382,13 @@ export default function FinanceTerminal({
                   </div>
                   <div className="p-3 bg-black/20 rounded border border-white/5">
                     <span className="text-[9px] text-text-secondary uppercase">Workforce Payroll</span>
-                    <span className="block font-bold text-white mt-1">{formatCurrency(monthlyPayroll, startup?.country)}</span>
+                    <span className="block font-bold text-white mt-1">{formatCurrency(payrollExpense, startup?.country)}</span>
                   </div>
                   <div className="p-3 bg-black/20 rounded border border-white/5">
-                    <span className="text-[9px] text-text-secondary uppercase">Corporate Tax Accrued</span>
-                    <span className="block text-text-muted italic mt-1">Coming Soon</span>
+                    <span className="text-[9px] text-text-secondary uppercase">Employee Morale</span>
+                    <span className="block font-bold text-white mt-1">{morale}%</span>
                   </div>
-                  <div className="p-3 bg-black/20 rounded border border-white/5">
-                    <span className="text-[9px] text-text-secondary uppercase">Debt Interest Liability</span>
-                    <span className="block text-text-muted italic mt-1">Coming Soon</span>
-                  </div>
-                  <div className="p-3 bg-black/20 rounded border border-white/5">
+                  <div className="p-3 bg-black/20 rounded border border-white/5 col-span-2">
                     <span className="text-[9px] text-text-secondary uppercase">Inventory Warehouse Stock Value</span>
                     <span className="block font-bold text-white mt-1">{formatCurrency(inventoryAssetValuation, startup?.country)}</span>
                   </div>
@@ -396,11 +449,11 @@ export default function FinanceTerminal({
 
                   <div className="flex justify-between items-center text-white font-bold py-1 border-b border-white/10 mt-2">
                     <span>Operating Expenses (OPEX)</span>
-                    <span className="text-red-400">({formatCurrency(monthlyPayroll, startup?.country)})</span>
+                    <span className="text-red-400">({formatCurrency(payrollExpense, startup?.country)})</span>
                   </div>
                   <div className="flex justify-between items-center text-text-secondary pl-4">
                     <span>Personnel Salaries (HR Payroll)</span>
-                    <span>{formatCurrency(monthlyPayroll, startup?.country)}</span>
+                    <span>{formatCurrency(payrollExpense, startup?.country)}</span>
                   </div>
                   <div className="flex justify-between items-center text-text-secondary pl-4">
                     <span>Corporate Tax Liabilities</span>
@@ -563,25 +616,31 @@ export default function FinanceTerminal({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 bg-black/25 rounded border border-white/5">
                     <span className="text-[9px] text-text-secondary uppercase block mb-1">Corporate Tax Rate</span>
-                    <span className="font-bold text-white text-sm">18.0%</span>
+                    <span className="font-bold text-white text-sm">{(taxRate * 100).toFixed(0)}%</span>
                   </div>
                   <div className="p-3 bg-black/25 rounded border border-white/5">
-                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Sales Tax liability</span>
-                    <span className="font-bold text-white text-sm">Coming Soon</span>
+                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Taxable Profit (This Month)</span>
+                    <span className="font-bold text-cyanGlow text-sm">{formatCurrency(taxableProfit, startup?.country)}</span>
                   </div>
                   <div className="p-3 bg-black/25 rounded border border-white/5">
-                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Estimated Tax Due</span>
-                    <span className="font-bold text-white text-sm">{formatCurrency(0, startup?.country)}</span>
+                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Corporate Tax Paid</span>
+                    <span className="font-bold text-greenGlow text-sm">{formatCurrency(startup?.financials?.taxExpense || 0, startup?.country)}</span>
                   </div>
                   <div className="p-3 bg-black/25 rounded border border-white/5">
-                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Filing Deadline</span>
-                    <span className="font-bold text-white text-sm">N/A</span>
+                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Outstanding Tax Liability</span>
+                    <span className={`font-bold text-sm ${startup?.outstandingTax > 0 ? 'text-red-400 font-bold' : 'text-white'}`}>
+                      {formatCurrency(startup?.outstandingTax || 0, startup?.country)}
+                    </span>
+                  </div>
+                  <div className="p-3 bg-black/25 rounded border border-white/5 col-span-2">
+                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Filing & Payment Deadline</span>
+                    <span className="font-bold text-white text-sm">{nextTaxDateStr}</span>
                   </div>
                 </div>
 
-                <div className="p-3.5 bg-amber-950/20 border border-amber-500/25 rounded-lg text-amber-400 flex items-center gap-3 mt-2">
-                  <i className="fa-solid fa-triangle-exclamation"></i>
-                  <span>Tax System Coming Soon: Corporate tax rules are currently scheduled for development.</span>
+                <div className="p-3.5 bg-cyan-950/15 border border-cyanGlow/15 rounded-lg text-cyanGlow flex items-center gap-3 mt-2">
+                  <i className="fa-solid fa-circle-info"></i>
+                  <span>Taxes are calculated based on closed-month taxable profits. Outstanding balances must accumulate and reduce automatically as payments are made.</span>
                 </div>
               </div>
             )}
@@ -593,31 +652,94 @@ export default function FinanceTerminal({
                   Personnel Payroll Ledger
                 </h3>
 
+                {/* Section A: Projected commitments */}
+                <div className="text-[10px] font-display uppercase tracking-widest text-text-muted mb-1 font-sans">
+                  Workforce Projections (Current Commitment)
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 bg-black/25 rounded border border-white/5">
                     <span className="text-[9px] text-text-secondary uppercase block mb-1">Hired Employees</span>
                     <span className="font-bold text-white text-sm">{totalEmployees} personnel</span>
                   </div>
                   <div className="p-3 bg-black/25 rounded border border-white/5">
-                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Monthly Payroll Outflow</span>
-                    <span className="font-bold text-red-400 text-sm">{formatCurrency(monthlyPayroll, startup?.country)}</span>
+                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Projected Monthly Outflow</span>
+                    <span className="font-bold text-amber-500 text-sm">{formatCurrency(monthlyPayrollOutflow, startup?.country)}</span>
                   </div>
                   <div className="p-3 bg-black/25 rounded border border-white/5">
-                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Annual Payroll projection</span>
-                    <span className="font-bold text-white text-sm">{formatCurrency(annualPayroll, startup?.country)}</span>
+                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Projected Annual Commitment</span>
+                    <span className="font-bold text-white text-sm">{formatCurrency(annualPayrollProjection, startup?.country)}</span>
                   </div>
                   <div className="p-3 bg-black/25 rounded border border-white/5">
-                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Payroll Percentage of Revenue</span>
+                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Payroll Pct of Revenue</span>
                     <span className="font-bold text-white text-sm">{payrollRevenuePct}</span>
                   </div>
                   <div className="p-3 bg-black/25 rounded border border-white/5 col-span-2">
-                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Average Salary per Capita</span>
-                    <span className="font-bold text-cyanGlow text-sm">{formatCurrency(averageSalary, startup?.country)}/month</span>
+                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Projected Average Salary</span>
+                    <span className="font-bold text-cyanGlow text-sm">{formatCurrency(averageSalaryPerEmployee, startup?.country)}/month</span>
                   </div>
                 </div>
 
-                <div className="p-3 bg-black/20 border border-white/5 rounded text-[10px] text-text-secondary leading-relaxed">
-                  Monthly payroll expenditures are deducted automatically from cash balance reserves at regular intervals. Verify worker assignments inside the HR console to check operations capacity.
+                {/* Section B: Executed history */}
+                <div className="text-[10px] font-display uppercase tracking-widest text-text-muted mt-2 mb-1 font-sans">
+                  Executed Payroll History (Financial Accounts)
+                </div>
+                {startup?.recentPayroll ? (
+                  <div className={`p-4 rounded border ${
+                    startup.recentPayroll.status === 'Success'
+                      ? 'bg-green-950/15 border-green-500/20 text-greenGlow'
+                      : 'bg-red-950/15 border-red-500/20 text-red-400'
+                  }`}>
+                    <div className="flex justify-between items-center font-bold text-xs uppercase mb-2">
+                      <span>{startup.recentPayroll.status === 'Success' ? 'Monthly Payroll Completed' : 'Payroll Failed'}</span>
+                      <span className="text-[9px] font-mono opacity-80">{startup.recentPayroll.month}</span>
+                    </div>
+                    <div className="flex flex-col gap-1.5 font-mono text-[10.5px] text-text-secondary">
+                      <div className="flex justify-between">
+                        <span>Employees Paid:</span>
+                        <span className="text-white font-bold">{startup.recentPayroll.employeesPaid}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Paid Salaries Amount:</span>
+                        <span className="text-white font-bold">{formatCurrency(startup.recentPayroll.amount, startup?.country)}</span>
+                      </div>
+                      <div className="flex justify-between border-t border-white/5 pt-1.5 mt-1">
+                        <span>Cash Balance Remaining:</span>
+                        <span className="text-white font-bold">{formatCurrency(startup.recentPayroll.cashRemaining, startup?.country)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Payroll Processed Date:</span>
+                        <span className="text-white font-bold">
+                          {startup.recentPayroll.date ? new Date(startup.recentPayroll.date).toLocaleDateString() : 'N/A'}
+                        </span>
+                      </div>
+                      {startup.recentPayroll.status === 'Failed' && (
+                        <div className="mt-2 text-red-400 font-sans italic text-[9.5px]">
+                          Reason: Insufficient company funds. Employee morale decreased.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-black/20 border border-white/5 rounded text-center text-text-muted italic text-xs">
+                    No payroll operations executed yet.
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  <div className="p-3 bg-black/25 rounded border border-white/5">
+                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Total Executed Expense</span>
+                    <span className="font-bold text-greenGlow text-sm">{formatCurrency(payrollExpense, startup?.country)}</span>
+                  </div>
+                  <div className="p-3 bg-black/25 rounded border border-white/5">
+                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Last Paid Amount</span>
+                    <span className="font-bold text-white text-sm">
+                      {startup?.recentPayroll ? formatCurrency(startup.recentPayroll.amount, startup?.country) : 'N/A'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-black/20 border border-white/5 rounded text-[10px] text-text-secondary leading-relaxed mt-2">
+                  Monthly payroll commitments are determined dynamically by your active team size. Payout checks run automatically once per virtual month.
                 </div>
               </div>
             )}
