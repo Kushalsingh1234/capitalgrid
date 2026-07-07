@@ -1145,7 +1145,7 @@ export default function MarketplaceInterface({
                               </td>
                             </tr>
                             {isSelected && tradeMode === 'buy' && (
-                              <tr className="bg-black/10">
+                              <tr className="hidden lg:table-row bg-black/10">
                                 <td colSpan="6" className="p-3 border-b border-cyanGlow/20">
                                   {renderQuickTradeConsoleInline(p)}
                                 </td>
@@ -1193,7 +1193,7 @@ export default function MarketplaceInterface({
                             <td className="p-3 text-right font-bold text-greenGlow">Available</td>
                           </tr>
                           {isSelected && tradeMode === 'buy' && (
-                            <tr className="bg-black/10">
+                            <tr className="hidden lg:table-row bg-black/10">
                               <td colSpan="6" className="p-3 border-b border-cyanGlow/20">
                                 {renderQuickTradeConsoleInline(p)}
                               </td>
@@ -1265,7 +1265,7 @@ export default function MarketplaceInterface({
                             </td>
                           </tr>
                           {isSelected && tradeMode === 'buy' && (
-                            <tr className="bg-black/10">
+                            <tr className="hidden lg:table-row bg-black/10">
                               <td colSpan="7" className="p-3 border-b border-cyanGlow/20">
                                 {renderQuickTradeConsoleInline(null, l)}
                               </td>
@@ -1286,6 +1286,16 @@ export default function MarketplaceInterface({
               </tbody>
             </table>
           </div>
+
+          {/* Mobile-only Buy console (rendered below listings card to prevent table-width overflow scroll) */}
+          {tradeMode === 'buy' && selectedProductId && (
+            <div className="block lg:hidden mt-3">
+              {renderQuickTradeConsoleInline(
+                productsWithPrices.find(p => p.id === selectedProductId),
+                selectedMarket === 'global' ? selectedListing : null
+              )}
+            </div>
+          )}
 
           {/* Mobile Economy Broadcast Ticker (block lg:hidden) */}
           <div className="glass-card p-5 border border-white/5 rounded-lg bg-gradient-to-b from-glassBg to-black/35 flex flex-col gap-3 font-mono block lg:hidden mt-4">

@@ -2230,6 +2230,7 @@ p {
 
 .game-world-container {
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
   display: flex;
@@ -2265,7 +2266,7 @@ p {
   -webkit-backdrop-filter: blur(12px);
   border-radius: 14px;
   position: absolute;
-  bottom: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
@@ -2308,6 +2309,7 @@ p {
   display: flex;
   flex: 1;
   height: calc(100vh - 60px);
+  height: calc(100dvh - 60px);
   position: relative;
   overflow: hidden;
 }
@@ -2401,7 +2403,7 @@ p {
 /* Responsive collapse limits */
 @media (max-width: 768px) {
   .sidebar-bottom {
-    bottom: 8px;
+    bottom: calc(24px + env(safe-area-inset-bottom));
     padding: 6px 10px;
     gap: 6px;
     border-radius: 12px;
