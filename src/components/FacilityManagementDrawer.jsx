@@ -4,6 +4,7 @@ import ProductionCenter from './ProductionCenter';
 import InventoryPanel from './InventoryPanel';
 import { getProductsForBusiness, isRetailBusiness } from '../data/products';
 import { PRODUCT_DEPENDENCIES } from '../data/dependencies';
+import { formatDuration } from '../utils/timeFormatter';
 
 const CURRENCY_SYMBOLS = {
   'India': '₹',
@@ -36,7 +37,9 @@ export default function FacilityManagementDrawer({
   token,
   onProductionComplete,
   producingState = {},
-  onProducingStateChange
+  onProducingStateChange,
+  worldClockSnapshot,
+  currentGameTime
 }) {
   const [selectedProductId, setSelectedProductId] = useState(null);
 
@@ -84,7 +87,7 @@ export default function FacilityManagementDrawer({
   const getActiveStatusText = () => {
     const activeProduction = Object.values(producingState)[0];
     if (activeProduction) {
-      return `Producing: ${activeProduction.name} (${activeProduction.remaining}s)`;
+      return `Producing: ${activeProduction.name} (${formatDuration(activeProduction.remaining)})`;
     }
     
     // Check if staff are hired to run operations
@@ -167,6 +170,9 @@ export default function FacilityManagementDrawer({
               tasks={startup.tasks || []}
               serverTime={startup.serverTime}
               fetchedAt={startup.fetchedAt}
+              startup={startup}
+              worldClockSnapshot={worldClockSnapshot}
+              currentGameTime={currentGameTime}
             />
           </div>
 

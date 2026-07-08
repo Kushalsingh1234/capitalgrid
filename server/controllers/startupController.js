@@ -240,8 +240,26 @@ export const getStartup = async (req, res) => {
       }
     }
 
+    if (startup.productionSpeedMultiplier === undefined) {
+      if (typeof startup.set === 'function') {
+        startup.set('productionSpeedMultiplier', 1.0);
+      } else {
+        startup.productionSpeedMultiplier = 1.0;
+      }
+      if (!global.useMockDb) {
+        await startup.save();
+      }
+    }
+
     // Process tasks
     await processCompletedTasks(startup._id);
+
+    // Reload startup to retrieve fresh inventory state
+    if (global.useMockDb) {
+      startup = global.mockStartups.find(s => String(s.owner) === String(userId));
+    } else {
+      startup = await Startup.findOne({ owner: userId });
+    }
 
     // Fetch remaining active tasks
     let activeTasks = [];

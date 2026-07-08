@@ -7,42 +7,42 @@
 const PRODUCTS = {
   // --- Primary Sector ---
   'Farming': [
-    { id: 'wheat', name: 'Wheat', icon: 'fa-solid fa-wheat-awn', duration: 15 },
-    { id: 'rice', name: 'Rice', icon: 'fa-solid fa-bowl-rice', duration: 20 },
-    { id: 'cotton', name: 'Cotton', icon: 'fa-solid fa-cloud', duration: 25 }
+    { id: 'wheat', name: 'Wheat', icon: 'fa-solid fa-wheat-awn', duration: 20 },
+    { id: 'rice', name: 'Rice', icon: 'fa-solid fa-bowl-rice', duration: 25 },
+    { id: 'cotton', name: 'Cotton', icon: 'fa-solid fa-cloud', duration: 30 }
   ],
   'Dairy': [
-    { id: 'milk', name: 'Milk', icon: 'fa-solid fa-glass-water', duration: 20 }
+    { id: 'milk', name: 'Milk', icon: 'fa-solid fa-glass-water', duration: 35 }
   ],
   'Mining': [
-    { id: 'coal', name: 'Coal', icon: 'fa-solid fa-mountain', duration: 30 }
+    { id: 'coal', name: 'Coal', icon: 'fa-solid fa-mountain', duration: 45 }
   ],
 
   // --- Factories ---
   'Garment Factory': [
-    { id: 'shirts', name: 'Shirts', icon: 'fa-solid fa-shirt', duration: 30 },
-    { id: 'jeans', name: 'Jeans', icon: 'fa-solid fa-scissors', duration: 30 },
-    { id: 'jackets', name: 'Jackets', icon: 'fa-solid fa-vest-patches', duration: 30 }
+    { id: 'shirts', name: 'Shirts', icon: 'fa-solid fa-shirt', duration: 90 },
+    { id: 'jeans', name: 'Jeans', icon: 'fa-solid fa-scissors', duration: 120 },
+    { id: 'jackets', name: 'Jackets', icon: 'fa-solid fa-vest-patches', duration: 180 }
   ],
   'Food Processing Factory': [
-    { id: 'bread', name: 'Bread', icon: 'fa-solid fa-bread-slice', duration: 30 },
-    { id: 'biscuits', name: 'Biscuits', icon: 'fa-solid fa-cookie', duration: 30 },
-    { id: 'cheese', name: 'Cheese', icon: 'fa-solid fa-cheese', duration: 30 }
+    { id: 'bread', name: 'Bread', icon: 'fa-solid fa-bread-slice', duration: 60 },
+    { id: 'biscuits', name: 'Biscuits', icon: 'fa-solid fa-cookie', duration: 90 },
+    { id: 'cheese', name: 'Cheese', icon: 'fa-solid fa-cheese', duration: 120 }
   ],
   'Construction Factory': [
-    { id: 'cement', name: 'Cement', icon: 'fa-solid fa-cubes-stacked', duration: 30 },
-    { id: 'bricks', name: 'Bricks', icon: 'fa-solid fa-cubes', duration: 30 },
-    { id: 'steel_beams', name: 'Steel Beams', icon: 'fa-solid fa-bars', duration: 30 }
+    { id: 'cement', name: 'Cement', icon: 'fa-solid fa-cubes-stacked', duration: 120 },
+    { id: 'bricks', name: 'Bricks', icon: 'fa-solid fa-cubes', duration: 90 },
+    { id: 'steel_beams', name: 'Steel Beams', icon: 'fa-solid fa-bars', duration: 240 }
   ],
 
   // --- Manufacturing ---
   'Automobile Manufacturing': [
-    { id: 'cars', name: 'Cars', icon: 'fa-solid fa-car-side', duration: 30 }
+    { id: 'cars', name: 'Cars', icon: 'fa-solid fa-car-side', duration: 1800 }
   ],
   'Electronics Manufacturing': [
-    { id: 'phones', name: 'Phones', icon: 'fa-solid fa-mobile-screen-button', duration: 30 },
-    { id: 'laptops', name: 'Laptops', icon: 'fa-solid fa-laptop', duration: 30 },
-    { id: 'tvs', name: 'TVs', icon: 'fa-solid fa-tv', duration: 30 }
+    { id: 'phones', name: 'Phones', icon: 'fa-solid fa-mobile-screen-button', duration: 300 },
+    { id: 'laptops', name: 'Laptops', icon: 'fa-solid fa-laptop', duration: 480 },
+    { id: 'tvs', name: 'TVs', icon: 'fa-solid fa-tv', duration: 600 }
   ]
 };
 

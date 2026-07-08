@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getProductsForBusiness, isRetailBusiness } from '../data/products';
 import * as productionService from '../services/productionService';
 import { PRODUCT_DEPENDENCIES } from '../data/dependencies';
+import { formatDuration, formatGameTime } from '../utils/timeFormatter';
 
 const BUSINESS_REQUIRED_ROLES = {
   'Farming': ['Farmer'],
@@ -33,7 +34,10 @@ export default function ProductionCenter({
   onProducingStateChange,
   tasks = [],
   serverTime = null,
-  fetchedAt = null
+  fetchedAt = null,
+  startup = null,
+  worldClockSnapshot = null,
+  currentGameTime = null
 }) {
   const [quantities, setQuantities] = useState({});
   const [producing, setProducing] = useState({}); // { productId: { remaining, total, qty, name } }
@@ -278,6 +282,7 @@ export default function ProductionCenter({
 
           // Compute product dependencies dynamically based on selected batch size
           const selectedQty = quantities[product.id] || 1;
+          const totalRealDuration = Math.round((product.duration * selectedQty) / (startup?.productionSpeedMultiplier || 1.0));
           const dep = PRODUCT_DEPENDENCIES[product.id];
           const missingResources = [];
 
@@ -347,8 +352,8 @@ export default function ProductionCenter({
                   <h4 className="font-display text-sm font-bold uppercase tracking-wider text-white">
                     {product.name}
                   </h4>
-                  <span className="text-[9px] text-text-muted font-display uppercase tracking-widest">
-                    {product.duration}s per batch
+                   <span className="text-[9px] text-text-muted font-display uppercase tracking-widest">
+                    {formatDuration(product.duration)} per unit
                   </span>
                 </div>
               </div>
@@ -362,11 +367,11 @@ export default function ProductionCenter({
                       Producing {prodState.qty}x {prodState.name}...
                     </span>
                   </div>
-                  <div className="font-display text-3xl font-black text-cyanGlow tabular-nums">
-                    {prodState.remaining}
+                  <div className="font-display text-2xl font-black text-cyanGlow tabular-nums">
+                    {formatDuration(prodState.remaining)}
                   </div>
                   <span className="text-[9px] text-text-muted font-display uppercase tracking-widest">
-                    seconds remaining
+                    remaining
                   </span>
                 </div>
               ) : (
@@ -421,6 +426,32 @@ export default function ProductionCenter({
                     </button>
                   </div>
 
+                  {/* Production Queue Preview Card */}
+                  <div className="mb-3 p-3 bg-white/2 border border-white/5 rounded text-[11px] font-mono text-text-secondary flex flex-col gap-1.5 bg-gradient-to-b from-glassBg to-black/20">
+                    <div className="flex justify-between">
+                      <span>Selected Quantity:</span>
+                      <span className="text-white font-bold">{selectedQty}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Base Time per Unit:</span>
+                      <span className="text-white">{formatDuration(product.duration)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Speed Multiplier:</span>
+                      <span className="text-cyanGlow font-bold">{(startup?.productionSpeedMultiplier || 1.0).toFixed(1)}x</span>
+                    </div>
+                    <div className="flex justify-between border-t border-white/5 pt-1.5 mt-1">
+                      <span className="text-cyanGlow font-bold">Total Duration:</span>
+                      <span className="text-cyanGlow font-bold font-mono">{formatDuration(totalRealDuration)}</span>
+                    </div>
+                    {currentGameTime && (
+                      <div className="flex justify-between text-[10px] text-text-muted mt-0.5">
+                        <span>Completion (Game):</span>
+                        <span className="text-amber-400 font-bold">{formatGameTime(new Date(currentGameTime.getTime() + totalRealDuration * (worldClockSnapshot?.speedMultiplier || 30) * 1000))}</span>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Warning Card */}
                   {hasMissing && (
                     <div className="mb-3 p-3 bg-red-950/20 border border-red-500/20 rounded text-[11px] text-red-400">
@@ -449,7 +480,7 @@ export default function ProductionCenter({
                     }`}
                   >
                     <i className="fa-solid fa-play text-[8px]"></i>
-                    Produce
+                    Produce ({formatDuration(totalRealDuration)})
                   </button>
                 </>
               )}

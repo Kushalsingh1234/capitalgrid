@@ -143,6 +143,7 @@ export default function PlayerDashboard() {
   const [lastSyncRealTime, setLastSyncRealTime] = useState(0);
   const [interpolatedTimeStr, setInterpolatedTimeStr] = useState('Loading Clock...');
   const [marketStatus, setMarketStatus] = useState('CLOSED');
+  const [currentGameTime, setCurrentGameTime] = useState(null);
 
   const handleLogout = () => {
     logout();
@@ -243,6 +244,7 @@ export default function PlayerDashboard() {
       
       setInterpolatedTimeStr(formatted);
       setMarketStatus((hour >= 8 && hour < 20) ? 'OPEN' : 'CLOSED');
+      setCurrentGameTime(gameDate);
     };
 
     updateInterpolation();
@@ -520,6 +522,7 @@ export default function PlayerDashboard() {
                   setSelectedBuilding(buildingData);
                   setIsFacilityDrawerOpen(true);
                   setCurrentView('world');
+                  fetchDashboardData();
                 }}
                 disableClicks={currentView !== 'world' || activeTab !== null || isFacilityDrawerOpen}
               />
@@ -592,6 +595,8 @@ export default function PlayerDashboard() {
           onProductionComplete={handleProductionComplete}
           producingState={producingState}
           onProducingStateChange={setProducingState}
+          worldClockSnapshot={worldClockSnapshot}
+          currentGameTime={currentGameTime}
         />
       </div>
     </div>

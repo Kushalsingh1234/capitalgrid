@@ -1,0 +1,20 @@
+export const PRODUCTION_TIME_CONFIG = {
+  wheat: 20,
+  rice: 25,
+  cotton: 30,
+  milk: 35,
+  coal: 45,
+  bread: 60,
+  biscuits: 90,
+  cheese: 120,
+  shirts: 90,
+  jeans: 120,
+  jackets: 180,
+  bricks: 90,
+  cement: 120,
+  steel_beams: 240,
+  phones: 300,
+  laptops: 480,
+  tvs: 600,
+  cars: 1800
+};

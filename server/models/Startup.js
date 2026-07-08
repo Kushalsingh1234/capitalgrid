@@ -68,6 +68,10 @@ const startupSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  productionSpeedMultiplier: {
+    type: Number,
+    default: 1.0
+  },
   financials: {
     revenue: { type: Number, default: 0 },
     operatingExpenses: { type: Number, default: 0 },

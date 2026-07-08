@@ -4,6 +4,7 @@ import Employee from '../models/Employee.js';
 import ProductionTask from '../models/ProductionTask.js';
 import { BUSINESS_REQUIRED_EMPLOYEES } from './employeeController.js';
 import { PRODUCT_DEPENDENCIES } from '../config/dependencies.js';
+import { PRODUCTION_TIME_CONFIG } from '../config/productionTimeConfig.js';
 
 /**
  * processCompletedTasks
@@ -223,27 +224,6 @@ export const getInventory = async (req, res) => {
   }
 };
 
-const PRODUCT_DURATIONS = {
-  wheat: 15,
-  rice: 20,
-  cotton: 25,
-  milk: 20,
-  coal: 30,
-  shirts: 30,
-  jeans: 30,
-  jackets: 30,
-  bread: 30,
-  biscuits: 30,
-  cheese: 30,
-  cement: 30,
-  bricks: 30,
-  steel_beams: 30,
-  phones: 30,
-  laptops: 30,
-  tvs: 30,
-  cars: 30
-};
-
 const PRODUCT_NAMES = {
   wheat: 'Wheat',
   rice: 'Rice',
@@ -395,8 +375,10 @@ export const startProduction = async (req, res) => {
     }
     startup.inventory = inventory;
 
-    // Calculate duration and end timestamps
-    const duration = PRODUCT_DURATIONS[productId] || 30;
+    // Calculate duration and end timestamps using quantity-based formula
+    const baseTime = PRODUCTION_TIME_CONFIG[productId] || 30;
+    const speedMultiplier = startup.productionSpeedMultiplier || 1.0;
+    const duration = Math.round((baseTime * quantity) / speedMultiplier);
     const startedAt = new Date();
     const endsAt = new Date(startedAt.getTime() + duration * 1000);
     const productName = PRODUCT_NAMES[productId] || productId;
