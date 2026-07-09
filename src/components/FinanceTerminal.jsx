@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getWorldClock } from '../services/worldClockService';
 
 const CURRENCY_SYMBOLS = {
   'India': '₹',
@@ -55,10 +56,9 @@ export default function FinanceTerminal({
   useEffect(() => {
     const fetchClock = async () => {
       try {
-        const res = await fetch('/api/world-clock');
-        const data = await res.json();
-        if (data.success && data.data) {
-          const clock = data.data;
+        const res = await getWorldClock();
+        if (res.success && res.data) {
+          const clock = res.data;
           let nextMonth = clock.month + 1;
           let nextYear = clock.year;
           if (nextMonth > 12) {
