@@ -82,6 +82,29 @@ const startupSchema = new mongoose.Schema({
     netProfit: { type: Number, default: 0 },
     retainedEarnings: { type: Number, default: 0 }
   },
+  retailInventory: {
+    type: Array,
+    default: []
+  },
+  retailState: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {
+      status: 'Open',
+      reputation: 0.82,
+      activeCycle: {
+        status: 'Idle',
+        startTime: null,
+        endTime: null,
+        duration: 0,
+        expectedRevenue: 0,
+        expectedProfit: 0,
+        expectedCustomers: 0,
+        expectedSales: {},
+        lockedQuantities: {}
+      },
+      history: []
+    }
+  },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

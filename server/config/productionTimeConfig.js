@@ -1,4 +1,5 @@
 export const PRODUCTION_TIME_CONFIG = {
+  seeds: 15,
   wheat: 20,
   rice: 25,
   cotton: 30,

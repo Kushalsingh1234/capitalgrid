@@ -37,7 +37,7 @@ const marketplaceSchema = new mongoose.Schema({
   quantity: {
     type: Number,
     required: [true, 'Listing quantity is required'],
-    min: [1, 'Listing quantity must be at least 1']
+    min: [0, 'Listing quantity must be at least 0']
   },
   pricePerUnit: {
     type: Number,

@@ -1,0 +1,20 @@
+export const WORKFORCE_CAPACITY_CONFIG = {
+  seeds: { role: 'Farmer', capacity: 50 },
+  wheat: { role: 'Farmer', capacity: 20 },
+  rice: { role: 'Farmer', capacity: 15 },
+  cotton: { role: 'Farmer', capacity: 12 },
+  coal: { role: 'Labourer', capacity: 10 },
+  bread: { role: 'Labourer', capacity: 20 },
+  biscuits: { role: 'Labourer', capacity: 15 },
+  cheese: { role: 'Labourer', capacity: 10 },
+  shirts: { role: 'Fashion Designer', capacity: 10 },
+  jeans: { role: 'Fashion Designer', capacity: 8 },
+  jackets: { role: 'Fashion Designer', capacity: 5 },
+  bricks: { role: 'Labourer', capacity: 15 },
+  cement: { role: 'Labourer', capacity: 10 },
+  steel_beams: { role: 'Labourer', capacity: 5 },
+  phones: { role: 'Engineer', capacity: 5 },
+  laptops: { role: 'Engineer', capacity: 3 },
+  tvs: { role: 'Engineer', capacity: 2 },
+  cars: { role: 'Engineer', capacity: 1 }
+};

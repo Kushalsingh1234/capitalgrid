@@ -7,16 +7,20 @@
 export const PRODUCT_DEPENDENCIES = {
   // --- Primary Sector (Farming, Dairy, Mining) ---
   // No materials required, only their respective service sector workers.
+  seeds: {
+    materials: { water: 1 },
+    employees: { 'Farmer': 1 }
+  },
   wheat: {
-    materials: {},
+    materials: { seeds: 1, water: 2 },
     employees: { 'Farmer': 1 }
   },
   rice: {
-    materials: {},
+    materials: { seeds: 2, water: 3 },
     employees: { 'Farmer': 1 }
   },
   cotton: {
-    materials: {},
+    materials: { seeds: 3, water: 2 },
     employees: { 'Farmer': 1 }
   },
   milk: {

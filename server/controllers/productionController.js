@@ -5,6 +5,8 @@ import ProductionTask from '../models/ProductionTask.js';
 import { BUSINESS_REQUIRED_EMPLOYEES } from './employeeController.js';
 import { PRODUCT_DEPENDENCIES } from '../config/dependencies.js';
 import { PRODUCTION_TIME_CONFIG } from '../config/productionTimeConfig.js';
+import { WORKFORCE_CAPACITY_CONFIG } from '../config/workforceCapacityConfig.js';
+import countryEconomy from '../config/countryEconomy.js';
 
 /**
  * processCompletedTasks
@@ -66,15 +68,24 @@ export const processCompletedTasks = async (startupId) => {
     const inventory = startup.inventory || [];
 
     for (const task of completedTasks) {
+      const country = startup.country || 'India';
+      const countryData = countryEconomy.countries[country] || countryEconomy.countries['India'];
+      const basePrice = countryData.commodities[task.productId]?.price || 100;
+      const producedCost = task.quantity * Math.round(basePrice * 0.50);
+
       // Find or add item
       const existingItem = inventory.find(i => i.productId === task.productId);
       if (existingItem) {
-        existingItem.quantity += task.quantity;
+        const currentQty = existingItem.quantity || 0;
+        const currentTotalCost = existingItem.totalCost || (currentQty * basePrice * 0.50);
+        existingItem.quantity = currentQty + task.quantity;
+        existingItem.totalCost = currentTotalCost + producedCost;
       } else {
         inventory.push({
           productId: task.productId,
           productName: task.productName,
-          quantity: task.quantity
+          quantity: task.quantity,
+          totalCost: producedCost
         });
       }
 
@@ -225,6 +236,7 @@ export const getInventory = async (req, res) => {
 };
 
 const PRODUCT_NAMES = {
+  seeds: 'Seeds',
   wheat: 'Wheat',
   rice: 'Rice',
   cotton: 'Cotton',
@@ -328,15 +340,17 @@ export const startProduction = async (req, res) => {
       hiredEmployees = await Employee.find({ startupId: startup._id });
     }
 
-    // Verify employees
-    const requiredEmployees = dependency.employees || {};
-    for (const [role, reqQty] of Object.entries(requiredEmployees)) {
+    // Verify employees using dynamic capacity
+    const capacityInfo = WORKFORCE_CAPACITY_CONFIG[productId];
+    if (capacityInfo) {
+      const { role, capacity } = capacityInfo;
+      const requiredCount = Math.ceil(quantity / capacity);
       const record = hiredEmployees.find(e => e.employeeType === role);
       const currentQty = record ? record.quantity : 0;
-      if (currentQty < reqQty) {
+      if (currentQty < requiredCount) {
         return res.status(400).json({
           success: false,
-          message: `Required workforce not met: Hire at least ${reqQty} ${role}${reqQty > 1 ? 's' : ''} to produce.`
+          message: `Insufficient Workforce\nRequired ${role}s: ${requiredCount}\nAvailable ${role}s: ${currentQty}\nHire ${requiredCount - currentQty} additional ${role}s.`
         });
       }
     }

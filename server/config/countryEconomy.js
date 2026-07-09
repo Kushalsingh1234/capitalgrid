@@ -17,6 +17,8 @@ const countryEconomy = {
         'Fashion Designer': 45000
       },
       commodities: {
+        'seeds': { name: 'Seeds', price: 18, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Wheat', 'Rice', 'Cotton'] },
+        'water': { name: 'Water', price: 8, category: 'Agriculture', producedBy: 'Government', usedIn: ['Seeds', 'Wheat', 'Rice', 'Cotton'] },
         'wheat': { name: 'Wheat', price: 90, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Bread', 'Biscuits'] },
         'rice': { name: 'Rice', price: 80, category: 'Agriculture', producedBy: 'Farming', usedIn: [] },
         'cotton': { name: 'Cotton', price: 100, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Shirts', 'Jeans', 'Jackets'] },
@@ -51,6 +53,8 @@ const countryEconomy = {
         'Fashion Designer': 7200
       },
       commodities: {
+        'seeds': { name: 'Seeds', price: 0.30, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Wheat', 'Rice', 'Cotton'] },
+        'water': { name: 'Water', price: 0.12, category: 'Agriculture', producedBy: 'Government', usedIn: ['Seeds', 'Wheat', 'Rice', 'Cotton'] },
         'wheat': { name: 'Wheat', price: 2.40, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Bread', 'Biscuits'] },
         'rice': { name: 'Rice', price: 2.10, category: 'Agriculture', producedBy: 'Farming', usedIn: [] },
         'cotton': { name: 'Cotton', price: 2.80, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Shirts', 'Jeans', 'Jackets'] },
@@ -85,6 +89,8 @@ const countryEconomy = {
         'Fashion Designer': 4800
       },
       commodities: {
+        'seeds': { name: 'Seeds', price: 0.25, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Wheat', 'Rice', 'Cotton'] },
+        'water': { name: 'Water', price: 0.10, category: 'Agriculture', producedBy: 'Government', usedIn: ['Seeds', 'Wheat', 'Rice', 'Cotton'] },
         'wheat': { name: 'Wheat', price: 2.00, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Bread', 'Biscuits'] },
         'rice': { name: 'Rice', price: 1.80, category: 'Agriculture', producedBy: 'Farming', usedIn: [] },
         'cotton': { name: 'Cotton', price: 2.30, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Shirts', 'Jeans', 'Jackets'] },
@@ -119,6 +125,8 @@ const countryEconomy = {
         'Fashion Designer': 5200
       },
       commodities: {
+        'seeds': { name: 'Seeds', price: 0.28, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Wheat', 'Rice', 'Cotton'] },
+        'water': { name: 'Water', price: 0.11, category: 'Agriculture', producedBy: 'Government', usedIn: ['Seeds', 'Wheat', 'Rice', 'Cotton'] },
         'wheat': { name: 'Wheat', price: 2.20, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Bread', 'Biscuits'] },
         'rice': { name: 'Rice', price: 2.00, category: 'Agriculture', producedBy: 'Farming', usedIn: [] },
         'cotton': { name: 'Cotton', price: 2.50, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Shirts', 'Jeans', 'Jackets'] },
@@ -153,6 +161,8 @@ const countryEconomy = {
         'Fashion Designer': 10000
       },
       commodities: {
+        'seeds': { name: 'Seeds', price: 1.40, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Wheat', 'Rice', 'Cotton'] },
+        'water': { name: 'Water', price: 0.60, category: 'Agriculture', producedBy: 'Government', usedIn: ['Seeds', 'Wheat', 'Rice', 'Cotton'] },
         'wheat': { name: 'Wheat', price: 7.00, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Bread', 'Biscuits'] },
         'rice': { name: 'Rice', price: 6.00, category: 'Agriculture', producedBy: 'Farming', usedIn: [] },
         'cotton': { name: 'Cotton', price: 8.00, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Shirts', 'Jeans', 'Jackets'] },
@@ -187,6 +197,8 @@ const countryEconomy = {
         'Fashion Designer': 620000
       },
       commodities: {
+        'seeds': { name: 'Seeds', price: 42, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Wheat', 'Rice', 'Cotton'] },
+        'water': { name: 'Water', price: 18, category: 'Agriculture', producedBy: 'Government', usedIn: ['Seeds', 'Wheat', 'Rice', 'Cotton'] },
         'wheat': { name: 'Wheat', price: 320, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Bread', 'Biscuits'] },
         'rice': { name: 'Rice', price: 300, category: 'Agriculture', producedBy: 'Farming', usedIn: [] },
         'cotton': { name: 'Cotton', price: 360, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Shirts', 'Jeans', 'Jackets'] },
@@ -221,6 +233,8 @@ const countryEconomy = {
         'Fashion Designer': 8200
       },
       commodities: {
+        'seeds': { name: 'Seeds', price: 0.45, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Wheat', 'Rice', 'Cotton'] },
+        'water': { name: 'Water', price: 0.18, category: 'Agriculture', producedBy: 'Government', usedIn: ['Seeds', 'Wheat', 'Rice', 'Cotton'] },
         'wheat': { name: 'Wheat', price: 3.40, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Bread', 'Biscuits'] },
         'rice': { name: 'Rice', price: 3.20, category: 'Agriculture', producedBy: 'Farming', usedIn: [] },
         'cotton': { name: 'Cotton', price: 3.90, category: 'Agriculture', producedBy: 'Farming', usedIn: ['Shirts', 'Jeans', 'Jackets'] },

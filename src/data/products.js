@@ -7,6 +7,7 @@
 const PRODUCTS = {
   // --- Primary Sector ---
   'Farming': [
+    { id: 'seeds', name: 'Seeds', icon: 'fa-solid fa-seedling', duration: 15 },
     { id: 'wheat', name: 'Wheat', icon: 'fa-solid fa-wheat-awn', duration: 20 },
     { id: 'rice', name: 'Rice', icon: 'fa-solid fa-bowl-rice', duration: 25 },
     { id: 'cotton', name: 'Cotton', icon: 'fa-solid fa-cloud', duration: 30 }

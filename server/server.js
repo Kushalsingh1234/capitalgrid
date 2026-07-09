@@ -12,6 +12,7 @@ import marketplaceRoutes from './routes/marketplaceRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
 import worldClockRoutes from './routes/worldClockRoutes.js';
+import retailRoutes from './routes/retailRoutes.js';
 import { initializeClock } from './services/worldClockService.js';
 import { tickEngine, registerDefaultModules } from './services/economicEngine.js';
 
@@ -52,6 +53,7 @@ app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/transaction', transactionRoutes);
 app.use('/api/employee', employeeRoutes);
 app.use('/api/world-clock', worldClockRoutes);
+app.use('/api/retail', retailRoutes);
 
 // Static assets production routing - conditionally enabled if built frontend files are present
 const distPath = path.join(__dirname, '../dist');

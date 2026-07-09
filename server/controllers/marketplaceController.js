@@ -22,6 +22,10 @@ export const createListing = async (req, res) => {
       return res.status(400).json({ success: false, message: 'All listing fields (product, quantity, price per unit) are required' });
     }
 
+    if (productId === 'water') {
+      return res.status(400).json({ success: false, message: 'Water cannot be listed on the Player Marketplace.' });
+    }
+
     const qty = parseInt(quantity, 10);
     const unitPrice = parseFloat(pricePerUnit);
 
@@ -54,15 +58,35 @@ export const createListing = async (req, res) => {
     }
 
     const inventoryItem = inventory[inventoryItemIndex];
-    if (inventoryItem.quantity < qty) {
+    
+    // Check if any inventory is locked in active retail cycles
+    let lockedQty = 0;
+    try {
+      const { getLockedInventory } = await import('./retailController.js');
+      const lockedMap = getLockedInventory(startup);
+      lockedQty = lockedMap[productId] || 0;
+    } catch (err) {
+      console.error('[Locked Inventory Import Error]', err);
+    }
+
+    const availableQty = inventoryItem.quantity - lockedQty;
+    if (availableQty < qty) {
       return res.status(400).json({ 
         success: false, 
-        message: `Insufficient inventory. You only have ${inventoryItem.quantity} unit(s) of ${inventoryItem.productName} available.` 
+        message: `Insufficient inventory. You only have ${availableQty} unit(s) of ${inventoryItem.productName} available (${lockedQty} reserved in active retail sales cycle).` 
       });
     }
 
-    // 4. Deduct quantity from inventory immediately (reserve goods)
+    // 4. Deduct quantity from inventory immediately (reserve goods) and reduce totalCost proportionally
+    const initialQty = inventoryItem.quantity || 0;
+    const basePrice = (countryEconomy.countries[startup.country || 'India'] || countryEconomy.countries['United States']).commodities[productId]?.price || 100;
+    const initialTotalCost = inventoryItem.totalCost !== undefined ? inventoryItem.totalCost : (initialQty * basePrice * 0.75);
+    const avgCost = initialQty > 0 ? (initialTotalCost / initialQty) : 0;
+
     inventoryItem.quantity -= qty;
+    if (inventoryItem.totalCost !== undefined) {
+      inventoryItem.totalCost = Math.max(0, Math.round(inventoryItem.quantity * avgCost));
+    }
     
     // Remove product slot if quantity reaches 0
     let updatedInventory = [...inventory];
@@ -390,14 +414,19 @@ export const buyListing = async (req, res) => {
     // Increase buyer inventory
     const buyerInventory = buyerStartup.inventory || [];
     const buyerItemIndex = buyerInventory.findIndex(item => item.productId === listing.productId);
+    const orderCost = buyQty * listing.pricePerUnit;
 
     if (buyerItemIndex !== -1) {
-      buyerInventory[buyerItemIndex].quantity += buyQty;
+      const currentQty = buyerInventory[buyerItemIndex].quantity || 0;
+      const currentTotalCost = buyerInventory[buyerItemIndex].totalCost || (currentQty * listing.pricePerUnit * 0.75);
+      buyerInventory[buyerItemIndex].quantity = currentQty + buyQty;
+      buyerInventory[buyerItemIndex].totalCost = currentTotalCost + orderCost;
     } else {
       buyerInventory.push({
         productId: listing.productId,
         productName: listing.productName,
-        quantity: buyQty
+        quantity: buyQty,
+        totalCost: orderCost
       });
     }
     buyerStartup.inventory = buyerInventory;
@@ -427,7 +456,7 @@ export const buyListing = async (req, res) => {
       await sellerStartup.save();
 
       // Save listing
-      await listing.save();
+      await listing.save({ validateBeforeSave: false });
     }
 
     // 8. Create transaction history records (one for buyer, one for seller)
@@ -523,8 +552,8 @@ export const getNcrCatalog = async (req, res) => {
       const localPrice = getProductPrice(country, item.productId);
       return {
         ...item,
-        ncrBuyPrice: +(localPrice * 0.95).toFixed(2),
-        ncrSellPrice: +(localPrice * 1.05).toFixed(2)
+        ncrBuyPrice: +(localPrice * 0.65).toFixed(2),
+        ncrSellPrice: +(localPrice * 1.40).toFixed(2)
       };
     });
 
@@ -568,7 +597,7 @@ export const buyFromNcr = async (req, res) => {
 
     const country = startup.country || 'United States';
     const localPrice = getProductPrice(country, productId);
-    const ncrSellPrice = +(localPrice * 1.05).toFixed(2);
+    const ncrSellPrice = +(localPrice * 1.40).toFixed(2);
     const totalCost = ncrSellPrice * qty;
 
     if (startup.currentBalance < totalCost) {
@@ -580,13 +609,19 @@ export const buyFromNcr = async (req, res) => {
 
     const inventory = startup.inventory || [];
     const itemIndex = inventory.findIndex(i => i.productId === productId);
+    const orderCost = qty * ncrSellPrice;
+
     if (itemIndex !== -1) {
-      inventory[itemIndex].quantity += qty;
+      const currentQty = inventory[itemIndex].quantity || 0;
+      const currentTotalCost = inventory[itemIndex].totalCost || (currentQty * ncrSellPrice * 0.75);
+      inventory[itemIndex].quantity = currentQty + qty;
+      inventory[itemIndex].totalCost = currentTotalCost + orderCost;
     } else {
       inventory.push({
         productId,
         productName: ncrItem.productName,
-        quantity: qty
+        quantity: qty,
+        totalCost: orderCost
       });
     }
     startup.inventory = inventory;
@@ -655,6 +690,10 @@ export const sellToNcr = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Product and a valid quantity are required' });
     }
 
+    if (productId === 'water') {
+      return res.status(400).json({ success: false, message: 'Water cannot be sold by players.' });
+    }
+
     const qty = parseInt(quantity, 10);
     const ncrItem = ncrCatalog.find(i => i.productId === productId);
     if (!ncrItem) {
@@ -675,17 +714,43 @@ export const sellToNcr = async (req, res) => {
     const inventory = startup.inventory || [];
     const itemIndex = inventory.findIndex(i => i.productId === productId);
 
-    if (itemIndex === -1 || inventory[itemIndex].quantity < qty) {
+    if (itemIndex === -1) {
       return res.status(400).json({ success: false, message: 'Insufficient stock in warehouse' });
+    }
+
+    const inventoryItem = inventory[itemIndex];
+    let lockedQty = 0;
+    try {
+      const { getLockedInventory } = await import('./retailController.js');
+      const lockedMap = getLockedInventory(startup);
+      lockedQty = lockedMap[productId] || 0;
+    } catch (err) {
+      console.error('[Locked Inventory Import Error]', err);
+    }
+
+    const availableQty = inventoryItem.quantity - lockedQty;
+    if (availableQty < qty) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Insufficient stock in warehouse. You have ${availableQty} unit(s) available (${lockedQty} reserved in active retail sales cycle).` 
+      });
     }
 
     const country = startup.country || 'United States';
     const localPrice = getProductPrice(country, productId);
-    const ncrBuyPrice = +(localPrice * 0.95).toFixed(2);
+    const ncrBuyPrice = +(localPrice * 0.65).toFixed(2);
     const totalRevenue = ncrBuyPrice * qty;
 
     // Perform transaction
+    const initialQty = inventory[itemIndex].quantity || 0;
+    const initialTotalCost = inventory[itemIndex].totalCost !== undefined ? inventory[itemIndex].totalCost : (initialQty * localPrice * 0.75);
+    const avgCost = initialQty > 0 ? (initialTotalCost / initialQty) : 0;
+
     inventory[itemIndex].quantity -= qty;
+    if (inventory[itemIndex].totalCost !== undefined) {
+      inventory[itemIndex].totalCost = Math.max(0, Math.round(inventory[itemIndex].quantity * avgCost));
+    }
+
     if (inventory[itemIndex].quantity === 0) {
       inventory.splice(itemIndex, 1);
     }

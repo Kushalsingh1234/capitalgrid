@@ -1,5 +1,7 @@
 const ncrCatalog = [
   // --- Agriculture ---
+  { productId: 'seeds', productName: 'Seeds', category: 'Agriculture', unlimited: true },
+  { productId: 'water', productName: 'Water', category: 'Agriculture', unlimited: true },
   { productId: 'wheat', productName: 'Wheat', category: 'Agriculture', unlimited: true },
   { productId: 'rice', productName: 'Rice', category: 'Agriculture', unlimited: true },
   { productId: 'cotton', productName: 'Cotton', category: 'Agriculture', unlimited: true },

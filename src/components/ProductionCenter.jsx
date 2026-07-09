@@ -3,6 +3,7 @@ import { getProductsForBusiness, isRetailBusiness } from '../data/products';
 import * as productionService from '../services/productionService';
 import { PRODUCT_DEPENDENCIES } from '../data/dependencies';
 import { formatDuration, formatGameTime } from '../utils/timeFormatter';
+import { WORKFORCE_CAPACITY_CONFIG } from '../config/workforceCapacityConfig';
 
 const BUSINESS_REQUIRED_ROLES = {
   'Farming': ['Farmer'],
@@ -167,42 +168,45 @@ export default function ProductionCenter({
 
   const adjustQty = (productId, delta) => {
     setQuantities(prev => {
-      const current = prev[productId] || 1;
-      const next = Math.max(1, Math.min(10000, current + delta));
+      const current = prev[productId] === '' ? 0 : prev[productId];
+      const next = Math.max(0, Math.min(10000, current + delta));
       return { ...prev, [productId]: next };
     });
   };
 
   const calculateMaxQty = (product) => {
     const dep = PRODUCT_DEPENDENCIES[product.id];
-    if (!dep) return 1;
 
-    // Check workforce
-    if (dep.employees) {
-      for (const [role, reqQty] of Object.entries(dep.employees)) {
-        const hired = employees.find(e => e.employeeType === role)?.quantity || 0;
-        if (hired < reqQty) return 0;
-      }
-    }
-
-    if (!dep.materials || Object.keys(dep.materials).length === 0) {
-      return 10000;
+    // Dynamic workforce limit
+    const capacityInfo = WORKFORCE_CAPACITY_CONFIG[product.id];
+    let maxQtyByWorkforce = 10000;
+    if (capacityInfo) {
+      const { role, capacity } = capacityInfo;
+      const hired = employees.find(e => e.employeeType === role)?.quantity || 0;
+      maxQtyByWorkforce = hired * capacity;
     }
 
     let minMatMax = Infinity;
-    for (const [matId, qtyPerUnit] of Object.entries(dep.materials)) {
-      const available = inventory.find(i => i.productId === matId)?.quantity || 0;
-      const maxForMat = Math.floor(available / qtyPerUnit);
-      if (maxForMat < minMatMax) {
-        minMatMax = maxForMat;
+    if (dep && dep.materials) {
+      for (const [matId, qtyPerUnit] of Object.entries(dep.materials)) {
+        const available = inventory.find(i => i.productId === matId)?.quantity || 0;
+        const maxForMat = Math.floor(available / qtyPerUnit);
+        if (maxForMat < minMatMax) {
+          minMatMax = maxForMat;
+        }
       }
     }
 
-    return minMatMax === Infinity ? 1 : Math.max(1, minMatMax);
+    const finalMax = Math.min(
+      maxQtyByWorkforce,
+      minMatMax === Infinity ? 10000 : minMatMax
+    );
+    return Math.max(0, finalMax);
   };
 
   const handleProduce = useCallback((product) => {
-    const qty = quantities[product.id] || 1;
+    const qty = quantities[product.id] === undefined ? 1 : quantities[product.id];
+    if (qty <= 0) return;
 
     // Don't allow starting production if already producing this product
     if (producing[product.id]) return;
@@ -286,22 +290,26 @@ export default function ProductionCenter({
           const dep = PRODUCT_DEPENDENCIES[product.id];
           const missingResources = [];
 
-          if (dep) {
-            // Check employees
-            if (dep.employees) {
-              for (const [role, reqQty] of Object.entries(dep.employees)) {
-                const hired = employees.find(e => e.employeeType === role)?.quantity || 0;
-                if (hired < reqQty) {
-                  missingResources.push({
-                    name: role,
-                    needed: reqQty,
-                    available: hired,
-                    type: 'employee'
-                  });
-                }
-              }
+          // Check dynamic workforce capacity
+          const capacityInfo = WORKFORCE_CAPACITY_CONFIG[product.id];
+          let missingWorkforce = null;
+          let neededEmp = 0;
+          let availableEmp = 0;
+          if (capacityInfo) {
+            const { role, capacity } = capacityInfo;
+            neededEmp = Math.ceil(selectedQty / capacity);
+            availableEmp = employees.find(e => e.employeeType === role)?.quantity || 0;
+            if (availableEmp < neededEmp) {
+              missingWorkforce = {
+                role,
+                needed: neededEmp,
+                available: availableEmp,
+                missing: neededEmp - availableEmp
+              };
             }
+          }
 
+          if (dep) {
             // Check materials
             if (dep.materials) {
               for (const [matId, qtyPerUnit] of Object.entries(dep.materials)) {
@@ -320,7 +328,7 @@ export default function ProductionCenter({
             }
           }
 
-          const hasMissing = missingResources.length > 0;
+          const hasMissing = missingResources.length > 0 || !!missingWorkforce;
 
           return (
             <div
@@ -397,13 +405,13 @@ export default function ProductionCenter({
                         } else {
                           const parsed = parseInt(cleaned, 10);
                           if (!isNaN(parsed)) {
-                            setQuantities(prev => ({ ...prev, [product.id]: Math.max(1, Math.min(10000, parsed)) }));
+                            setQuantities(prev => ({ ...prev, [product.id]: Math.max(0, Math.min(10000, parsed)) }));
                           }
                         }
                       }}
                       onBlur={() => {
-                        if (quantities[product.id] === '' || quantities[product.id] < 1) {
-                          setQuantities(prev => ({ ...prev, [product.id]: 1 }));
+                        if (quantities[product.id] === '' || quantities[product.id] < 0) {
+                          setQuantities(prev => ({ ...prev, [product.id]: 0 }));
                         }
                       }}
                       className="font-display text-base font-black text-white w-20 text-center tabular-nums bg-black/40 border border-white/15 rounded focus:outline-none focus:border-cyanGlow/40 px-1 py-1"
@@ -426,6 +434,44 @@ export default function ProductionCenter({
                     </button>
                   </div>
 
+                  {/* Consumes / Required Inputs Recipe Checklist */}
+                  {((dep && dep.materials) || capacityInfo) && (
+                    <div className="mb-3 p-2.5 bg-white/2 border border-white/5 rounded text-[10px] font-sans text-text-secondary flex flex-col gap-1.5 bg-black/10">
+                      <div className="text-[8px] font-display uppercase tracking-widest text-text-muted mb-0.5 font-bold flex items-center gap-1">
+                        <i className="fa-solid fa-list-check text-cyanGlow/80"></i>
+                        <span>Required Inputs (Consumes)</span>
+                      </div>
+                      {dep && dep.materials && Object.entries(dep.materials).map(([matId, qtyPerUnit]) => {
+                        const needed = qtyPerUnit * selectedQty;
+                        const available = inventory.find(i => i.productId === matId)?.quantity || 0;
+                        const hasEnough = available >= needed;
+                        const matName = matId.charAt(0).toUpperCase() + matId.slice(1).replace('_', ' ');
+                        return (
+                          <div key={matId} className="flex justify-between items-center font-mono text-[10.5px]">
+                            <span className="flex items-center gap-1.5">
+                              <span className={`w-1.5 h-1.5 rounded-full ${hasEnough ? 'bg-greenGlow shadow-greenGlow/30 shadow-sm animate-pulse' : 'bg-red-500 animate-ping'}`}></span>
+                              <span className="text-white">• {qtyPerUnit}x {matName}</span>
+                              <span className="text-[9px] text-text-muted">({needed} total)</span>
+                            </span>
+                            <span className={hasEnough ? 'text-greenGlow font-bold' : 'text-red-400 font-bold'}>
+                              {available} / {needed}
+                            </span>
+                          </div>
+                        );
+                      })}
+                      {capacityInfo && (
+                        <div className="flex justify-between items-center font-mono text-[10.5px] border-t border-white/5 pt-1 mt-0.5">
+                          <span className="flex items-center gap-1.5 text-[9px] text-text-secondary font-sans">
+                            <i className="fa-solid fa-user-tie text-[9px] text-cyanGlow/80"></i> Requires {neededEmp}x {capacityInfo.role}
+                          </span>
+                          <span className={!missingWorkforce ? 'text-greenGlow font-bold' : 'text-red-400 font-bold'}>
+                            {availableEmp} / {neededEmp}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Production Queue Preview Card */}
                   <div className="mb-3 p-3 bg-white/2 border border-white/5 rounded text-[11px] font-mono text-text-secondary flex flex-col gap-1.5 bg-gradient-to-b from-glassBg to-black/20">
                     <div className="flex justify-between">
@@ -440,6 +486,22 @@ export default function ProductionCenter({
                       <span>Speed Multiplier:</span>
                       <span className="text-cyanGlow font-bold">{(startup?.productionSpeedMultiplier || 1.0).toFixed(1)}x</span>
                     </div>
+                    {capacityInfo && (
+                      <>
+                        <div className="flex justify-between border-t border-white/5 pt-1 mt-1">
+                          <span>Required Role:</span>
+                          <span className="text-white font-bold">{capacityInfo.role}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Worker Capacity:</span>
+                          <span className="text-white">{capacityInfo.capacity} unit(s) / worker</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Required Workers:</span>
+                          <span className={`font-bold ${missingWorkforce ? 'text-red-400 font-bold' : 'text-cyanGlow'}`}>{neededEmp}</span>
+                        </div>
+                      </>
+                    )}
                     <div className="flex justify-between border-t border-white/5 pt-1.5 mt-1">
                       <span className="text-cyanGlow font-bold">Total Duration:</span>
                       <span className="text-cyanGlow font-bold font-mono">{formatDuration(totalRealDuration)}</span>
@@ -452,8 +514,8 @@ export default function ProductionCenter({
                     )}
                   </div>
 
-                  {/* Warning Card */}
-                  {hasMissing && (
+                  {/* Warning Cards */}
+                  {missingResources.length > 0 && (
                     <div className="mb-3 p-3 bg-red-950/20 border border-red-500/20 rounded text-[11px] text-red-400">
                       <div className="font-display font-bold uppercase tracking-wider text-[10px] text-red-400 mb-1 flex items-center gap-1">
                         <i className="fa-solid fa-triangle-exclamation animate-pulse"></i>
@@ -466,6 +528,20 @@ export default function ProductionCenter({
                           </li>
                         ))}
                       </ul>
+                    </div>
+                  )}
+
+                  {missingWorkforce && (
+                    <div className="mb-3 p-3 bg-red-950/20 border border-red-500/20 rounded text-[11px] text-red-400">
+                      <div className="font-display font-bold uppercase tracking-wider text-[10px] text-red-400 mb-1 flex items-center gap-1">
+                        <i className="fa-solid fa-user-xmark animate-pulse"></i>
+                        <span>Insufficient Workforce</span>
+                      </div>
+                      <div className="flex flex-col gap-0.5 font-mono text-[10.5px] text-red-300">
+                        <div>Required {missingWorkforce.role}s: <span className="font-bold text-white">{missingWorkforce.needed}</span></div>
+                        <div>Available {missingWorkforce.role}s: <span className="font-bold text-white">{missingWorkforce.available}</span></div>
+                        <div className="mt-1 font-bold text-red-400">Hire {missingWorkforce.missing} additional {missingWorkforce.role}s.</div>
+                      </div>
                     </div>
                   )}
 

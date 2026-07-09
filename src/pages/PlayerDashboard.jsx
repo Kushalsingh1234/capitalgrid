@@ -11,6 +11,7 @@ import InventoryPanel from '../components/InventoryPanel';
 import FacilityManagementDrawer from '../components/FacilityManagementDrawer';
 import MarketplaceInterface from '../components/MarketplaceInterface';
 import FinanceTerminal from '../components/FinanceTerminal';
+import RetailTerminal from '../components/RetailTerminal';
 import * as transactionService from '../services/transactionService';
 import * as employeeService from '../services/employeeService';
 import { getProductsForBusiness, isRetailBusiness } from '../data/products';
@@ -466,7 +467,7 @@ export default function PlayerDashboard() {
 
       <div className="main-game-layout relative">
         {/* BOTTOM HORIZONTAL SIDEBAR */}
-        {currentView !== 'marketplace' && currentView !== 'finance' && (
+        {currentView !== 'marketplace' && currentView !== 'finance' && currentView !== 'retail' && (
           <nav className="sidebar-bottom">
             {[
               { id: 'Dashboard', icon: 'fa-chart-pie', label: 'Overview' },
@@ -510,18 +511,23 @@ export default function PlayerDashboard() {
         {/* MAIN GAME WORLD AREA */}
         <main 
           className={`world-viewport ${activeTab || isFacilityDrawerOpen ? 'drawer-open' : ''}`}
-          style={currentView === 'marketplace' || currentView === 'finance' ? { overflow: 'auto', alignItems: 'flex-start', justifyContent: 'flex-start', padding: 0 } : {}}
+          style={currentView === 'marketplace' || currentView === 'finance' || currentView === 'retail' ? { overflow: 'auto', alignItems: 'flex-start', justifyContent: 'flex-start', padding: 0 } : {}}
         >
           {/* GameWorld wrapper for hiding but maintaining mounted state */}
-          <div className={`w-full h-full ${currentView === 'marketplace' || currentView === 'finance' ? 'absolute pointer-events-none invisible opacity-0' : ''}`}>
+          <div className={`w-full h-full ${currentView === 'marketplace' || currentView === 'finance' || currentView === 'retail' ? 'absolute pointer-events-none invisible opacity-0' : ''}`}>
             {startup ? (
               <GameWorld 
                 startup={startup} 
                 onBuildingClick={(buildingData) => {
                   setActiveTab(null);
                   setSelectedBuilding(buildingData);
-                  setIsFacilityDrawerOpen(true);
-                  setCurrentView('world');
+                  if (isRetail) {
+                    setCurrentView('retail');
+                    setIsFacilityDrawerOpen(false);
+                  } else {
+                    setIsFacilityDrawerOpen(true);
+                    setCurrentView('world');
+                  }
                   fetchDashboardData();
                 }}
                 disableClicks={currentView !== 'world' || activeTab !== null || isFacilityDrawerOpen}
@@ -555,6 +561,16 @@ export default function PlayerDashboard() {
               employees={employees}
               token={token}
               onClose={() => setCurrentView('world')}
+            />
+          )}
+
+          {/* Full Screen Retail Dashboard Terminal */}
+          {currentView === 'retail' && (
+            <RetailTerminal
+              startup={startup}
+              token={token}
+              onClose={() => setCurrentView('world')}
+              onRetailAction={fetchDashboardData}
             />
           )}
 

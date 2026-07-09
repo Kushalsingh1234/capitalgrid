@@ -78,6 +78,8 @@ export default class GameScene extends Phaser.Scene {
     this.velocityX = 0;
     this.velocityY = 0;
     this.isPanning = false;
+    this.isPanEnabled = false;
+    this.lastClickTime = 0;
 
     // Track dragging speed
     this.lastPointerX = 0;
@@ -547,23 +549,36 @@ export default class GameScene extends Phaser.Scene {
   }
 
   // Camera pan pointer handlers with drag speeds
+  // Camera pan pointer handlers with drag speeds (enabled only on double-click viewport)
   handlePointerDown(pointer) {
     if (pointer.rightButtonDown()) return;
-    this.isPanning = true;
-    this.dragStartX = pointer.x;
-    this.dragStartY = pointer.y;
-    this.cameraDragStartX = this.targetScrollX;
-    this.cameraDragStartY = this.targetScrollY;
 
-    // Reset speeds
-    this.velocityX = 0;
-    this.velocityY = 0;
-    this.lastPointerX = pointer.x;
-    this.lastPointerY = pointer.y;
+    const now = this.time.now;
+    const doubleClickDelay = 350; // ms
+    if (this.lastClickTime && (now - this.lastClickTime < doubleClickDelay)) {
+      this.isPanEnabled = true;
+      this.isPanning = true;
+      this.dragStartX = pointer.x;
+      this.dragStartY = pointer.y;
+      this.cameraDragStartX = this.targetScrollX;
+      this.cameraDragStartY = this.targetScrollY;
+
+      // Reset speeds
+      this.velocityX = 0;
+      this.velocityY = 0;
+      this.lastPointerX = pointer.x;
+      this.lastPointerY = pointer.y;
+    }
+    this.lastClickTime = now;
   }
 
   handlePointerMove(pointer) {
-    if (!this.isPanning) return;
+    if (!this.isPanEnabled || !this.isPanning) return;
+    if (!pointer.isDown) {
+      this.isPanning = false;
+      this.isPanEnabled = false;
+      return;
+    }
     const zoom = this.cameras.main.zoom;
     const dx = (pointer.x - this.dragStartX) / zoom;
     const dy = (pointer.y - this.dragStartY) / zoom;
@@ -580,6 +595,7 @@ export default class GameScene extends Phaser.Scene {
 
   handlePointerUp() {
     this.isPanning = false;
+    this.isPanEnabled = false;
   }
 
   // Mouse wheel zoom to cursor targeting
@@ -598,6 +614,12 @@ export default class GameScene extends Phaser.Scene {
   }
 
   update() {
+    // Safety check: reset panning state if pointer is not down
+    if (this.isPanning && !this.input.activePointer.isDown) {
+      this.isPanning = false;
+      this.isPanEnabled = false;
+    }
+
     // 1. Decelerate panning velocities for gliding inertia when pointer is released
     if (!this.isPanning) {
       this.targetScrollX += this.velocityX;

@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import ProductionTask from '../models/ProductionTask.js';
 import { processCompletedTasks } from './productionController.js';
 import countryEconomy from '../config/countryEconomy.js';
+import { checkAndResolveRetailCycle } from '../controllers/retailController.js';
 
 // Capital mappings based on country choice
 const STARTING_CAPITALS = {
@@ -208,6 +209,71 @@ export const getStartup = async (req, res) => {
       return res.status(404).json({ success: false, message: 'No startup registered for this player' });
     }
 
+    // Auto-migrate and initialize retail features
+    let startupDirty = false;
+    if (!startup.retailInventory) {
+      startup.retailInventory = [];
+      startupDirty = true;
+    }
+    if (!startup.retailState) {
+      startup.retailState = {
+        status: 'Open',
+        reputation: 0.82,
+        activeCycle: {
+          status: 'Idle',
+          startTime: null,
+          endTime: null,
+          duration: 0,
+          expectedRevenue: 0,
+          expectedProfit: 0,
+          expectedCustomers: 0,
+          expectedSales: {}
+        },
+        history: []
+      };
+      startupDirty = true;
+    }
+
+    const RETAIL_PRODUCTS_MAP = {
+      'Clothing Store': ['shirts', 'jeans', 'jackets'],
+      'Electronics Store': ['laptops', 'phones', 'tvs'],
+      'Restaurant': ['biscuits', 'bread', 'cheese'],
+      'Car Showroom': ['cars']
+    };
+
+    if (RETAIL_PRODUCTS_MAP[startup.businessType] && startup.retailInventory.length === 0) {
+      const pIds = RETAIL_PRODUCTS_MAP[startup.businessType];
+      const country = startup.country || 'India';
+      const countryData = countryEconomy.countries[country] || countryEconomy.countries['India'];
+      const localEconomy = countryData.commodities;
+      startup.retailInventory = pIds.map(pId => {
+        const econ = localEconomy[pId] || { name: pId, price: 100 };
+        return {
+          productId: pId,
+          productName: econ.name,
+          quantity: 0,
+          sellingPrice: econ.price,
+          avgPurchaseCost: Math.round(econ.price * 0.75)
+        };
+      });
+      startupDirty = true;
+    }
+
+    // Resolve completed retail cycle
+    const resolvedRetail = checkAndResolveRetailCycle(startup);
+    if (resolvedRetail) {
+      startupDirty = true;
+    }
+
+    if (startupDirty && !global.useMockDb) {
+      if (typeof startup.markModified === 'function') {
+        startup.markModified('retailInventory');
+        startup.markModified('retailState');
+        startup.markModified('financials');
+      }
+      await startup.save();
+    }
+
     // Auto-migrate old documents missing financial accounting object
     if (!startup.financials) {
       startup.financials = {
@@ -283,6 +349,15 @@ export const getStartup = async (req, res) => {
       acc[key] = countryData.commodities[key].price;
       return acc;
     }, {});
+
+    // Compute dynamic avgPurchaseCost for retailInventory items
+    if (startup.retailInventory) {
+      const { getAveragePurchaseCost } = await import('./retailController.js');
+      for (const item of startup.retailInventory) {
+        const basePrice = localPrices[item.productId] || 100;
+        item.avgPurchaseCost = await getAveragePurchaseCost(startup._id, item.productId, basePrice);
+      }
+    }
 
     res.status(200).json({
       success: true,

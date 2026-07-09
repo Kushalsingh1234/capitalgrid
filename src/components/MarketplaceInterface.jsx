@@ -383,7 +383,7 @@ export default function MarketplaceInterface({
     const minPrice = activeListings.length > 0 
       ? Math.min(...activeListings.map(l => l.pricePerUnit)) 
       : p.basePrice;
-    const maxPrice = minPrice * 0.95; // Mock buy price
+    const maxPrice = minPrice * 0.65; // Mock buy price
     
     // Find last transaction price
     const prodTx = transactions.filter(t => t.productId === p.id);
@@ -406,7 +406,14 @@ export default function MarketplaceInterface({
   });
 
   // Selected Product for Home Market Console
-  const selectedProduct = productsWithPrices.find(p => p.id === selectedProductId) || productsWithPrices[0];
+  const selectedProduct = productsWithPrices.find(p => p.id === selectedProductId) || 
+    (selectedProductId === 'water' ? {
+      id: 'water',
+      name: 'Water',
+      basePrice: localPrices['water'] || 10,
+      icon: 'fa-solid fa-droplet text-blue-400',
+      categoryGroup: 'Agriculture'
+    } : productsWithPrices[0]);
 
   const cheapestListing = listings
     .filter(l => l.productId === selectedProduct?.id && l.status === 'Active' && l.sellerCountry === playerCountry && l.seller !== startup?._id)
@@ -478,14 +485,14 @@ export default function MarketplaceInterface({
     ? selectedListing
     : (activeTab === 'ncr' ? {
         isNcr: true,
-        id: `ncr-${selectedProduct?.id}`,
-        productId: selectedProduct?.id,
-        productName: selectedProduct?.name,
+        id: `ncr-${selectedProductId}`,
+        productId: selectedProductId,
+        productName: ncrProductPrice ? ncrProductPrice.productName : (selectedProduct?.name || 'Water'),
         quantity: 'Unlimited',
-        buyerBasePrice: selectedProduct ? selectedProduct.basePrice : 0,
-        finalPrice: selectedProduct ? +(selectedProduct.basePrice * 1.05).toFixed(2) : 0,
-        ncrBuyPrice: selectedProduct ? +(selectedProduct.basePrice * 0.95).toFixed(2) : 0,
-        ncrSellPrice: selectedProduct ? +(selectedProduct.basePrice * 1.05).toFixed(2) : 0,
+        buyerBasePrice: ncrProductPrice ? ncrProductPrice.ncrSellPrice / 1.40 : (selectedProduct ? selectedProduct.basePrice : 0),
+        finalPrice: ncrProductPrice ? ncrProductPrice.ncrSellPrice : (selectedProduct ? +(selectedProduct.basePrice * 1.40).toFixed(2) : 0),
+        ncrBuyPrice: ncrProductPrice ? ncrProductPrice.ncrBuyPrice : (selectedProduct ? +(selectedProduct.basePrice * 0.65).toFixed(2) : 0),
+        ncrSellPrice: ncrProductPrice ? ncrProductPrice.ncrSellPrice : (selectedProduct ? +(selectedProduct.basePrice * 1.40).toFixed(2) : 0),
         shippingCost: 0,
         tariff: 0
       } : (cheapestListing ? {
@@ -502,7 +509,7 @@ export default function MarketplaceInterface({
       } : null));
 
   const buyPrice = activeListingForConsole ? activeListingForConsole.finalPrice : (selectedProduct ? selectedProduct.basePrice * 1.25 : 0);
-  const sellPrice = activeListingForConsole?.isNcr ? activeListingForConsole.ncrBuyPrice : (selectedProduct ? +(selectedProduct.basePrice * 0.95).toFixed(2) : 0);
+  const sellPrice = activeListingForConsole?.isNcr ? activeListingForConsole.ncrBuyPrice : (selectedProduct ? +(selectedProduct.basePrice * 0.65).toFixed(2) : 0);
 
   const estCost = buyPrice * (parseInt(tradeQuantity, 10) || 0);
   const estRevenue = (activeListingForConsole?.isNcr ? sellPrice : sellPricePerUnit) * (parseInt(tradeQuantity, 10) || 0);
@@ -514,9 +521,18 @@ export default function MarketplaceInterface({
     
     if (!prod) return null;
 
+    const unitPrice = activeListing 
+      ? (activeListing.finalPrice || activeListing.pricePerUnit || activeListing.ncrSellPrice || 0)
+      : 0;
+
     const maxQty = tradeMode === 'sell'
       ? (inventory.find(i => i.productId === prod.id)?.quantity || 0)
-      : (activeListing ? (activeListing.isNcr ? Math.floor(startup.currentBalance / buyPrice) : activeListing.quantity) : 0);
+      : (activeListing 
+          ? (activeListing.isNcr 
+              ? (unitPrice > 0 ? Math.floor(startup.currentBalance / unitPrice) : 0)
+              : (unitPrice > 0 ? Math.min(activeListing.quantity, Math.floor(startup.currentBalance / unitPrice)) : activeListing.quantity)
+            ) 
+          : 0);
     const displayMaxQty = Math.max(1, maxQty);
     const showMaxButton = tradeMode === 'sell' || tradeMode === 'buy';
 
@@ -742,7 +758,14 @@ export default function MarketplaceInterface({
           <div className="flex flex-col gap-2.5 max-h-[220px] overflow-y-auto pr-1">
             {inventory.length > 0 ? (
               inventory.map((item, idx) => {
-                const prod = productsWithPrices.find(p => p.id === item.productId) || { icon: 'fa-solid fa-box', basePrice: 100 };
+                const prod = productsWithPrices.find(p => p.id === item.productId) || (
+                  item.productId === 'water' ? {
+                    id: 'water',
+                    name: 'Water',
+                    icon: 'fa-solid fa-droplet text-blue-400',
+                    basePrice: localPrices['water'] || 8
+                  } : { icon: 'fa-solid fa-box', basePrice: 100 }
+                );
                 const marketVal = item.quantity * prod.basePrice;
                 
                 return (
@@ -758,17 +781,21 @@ export default function MarketplaceInterface({
                       <span className="text-text-secondary text-[10px]">
                         {formatCurrency(marketVal, startup?.country)}
                       </span>
-                      <button
-                        onClick={() => {
-                          setSelectedProductId(item.productId);
-                          setTradeMode('sell');
-                          setTradeQuantity(1);
-                          setSellPricePerUnit(Math.round(prod.basePrice * 1.25));
-                        }}
-                        className="px-2 py-1 bg-cyan-950/20 border border-cyanGlow/25 text-cyanGlow hover:bg-cyan-900/35 text-[9px] font-display uppercase tracking-widest rounded cursor-pointer"
-                      >
-                        Sell
-                      </button>
+                      {item.productId !== 'water' ? (
+                        <button
+                          onClick={() => {
+                            setSelectedProductId(item.productId);
+                            setTradeMode('sell');
+                            setTradeQuantity(1);
+                            setSellPricePerUnit(Math.round(prod.basePrice * 1.25));
+                          }}
+                          className="px-2 py-1 bg-cyan-950/20 border border-cyanGlow/25 text-cyanGlow hover:bg-cyan-900/35 text-[9px] font-display uppercase tracking-widest rounded cursor-pointer"
+                        >
+                          Sell
+                        </button>
+                      ) : (
+                        <span className="text-[8px] font-mono text-text-muted border border-white/5 bg-white/2 px-1 rounded uppercase tracking-wider">NCR Only</span>
+                      )}
                     </div>
                   </div>
                 );
@@ -1163,15 +1190,27 @@ export default function MarketplaceInterface({
                       </tr>
                     )
                   ) : (
-                    processedProducts.map((p) => {
-                      const ncrItem = ncrCatalog.find(i => i.productId === p.id);
+                    ncrCatalog.map((item) => {
+                      const p = productsWithPrices.find(fp => fp.id === item.productId) || {
+                        id: item.productId,
+                        name: item.productName,
+                        categoryGroup: item.category,
+                        icon: item.productId === 'water' ? 'fa-solid fa-droplet text-blue-400' : 'fa-solid fa-circle-question',
+                        basePrice: localPrices[item.productId] || 10
+                      };
+
+                      // Apply category filter
+                      if (selectedCategory !== 'All Categories' && p.categoryGroup !== selectedCategory) return null;
+                      // Apply search filter
+                      if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) return null;
+
                       const isSelected = p.id === selectedProductId;
-                      if (!ncrItem) return null;
                       return (
                         <React.Fragment key={p.id}>
                           <tr 
                             onClick={() => {
-                              handleSelectProduct(p.id);
+                              setSelectedProductId(p.id);
+                              setSelectedListing(null);
                               setTradeMode('buy');
                             }}
                             className={`border-b border-white/5 hover:bg-white/2 cursor-pointer transition-colors ${
@@ -1184,10 +1223,10 @@ export default function MarketplaceInterface({
                             </td>
                             <td className="p-3 text-text-secondary">{p.categoryGroup}</td>
                             <td className="p-3 text-right text-cyanGlow font-medium">
-                              {formatCurrency(ncrItem.ncrBuyPrice, startup?.country)}
+                              {formatCurrency(item.ncrBuyPrice, startup?.country)}
                             </td>
                             <td className="p-3 text-right text-greenGlow font-bold">
-                              {formatCurrency(ncrItem.ncrSellPrice, startup?.country)}
+                              {formatCurrency(item.ncrSellPrice, startup?.country)}
                             </td>
                             <td className="p-3 text-right text-text-secondary">Unlimited</td>
                             <td className="p-3 text-right font-bold text-greenGlow">Available</td>
