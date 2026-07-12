@@ -52,7 +52,7 @@ const formatCurrency = (amount, countryName) => {
 
 const BUSINESS_REQUIRED_ROLES = {
   'Farming': ['Farmer'],
-  'Dairy': ['Farmer'],
+  'Dairy': ['Labourer'],
   'Mining': ['Labourer'],
   'Garment Factory': ['Fashion Designer', 'Labourer'],
   'Food Processing Factory': ['Labourer'],
@@ -72,6 +72,8 @@ export default function DashboardDrawer({
   producingState = {},
   onHire,
   onFire,
+  employeeToFire,
+  setEmployeeToFire,
   user,
   onLogout
 }) {
@@ -461,7 +463,7 @@ export default function DashboardDrawer({
         const getRequiredStaffCount = (businessType, role) => {
           const reqs = {
             'Farming': { 'Farmer': 1 },
-            'Dairy': { 'Farmer': 1 },
+            'Dairy': { 'Labourer': 1 },
             'Mining': { 'Labourer': 1 },
             'Garment Factory': { 'Fashion Designer': 1, 'Labourer': 2 },
             'Food Processing Factory': { 'Labourer': 1 },
@@ -650,7 +652,7 @@ export default function DashboardDrawer({
                                   <i className="fa-solid fa-user-plus text-[9px]"></i> Hire {draftQty}
                                 </button>
                                 <button
-                                  onClick={() => onFire(emp.employeeType)}
+                                  onClick={() => setEmployeeToFire({ employeeType: emp.employeeType, salary: emp.salary })}
                                   disabled={emp.quantity <= 0}
                                   className="px-2.5 py-1 bg-red-950/20 border border-red-500/25 hover:bg-red-900/30 text-red-400 text-[10px] font-display uppercase tracking-wider rounded transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1"
                                 >

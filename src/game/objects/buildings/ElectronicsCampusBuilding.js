@@ -1,3 +1,4 @@
+import Phaser from 'phaser';
 import BaseBuilding from './BaseBuilding';
 
 export default class ElectronicsCampusBuilding extends BaseBuilding {

@@ -2417,7 +2417,8 @@ p {
     font-size: 14px;
   }
   .topbar-horizontal {
-    padding: 0 16px;
+    padding: 0 8px;
+    gap: 8px;
   }
 }
 

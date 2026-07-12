@@ -5,7 +5,7 @@ import { getSalary } from '../config/countryEconomy.js';
 // Employee roles required/allowed per business type
 export const BUSINESS_REQUIRED_EMPLOYEES = {
   'Farming': ['Farmer'],
-  'Dairy': ['Farmer'],
+  'Dairy': ['Labourer'],
   'Mining': ['Labourer'],
   'Garment Factory': ['Fashion Designer', 'Labourer'],
   'Food Processing Factory': ['Labourer'],
@@ -228,6 +228,9 @@ export const fireEmployee = async (req, res) => {
     let employee;
     const allowedTypes = BUSINESS_REQUIRED_EMPLOYEES[startup.businessType] || [];
 
+    const country = startup.country || 'United States';
+    const oneMonthSalary = getSalary(country, targetRole);
+
     if (global.useMockDb) {
       employee = global.mockEmployees.find(e => String(e.startupId) === String(startup._id) && e.employeeType === targetRole);
       if (!employee || employee.quantity <= 0) {
@@ -235,6 +238,7 @@ export const fireEmployee = async (req, res) => {
       }
       employee.quantity -= 1;
       startup.employeesLaidOff = (startup.employeesLaidOff || 0) + 1;
+      startup.currentBalance -= oneMonthSalary;
     } else {
       employee = await Employee.findOne({ startupId: startup._id, employeeType: targetRole });
       if (!employee || employee.quantity <= 0) {
@@ -244,6 +248,7 @@ export const fireEmployee = async (req, res) => {
       await employee.save();
 
       startup.employeesLaidOff = (startup.employeesLaidOff || 0) + 1;
+      startup.currentBalance -= oneMonthSalary;
       await startup.save();
     }
 
@@ -263,7 +268,6 @@ export const fireEmployee = async (req, res) => {
       return e;
     });
 
-    const country = startup.country || 'United States';
     const updatedMerged = allowedTypes.map(type => {
       const hired = hiredEmployees.find(e => e.employeeType === type);
       return {

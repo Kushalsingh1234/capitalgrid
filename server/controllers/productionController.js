@@ -240,20 +240,48 @@ const PRODUCT_NAMES = {
   wheat: 'Wheat',
   rice: 'Rice',
   cotton: 'Cotton',
+  grains: 'Grains',
+  vegetables: 'Vegetables',
   milk: 'Milk',
+  fodder: 'Fodder',
+  eggs: 'Eggs',
   coal: 'Coal',
+  iron_ore: 'Iron Ore',
+  bauxite_ore: 'Bauxite Ore',
+  limestone: 'Limestone',
+  gypsum: 'Gypsum',
+  crude_oil: 'Crude Oil',
+  minerals: 'Minerals',
+  sand: 'Sand',
+  clay: 'Clay',
+  energy: 'Energy',
+  cows: 'Cows',
+  hens: 'Hens',
   shirts: 'Shirts',
   jeans: 'Jeans',
   jackets: 'Jackets',
+  fabric: 'Fabric',
   bread: 'Bread',
   biscuits: 'Biscuits',
   cheese: 'Cheese',
+  steel: 'Steel',
+  aluminium: 'Aluminium',
   cement: 'Cement',
   bricks: 'Bricks',
   steel_beams: 'Steel Beams',
+  glass: 'Glass',
+  silicon: 'Silicon',
+  plastics: 'Plastics',
+  chemicals: 'Chemicals',
+  processor: 'Processor',
+  display: 'Display',
+  electronic_components: 'Electronic Components',
+  battery: 'Battery',
+  on_board_computer: 'On-board Computer',
   phones: 'Phones',
   laptops: 'Laptops',
   tvs: 'TVs',
+  combustion_engine: 'Combustion Engine',
   cars: 'Cars'
 };
 
@@ -340,17 +368,79 @@ export const startProduction = async (req, res) => {
       hiredEmployees = await Employee.find({ startupId: startup._id });
     }
 
+    // Fetch active production tasks to calculate currently busy employees
+    let activeTasks = [];
+    if (global.useMockDb) {
+      if (!global.mockProductionTasks) {
+        global.mockProductionTasks = [];
+      }
+      activeTasks = global.mockProductionTasks.filter(
+        t => String(t.startupId) === String(startup._id) && t.status === 'Producing'
+      );
+    } else {
+      activeTasks = await ProductionTask.find({
+        startupId: startup._id,
+        status: 'Producing'
+      });
+    }
+
+    const busyEmployees = {};
+    for (const task of activeTasks) {
+      const capInfo = WORKFORCE_CAPACITY_CONFIG[task.productId];
+      const dep = PRODUCT_DEPENDENCIES[task.productId];
+      const countedRoles = new Set();
+      
+      if (capInfo) {
+        const constraints = Array.isArray(capInfo) ? capInfo : [capInfo];
+        for (const { role, capacity } of constraints) {
+          const reqCount = Math.ceil(task.quantity / capacity);
+          busyEmployees[role] = (busyEmployees[role] || 0) + reqCount;
+          countedRoles.add(role);
+        }
+      }
+      
+      if (dep && dep.employees) {
+        for (const [role, needed] of Object.entries(dep.employees)) {
+          if (countedRoles.has(role)) continue;
+          busyEmployees[role] = (busyEmployees[role] || 0) + needed;
+        }
+      }
+    }
+
     // Verify employees using dynamic capacity
     const capacityInfo = WORKFORCE_CAPACITY_CONFIG[productId];
     if (capacityInfo) {
-      const { role, capacity } = capacityInfo;
-      const requiredCount = Math.ceil(quantity / capacity);
+      const constraints = Array.isArray(capacityInfo) ? capacityInfo : [capacityInfo];
+      for (const { role, capacity } of constraints) {
+        const requiredCount = Math.ceil(quantity / capacity);
+        const record = hiredEmployees.find(e => e.employeeType === role);
+        const totalQty = record ? record.quantity : 0;
+        const busyQty = busyEmployees[role] || 0;
+        const availableQty = Math.max(0, totalQty - busyQty);
+        if (availableQty < requiredCount) {
+          return res.status(400).json({
+            success: false,
+            message: `Insufficient Workforce\nRequired ${role}s: ${requiredCount}\nAvailable ${role}s: ${availableQty} (Total: ${totalQty}, Busy: ${busyQty})\nHire ${requiredCount - availableQty} additional ${role}s.`
+          });
+        }
+      }
+    }
+
+    // Verify flat employee requirements
+    const requiredEmployees = dependency.employees || {};
+    for (const [role, needed] of Object.entries(requiredEmployees)) {
+      if (capacityInfo) {
+        const constraints = Array.isArray(capacityInfo) ? capacityInfo : [capacityInfo];
+        if (constraints.some(c => c.role === role)) continue;
+      }
       const record = hiredEmployees.find(e => e.employeeType === role);
-      const currentQty = record ? record.quantity : 0;
-      if (currentQty < requiredCount) {
+      const totalQty = record ? record.quantity : 0;
+      const busyQty = busyEmployees[role] || 0;
+      const availableQty = Math.max(0, totalQty - busyQty);
+      if (availableQty < needed) {
         return res.status(400).json({
           success: false,
-          message: `Insufficient Workforce\nRequired ${role}s: ${requiredCount}\nAvailable ${role}s: ${currentQty}\nHire ${requiredCount - currentQty} additional ${role}s.`
+          message: `Insufficient Workforce\nRequired ${role}s: ${needed}\nAvailable ${role}s: ${availableQty} (Total: ${totalQty}, Busy: ${busyQty})\nHire ${needed - availableQty} additional ${role}s.`
         });
       }
     }
@@ -359,8 +449,14 @@ export const startProduction = async (req, res) => {
     const inventory = startup.inventory || [];
     const requiredMaterials = dependency.materials || {};
     const missingMatList = [];
+    const NON_CONSUMABLE_ASSETS = { cows: 10, hens: 10 };
+
     for (const [matId, qtyPerUnit] of Object.entries(requiredMaterials)) {
-      const needed = qtyPerUnit * quantity;
+      const isAsset = NON_CONSUMABLE_ASSETS[matId] !== undefined;
+      const needed = isAsset
+        ? Math.ceil(quantity / NON_CONSUMABLE_ASSETS[matId])
+        : qtyPerUnit * quantity;
+
       const invItem = inventory.find(item => item.productId === matId);
       const available = invItem ? invItem.quantity : 0;
       if (available < needed) {
@@ -376,8 +472,10 @@ export const startProduction = async (req, res) => {
       });
     }
 
-    // Deduct materials immediately
+    // Deduct consumable materials immediately (bypass non-consumable cows/hens)
     for (const [matId, qtyPerUnit] of Object.entries(requiredMaterials)) {
+      if (NON_CONSUMABLE_ASSETS[matId] !== undefined) continue;
+
       const needed = qtyPerUnit * quantity;
       const itemIndex = inventory.findIndex(item => item.productId === matId);
       if (itemIndex > -1) {

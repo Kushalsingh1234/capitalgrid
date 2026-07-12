@@ -131,6 +131,7 @@ export default function PlayerDashboard() {
   const [transactions, setTransactions] = useState([]);
   const [loadingTransactions, setLoadingTransactions] = useState(true);
   const [employees, setEmployees] = useState([]);
+  const [employeeToFire, setEmployeeToFire] = useState(null);
   const [loadingEmployees, setLoadingEmployees] = useState(true);
   const [actionInProgress, setActionInProgress] = useState(false);
   const [activeTab, setActiveTab] = useState(null);
@@ -370,7 +371,12 @@ export default function PlayerDashboard() {
   const products = startup ? getProductsForBusiness(startup.businessType) : null;
   const isRetail = startup ? isRetailBusiness(startup.businessType) : false;
 
-    // Production and inventory are now actively bound inside the FacilityManagementDrawer
+  const monthAbbrs = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const shortTimeStr = currentGameTime 
+    ? `${currentGameTime.getDate()} ${monthAbbrs[currentGameTime.getMonth()]} | ${String(currentGameTime.getHours()).padStart(2, '0')}:${String(currentGameTime.getMinutes()).padStart(2, '0')}`
+    : 'Loading...';
+
+  // Production and inventory are now actively bound inside the FacilityManagementDrawer
 
   return (
     <div className="game-world-container text-white font-body select-none">
@@ -380,10 +386,10 @@ export default function PlayerDashboard() {
 
       {/* TOP BAR HUD */}
       <header className="topbar-horizontal">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <div 
             onClick={handleLogoClick} 
-            className="h-7 hover:opacity-85 transition-opacity cursor-pointer"
+            className="h-6 sm:h-7 hover:opacity-85 transition-opacity cursor-pointer"
             title="Focus corporate headquarters"
           >
             <Logo className="h-full" />
@@ -398,14 +404,17 @@ export default function PlayerDashboard() {
           )}
         </div>
 
-        <div className="flex items-center gap-3 md:gap-6">
+        <div className="flex items-center gap-1.5 sm:gap-4 md:gap-6">
           {/* WORLD CLOCK */}
-          <div className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 bg-black/40 border border-white/5 rounded-md font-mono text-[9.5px] md:text-[11px] tracking-wide text-text-secondary select-none">
-            <span className="text-[11px] md:text-xs shrink-0">🌍</span>
-            <span className="font-bold text-white whitespace-nowrap">
+          <div className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-0.5 sm:py-1.5 bg-black/40 border border-white/5 rounded-md font-mono text-[9px] sm:text-[11px] tracking-wide text-text-secondary select-none">
+            <span className="text-[10px] sm:text-xs shrink-0">🌍</span>
+            <span className="hidden md:inline font-bold text-white whitespace-nowrap">
               {interpolatedTimeStr}
             </span>
-            <span className={`text-[7.5px] md:text-[9.5px] font-display font-extrabold uppercase px-1 md:px-1.5 py-0.2 md:py-0.5 rounded border ${
+            <span className="inline md:hidden font-bold text-white whitespace-nowrap">
+              {shortTimeStr}
+            </span>
+            <span className={`hidden md:inline-block text-[7.5px] md:text-[9.5px] font-display font-extrabold uppercase px-1 md:px-1.5 py-0.2 md:py-0.5 rounded border ${
               marketStatus === 'OPEN'
                 ? 'bg-green-950/20 text-greenGlow border-green-500/20'
                 : 'bg-red-950/20 text-red-400 border-red-500/20'
@@ -416,10 +425,10 @@ export default function PlayerDashboard() {
 
           {/* CURRENT BALANCE */}
           {startup && (
-            <div className="flex items-center gap-2 px-2.5 py-1.5 md:px-3.5 md:py-1.5 bg-green-950/20 border border-green-500/20 rounded-md">
+            <div className="flex items-center gap-1.5 px-1.5 sm:px-3 py-1 sm:py-1.5 bg-green-950/20 border border-green-500/20 rounded-md">
               <span className="hidden md:inline text-[9px] font-display uppercase tracking-widest text-text-secondary">Current Balance</span>
-              <i className="inline md:hidden fa-solid fa-wallet text-greenGlow text-xs"></i>
-              <span className="font-display font-black text-xs md:text-sm text-greenGlow leading-none">
+              <i className="fa-solid fa-wallet text-greenGlow text-[10px] sm:text-xs"></i>
+              <span className="font-display font-black text-[10px] sm:text-xs md:text-sm text-greenGlow leading-none">
                 {formatCurrency(startup.currentBalance, startup.country)}
               </span>
             </div>
@@ -433,10 +442,10 @@ export default function PlayerDashboard() {
               setActiveTab(activeTab === 'Notifications' ? null : 'Notifications');
               setCurrentView('world');
             }}
-            className="flex md:hidden w-8 h-8 rounded border border-white/5 hover:border-white/15 items-center justify-center text-text-muted hover:text-white transition-colors cursor-pointer"
+            className="flex md:hidden w-7 h-7 rounded border border-white/5 hover:border-white/15 items-center justify-center text-text-muted hover:text-white transition-colors cursor-pointer"
             title="Notifications"
           >
-            <i className="fa-solid fa-bell text-xs"></i>
+            <i className="fa-solid fa-bell text-[10px]"></i>
           </button>
 
           {/* UTILITIES & SETTINGS */}
@@ -568,6 +577,7 @@ export default function PlayerDashboard() {
           {currentView === 'retail' && (
             <RetailTerminal
               startup={startup}
+              employees={employees}
               token={token}
               onClose={() => setCurrentView('world')}
               onRetailAction={fetchDashboardData}
@@ -592,6 +602,8 @@ export default function PlayerDashboard() {
           producingState={producingState}
           onHire={handleHire}
           onFire={handleFire}
+          employeeToFire={employeeToFire}
+          setEmployeeToFire={setEmployeeToFire}
           user={user}
           onLogout={handleLogout}
         />
@@ -614,6 +626,50 @@ export default function PlayerDashboard() {
           worldClockSnapshot={worldClockSnapshot}
           currentGameTime={currentGameTime}
         />
+
+        {/* Severance Package Warning Dialog Overlay (Centered on the entire screen) */}
+        {employeeToFire && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 z-[999] animate-fade-in">
+            <div className="glass-card max-w-sm w-full p-6 border border-red-500/20 bg-gradient-to-b from-[#130708] to-[#0a0505] rounded-xl shadow-2xl flex flex-col gap-4 text-center">
+              <div className="w-12 h-12 bg-red-950/30 border border-red-500/30 rounded-full flex items-center justify-center text-red-400 mx-auto animate-pulse">
+                <i className="fa-solid fa-triangle-exclamation text-lg"></i>
+              </div>
+              <div>
+                <h3 className="font-display font-extrabold text-sm uppercase text-white tracking-wider">
+                  Severance Package Warning
+                </h3>
+                <p className="text-xs text-text-secondary mt-2 leading-relaxed font-body">
+                  Firing 1 <strong className="text-white">{employeeToFire.employeeType}</strong> requires paying a severance fee equal to one month's salary:
+                </p>
+                <div className="mt-3 bg-black/45 border border-white/5 py-2 px-4 rounded-lg inline-block font-mono">
+                  <span className="text-red-400 font-bold text-sm">
+                    -{formatCurrency(employeeToFire.salary, startup?.country)}
+                  </span>
+                </div>
+                <p className="text-[10px] text-text-muted mt-3 italic font-body">
+                  This action is irreversible and the amount will be immediately deducted from your cash balance.
+                </p>
+              </div>
+              <div className="flex gap-3 mt-2">
+                <button
+                  onClick={() => setEmployeeToFire(null)}
+                  className="flex-1 py-2 border border-white/10 hover:border-white/20 bg-white/2 hover:bg-white/5 text-text-secondary hover:text-white text-xs font-display font-bold uppercase tracking-wider rounded transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    handleFire(employeeToFire.employeeType);
+                    setEmployeeToFire(null);
+                  }}
+                  className="flex-1 py-2 bg-red-950/20 border border-red-500/25 hover:bg-red-900/30 text-red-400 text-xs font-display font-bold uppercase tracking-wider rounded transition-all cursor-pointer"
+                >
+                  Fire Employee
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

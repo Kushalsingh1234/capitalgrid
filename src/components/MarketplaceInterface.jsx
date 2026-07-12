@@ -37,8 +37,17 @@ const CATEGORIES = [
   'Food & Consumer Goods',
   'Construction',
   'Electronics',
-  'Industrial Goods'
+  'Industrial Goods',
+  'Utilities'
 ];
+
+const NCR_ICONS = {
+  water: 'fa-solid fa-droplet text-blue-400',
+  cows: 'fa-solid fa-cow text-blue-400',
+  hens: 'fa-solid fa-dove text-blue-400',
+  energy: 'fa-solid fa-bolt text-blue-400',
+  clay: 'fa-solid fa-shapes text-blue-400'
+};
 
 // Flatten product lists with helper category metadata
 const FLAT_PRODUCTS = [];
@@ -758,14 +767,12 @@ export default function MarketplaceInterface({
           <div className="flex flex-col gap-2.5 max-h-[220px] overflow-y-auto pr-1">
             {inventory.length > 0 ? (
               inventory.map((item, idx) => {
-                const prod = productsWithPrices.find(p => p.id === item.productId) || (
-                  item.productId === 'water' ? {
-                    id: 'water',
-                    name: 'Water',
-                    icon: 'fa-solid fa-droplet text-blue-400',
-                    basePrice: localPrices['water'] || 8
-                  } : { icon: 'fa-solid fa-box', basePrice: 100 }
-                );
+                const prod = productsWithPrices.find(p => p.id === item.productId) || {
+                  id: item.productId,
+                  name: item.productName || item.productId.charAt(0).toUpperCase() + item.productId.slice(1).replace('_', ' '),
+                  icon: NCR_ICONS[item.productId] || 'fa-solid fa-box',
+                  basePrice: localPrices[item.productId] || 100
+                };
                 const marketVal = item.quantity * prod.basePrice;
                 
                 return (
@@ -1195,7 +1202,7 @@ export default function MarketplaceInterface({
                         id: item.productId,
                         name: item.productName,
                         categoryGroup: item.category,
-                        icon: item.productId === 'water' ? 'fa-solid fa-droplet text-blue-400' : 'fa-solid fa-circle-question',
+                        icon: NCR_ICONS[item.productId] || 'fa-solid fa-circle-question',
                         basePrice: localPrices[item.productId] || 10
                       };
 

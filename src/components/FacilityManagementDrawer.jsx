@@ -18,7 +18,7 @@ const CURRENCY_SYMBOLS = {
 
 const BUSINESS_REQUIRED_ROLES = {
   'Farming': ['Farmer'],
-  'Dairy': ['Farmer'],
+  'Dairy': ['Labourer'],
   'Mining': ['Labourer'],
   'Garment Factory': ['Fashion Designer', 'Labourer'],
   'Food Processing Factory': ['Labourer'],

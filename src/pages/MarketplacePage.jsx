@@ -77,6 +77,15 @@ export default function MarketplacePage() {
 
   // Helper: Find product details
   const getProductDetails = (productId) => {
+    const OVERRIDES = {
+      water: { name: 'Water', icon: 'fa-solid fa-droplet text-blue-400' },
+      cows: { name: 'Cows', icon: 'fa-solid fa-cow text-blue-400' },
+      hens: { name: 'Hens', icon: 'fa-solid fa-dove text-blue-400' },
+      energy: { name: 'Energy', icon: 'fa-solid fa-bolt text-blue-400' },
+      clay: { name: 'Clay', icon: 'fa-solid fa-shapes text-blue-400' }
+    };
+    if (OVERRIDES[productId]) return OVERRIDES[productId];
+
     for (const category in PRODUCTS) {
       const prod = PRODUCTS[category].find(p => p.id === productId);
       if (prod) return prod;
@@ -635,7 +644,7 @@ export default function MarketplacePage() {
                       Category Filter
                     </h3>
                     <div className="flex flex-col gap-1.5">
-                      {['All', 'Agriculture', 'Mining', 'Construction', 'Manufacturing', 'Food', 'Electronics'].map(cat => (
+                      {['All', 'Agriculture', 'Mining', 'Construction', 'Manufacturing', 'Food', 'Electronics', 'Utilities'].map(cat => (
                         <button
                           key={cat}
                           onClick={() => setSelectedNcrCategory(cat)}

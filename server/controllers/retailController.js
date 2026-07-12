@@ -1,5 +1,6 @@
 import Startup from '../models/Startup.js';
 import Transaction from '../models/Transaction.js';
+import Employee from '../models/Employee.js';
 import countryEconomy from '../config/countryEconomy.js';
 
 // Base demand catalog for retail stores
@@ -269,6 +270,13 @@ export const checkAndResolveRetailCycle = (startup) => {
     lockedQuantities: {}
   };
 
+  if (!global.useMockDb && typeof startup.markModified === 'function') {
+    startup.markModified('inventory');
+    startup.markModified('retailState');
+    startup.markModified('financials');
+    startup.markModified('retailInventory');
+  }
+
   return true;
 };
 
@@ -302,6 +310,12 @@ export const getRetailStatus = async (req, res) => {
     // Resolve offline completed cycles
     const resolved = checkAndResolveRetailCycle(startup);
     if (resolved && !global.useMockDb) {
+      if (typeof startup.markModified === 'function') {
+        startup.markModified('inventory');
+        startup.markModified('retailState');
+        startup.markModified('financials');
+        startup.markModified('retailInventory');
+      }
       await startup.save();
     }
 
@@ -313,6 +327,7 @@ export const getRetailStatus = async (req, res) => {
     if (startup.retailInventory) {
       for (const item of startup.retailInventory) {
         const basePrice = localPrices[item.productId]?.price || 100;
+        item.basePrice = basePrice;
         item.avgPurchaseCost = await getAveragePurchaseCost(startup._id, item.productId, basePrice);
       }
     }
@@ -369,6 +384,7 @@ export const updatePricing = async (req, res) => {
     if (startup.retailInventory) {
       for (const item of startup.retailInventory) {
         const basePrice = localPrices[item.productId]?.price || 100;
+        item.basePrice = basePrice;
         item.avgPurchaseCost = await getAveragePurchaseCost(startup._id, item.productId, basePrice);
       }
     }
@@ -425,6 +441,36 @@ export const startSalesCycle = async (req, res) => {
           message: `Cannot put ${qty} units of ${pId} on sale. Only ${availableQty} units available in warehouse.`
         });
       }
+    }
+
+    // Verify workforce requirements
+    let hiredEmployees = [];
+    if (global.useMockDb) {
+      hiredEmployees = (global.mockEmployees || []).filter(e => String(e.startupId) === String(startup._id));
+    } else {
+      hiredEmployees = await Employee.find({ startupId: startup._id });
+    }
+
+    const hiredManagers = hiredEmployees.find(e => e.employeeType === 'Manager')?.quantity || 0;
+    const hiredLabourers = hiredEmployees.find(e => e.employeeType === 'Labourer')?.quantity || 0;
+
+    const totalSelectedQty = Object.values(selectedProducts).reduce((sum, q) => sum + parseInt(q || 0, 10), 0);
+    const maxCapacity = (startup.level || 1) * 1000;
+    const labourersNeeded = totalSelectedQty > 0 ? Math.ceil(totalSelectedQty / (maxCapacity * 0.1)) : 0;
+    const managersNeeded = totalSelectedQty > 0 ? 1 : 0;
+
+    if (hiredManagers < managersNeeded) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot start sales cycle: 1 Manager is required to operate the store. Hire a Manager in the Employees tab first.'
+      });
+    }
+
+    if (hiredLabourers < labourersNeeded) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot start sales cycle: Not enough Labourers. Selected quantity (${totalSelectedQty} units) requires ${labourersNeeded} Labourers (1 per 10% of store capacity). Currently you have ${hiredLabourers}.`
+      });
     }
 
     // Calculate dynamic projections based on manual selected quantities

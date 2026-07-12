@@ -39,9 +39,10 @@ const CURRENCY_SYMBOLS = {
   'Australia': 'A$'
 };
 
-export default function RetailTerminal({ startup: initialStartup, token, onClose, onRetailAction }) {
+export default function RetailTerminal({ startup: initialStartup, employees = [], token, onClose, onRetailAction }) {
   const [startup, setStartup] = useState(initialStartup);
   const [activeTab, setActiveTab] = useState('overview');
+  const [isTabDropdownOpen, setIsTabDropdownOpen] = useState(false);
   const [retailInventory, setRetailInventory] = useState(initialStartup?.retailInventory || []);
   const [retailState, setRetailState] = useState(initialStartup?.retailState || {});
   
@@ -54,6 +55,10 @@ export default function RetailTerminal({ startup: initialStartup, token, onClose
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [showCompletionSummary, setShowCompletionSummary] = useState(null);
+
+  // Pricing Simulator State
+  const [selectedSimProductId, setSelectedSimProductId] = useState('');
+  const [simPrice, setSimPrice] = useState(0);
 
   if (!startup) {
     return (
@@ -207,7 +212,6 @@ export default function RetailTerminal({ startup: initialStartup, token, onClose
   // Computes active price ratio demand & duration projections
   const calculateProjections = () => {
     const demands = BASE_DEMAND[startup.businessType] || {};
-    const localPricesConfig = startup.localPrices || {};
     const baseCycleDuration = BASE_DURATION[startup.businessType] || 3600;
 
     let totalCustomers = 0;
@@ -219,12 +223,9 @@ export default function RetailTerminal({ startup: initialStartup, token, onClose
     const productsDetails = [];
 
     Object.entries(demands).forEach(([pId, config]) => {
-      const basePrice = localPricesConfig[pId] || 100;
-      const sellingPrice = localPrices[pId] !== undefined ? localPrices[pId] : basePrice;
-
-      const pricingObj = retailInventory.find(i => i.productId === pId) || {
-        avgPurchaseCost: Math.round(basePrice * 0.75)
-      };
+      const pricingObj = retailInventory.find(i => i.productId === pId) || {};
+      const basePrice = pricingObj.basePrice || 100;
+      const sellingPrice = localPrices[pId] !== undefined ? localPrices[pId] : (pricingObj.sellingPrice || basePrice);
 
       // V1 pricing elasticity: 1 / (sellingPrice / (basePrice * 1.08)) ^ 2
       const marketAveragePrice = basePrice * 1.08;
@@ -258,7 +259,8 @@ export default function RetailTerminal({ startup: initialStartup, token, onClose
         : Math.min(quantitySelected, expectedCustomers);
 
       const revenue = unitsSold * sellingPrice;
-      const cost = unitsSold * pricingObj.avgPurchaseCost;
+      const avgPurchaseCost = pricingObj.avgPurchaseCost !== undefined ? pricingObj.avgPurchaseCost : Math.round(basePrice * 0.75);
+      const cost = unitsSold * avgPurchaseCost;
       const profit = revenue - cost;
 
       // Dynamic duration = Base Duration * (Quantity Selected / Base Demand) * Price Ratio
@@ -280,7 +282,7 @@ export default function RetailTerminal({ startup: initialStartup, token, onClose
         productName: config.name,
         icon: config.icon,
         availableStock,
-        avgPurchaseCost: pricingObj.avgPurchaseCost,
+        avgPurchaseCost,
         sellingPrice,
         basePrice,
         expectedCustomers,
@@ -295,6 +297,16 @@ export default function RetailTerminal({ startup: initialStartup, token, onClose
     const totalProfit = totalRevenue - totalCost;
     const cycleDuration = isRunning ? (retailState.activeCycle?.duration || 0) : totalDuration;
 
+    const totalSelectedQty = productsDetails.reduce((sum, item) => sum + item.quantitySelected, 0);
+    const maxCapacity = (startup.level || 1) * 1000;
+    const labourersNeeded = totalSelectedQty > 0 ? Math.ceil(totalSelectedQty / (maxCapacity * 0.1)) : 0;
+    const managersNeeded = totalSelectedQty > 0 ? 1 : 0;
+
+    const hiredManagers = (employees || []).find(e => e.employeeType === 'Manager')?.quantity || 0;
+    const hiredLabourers = (employees || []).find(e => e.employeeType === 'Labourer')?.quantity || 0;
+
+    const hasEnoughWorkforce = hiredManagers >= managersNeeded && hiredLabourers >= labourersNeeded;
+
     return {
       totalCustomers: isRunning ? (retailState.activeCycle?.expectedCustomers || 0) : totalCustomers,
       totalUnitsSold,
@@ -302,7 +314,13 @@ export default function RetailTerminal({ startup: initialStartup, token, onClose
       totalCost,
       totalProfit: isRunning ? (retailState.activeCycle?.expectedProfit || 0) : totalProfit,
       cycleDuration,
-      productsDetails
+      productsDetails,
+      totalSelectedQty,
+      managersNeeded,
+      labourersNeeded,
+      hasEnoughWorkforce,
+      hiredManagers,
+      hiredLabourers
     };
   };
 
@@ -330,7 +348,7 @@ export default function RetailTerminal({ startup: initialStartup, token, onClose
       <div className="glow-radial-overlay opacity-20"></div>
 
       {/* Corporate Header HUD */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative z-10 font-sans">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative z-10 font-sans pr-12 lg:pr-0">
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-display font-black uppercase tracking-wider text-white">
@@ -370,7 +388,7 @@ export default function RetailTerminal({ startup: initialStartup, token, onClose
 
           <button 
             onClick={onClose}
-            className="w-10 h-10 border border-white/10 hover:border-white/30 rounded-lg flex items-center justify-center text-text-muted hover:text-white hover:bg-white/5 transition-all cursor-pointer shrink-0"
+            className="absolute top-4 right-4 lg:static w-10 h-10 border border-white/10 hover:border-white/30 rounded-lg flex items-center justify-center text-text-muted hover:text-white hover:bg-white/5 transition-all cursor-pointer shrink-0 z-50"
             title="Close Management Terminal"
           >
             <i className="fa-solid fa-xmark text-sm"></i>
@@ -379,7 +397,67 @@ export default function RetailTerminal({ startup: initialStartup, token, onClose
       </div>
 
       {/* ALL SIX TABS */}
-      <div className="border-b border-white/5 flex gap-1 relative z-10 overflow-x-auto whitespace-nowrap scrollbar-none">
+      {/* Mobile Tab Dropdown Ledge */}
+      <div className="lg:hidden relative z-20">
+        <button
+          onClick={() => setIsTabDropdownOpen(!isTabDropdownOpen)}
+          className="w-full flex items-center justify-between px-4 py-3 bg-black/60 border border-white/10 rounded-lg font-display text-xs font-bold uppercase tracking-widest text-cyanGlow hover:border-cyanGlow/40 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
+            <i className={`fa-solid ${
+              activeTab === 'overview' ? 'fa-chart-pie' :
+              activeTab === 'inventory' ? 'fa-warehouse' :
+              activeTab === 'pricing' ? 'fa-tags' :
+              activeTab === 'sales' ? 'fa-cash-register' :
+              activeTab === 'analytics' ? 'fa-chart-column' :
+              'fa-clock-rotate-left'
+            } text-xs`}></i>
+            <span>
+              {activeTab === 'overview' ? 'Overview' :
+               activeTab === 'inventory' ? 'Inventory' :
+               activeTab === 'pricing' ? 'Pricing' :
+               activeTab === 'sales' ? 'Sales Center' :
+               activeTab === 'analytics' ? 'Analytics' :
+               'History'}
+            </span>
+          </div>
+          <i className={`fa-solid ${isTabDropdownOpen ? 'fa-chevron-up' : 'fa-chevron-down'} text-text-muted text-[10px]`}></i>
+        </button>
+
+        {isTabDropdownOpen && (
+          <div className="absolute top-full left-0 w-full mt-1.5 bg-[#090e17] border border-white/10 rounded-lg shadow-2xl overflow-hidden flex flex-col z-50">
+            {[
+              { id: 'overview', label: 'Overview', icon: 'fa-chart-pie' },
+              { id: 'inventory', label: 'Inventory', icon: 'fa-warehouse' },
+              { id: 'pricing', label: 'Pricing', icon: 'fa-tags' },
+              { id: 'sales', label: 'Sales Center', icon: 'fa-cash-register' },
+              { id: 'analytics', label: 'Analytics', icon: 'fa-chart-column' },
+              { id: 'history', label: 'History', icon: 'fa-clock-rotate-left' }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setIsTabDropdownOpen(false);
+                  setErrorMsg('');
+                  setSuccessMsg('');
+                }}
+                className={`w-full text-left px-4 py-3 text-[10px] font-display font-bold uppercase tracking-widest flex items-center gap-2 cursor-pointer transition-colors border-b border-white/5 last:border-0 ${
+                  activeTab === tab.id
+                    ? 'bg-cyanGlow/10 text-cyanGlow'
+                    : 'text-text-secondary hover:text-white hover:bg-white/2'
+                }`}
+              >
+                <i className={`fa-solid ${tab.icon} text-xs`}></i>
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Tabs */}
+      <div className="hidden lg:flex border-b border-white/5 gap-1 relative z-10 overflow-x-auto whitespace-nowrap scrollbar-none">
         {[
           { id: 'overview', label: 'Overview', icon: 'fa-chart-pie' },
           { id: 'inventory', label: 'Inventory', icon: 'fa-warehouse' },
@@ -535,7 +613,7 @@ export default function RetailTerminal({ startup: initialStartup, token, onClose
 
         {/* TAB 3 - PRICING */}
         {activeTab === 'pricing' && (
-          <div className="glass-card border border-white/5 rounded-lg bg-black/25 overflow-hidden">
+          <div className="glass-card border border-white/5 rounded-lg bg-black/25 overflow-x-auto scrollbar-none">
             <table className="w-full text-left border-collapse font-sans text-xs">
               <thead>
                 <tr className="bg-white/3 text-[10px] uppercase font-display text-text-secondary tracking-wider border-b border-white/5">
@@ -675,6 +753,49 @@ export default function RetailTerminal({ startup: initialStartup, token, onClose
               })}
             </div>
 
+            {/* Workforce Requirements Card */}
+            {!isRunning && (
+              <div className="glass-card p-5 border border-white/5 bg-gradient-to-b from-glassBg via-black/25 to-black/35 rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-cyanGlow/5 border border-cyanGlow/20 rounded-lg flex items-center justify-center text-cyanGlow">
+                    <i className="fa-solid fa-id-card-clip text-sm"></i>
+                  </div>
+                  <div>
+                    <h4 className="font-display font-extrabold text-xs uppercase text-white tracking-wider">
+                      Workforce Requirements
+                    </h4>
+                    <p className="text-[10px] text-text-secondary font-mono mt-0.5">
+                      Operational checklist for active sales registers (Ceiling based on total selected units: {projections.totalSelectedQty}).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 font-mono text-xs w-full md:w-auto">
+                  {/* Manager Requirement */}
+                  <div className="flex items-center gap-3 bg-black/40 border border-white/5 px-4 py-2.5 rounded-lg flex-1 md:flex-none justify-between md:justify-start min-w-[160px]">
+                    <div className="flex items-center gap-2">
+                      <i className="fa-solid fa-user-tie text-cyanGlow text-[11px]"></i>
+                      <span className="text-text-secondary text-[10px] uppercase">Manager</span>
+                    </div>
+                    <span className={`font-bold ${projections.hiredManagers >= projections.managersNeeded ? 'text-greenGlow' : 'text-red-400'}`}>
+                      {projections.hiredManagers} hired / {projections.managersNeeded} req
+                    </span>
+                  </div>
+
+                  {/* Labourers Requirement */}
+                  <div className="flex items-center gap-3 bg-black/40 border border-white/5 px-4 py-2.5 rounded-lg flex-1 md:flex-none justify-between md:justify-start min-w-[160px]">
+                    <div className="flex items-center gap-2">
+                      <i className="fa-solid fa-users text-cyanGlow text-[11px]"></i>
+                      <span className="text-text-secondary text-[10px] uppercase">Labourers</span>
+                    </div>
+                    <span className={`font-bold ${projections.hiredLabourers >= projections.labourersNeeded ? 'text-greenGlow' : 'text-red-400'}`}>
+                      {projections.hiredLabourers} hired / {projections.labourersNeeded} req
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Bottom Store Summary block */}
             <div className="glass-card p-6 border border-greenGlow/10 bg-gradient-to-b from-glassBg to-black/45 rounded-lg flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 relative">
               <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-greenGlow/20 to-transparent"></div>
@@ -718,10 +839,10 @@ export default function RetailTerminal({ startup: initialStartup, token, onClose
                 </div>
               ) : (
                 <button
-                  disabled={actionInProgress || projections.totalUnitsSold === 0}
+                  disabled={actionInProgress || projections.totalUnitsSold === 0 || !projections.hasEnoughWorkforce}
                   onClick={handleStartCycle}
                   className={`px-6 py-2.5 font-display text-[10px] font-bold uppercase tracking-widest rounded border transition-all cursor-pointer flex items-center gap-2 ${
-                    projections.totalUnitsSold > 0 
+                    (projections.totalUnitsSold > 0 && projections.hasEnoughWorkforce)
                       ? 'bg-cyanGlow border-cyanGlow text-black hover:bg-cyanGlow/85' 
                       : 'border-white/10 bg-white/3 text-text-muted cursor-not-allowed'
                   }`}
@@ -735,37 +856,429 @@ export default function RetailTerminal({ startup: initialStartup, token, onClose
         )}
 
         {/* TAB 5 - ANALYTICS */}
-        {activeTab === 'analytics' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
-            <div className="glass-card p-5 border border-white/5 rounded-lg bg-gradient-to-b from-glassBg to-black/25 flex flex-col gap-4">
-              <h3 className="font-display font-extrabold text-sm uppercase text-cyanGlow tracking-wide border-b border-white/5 pb-2">
-                Top Selling Commodities
-              </h3>
-              <div className="flex flex-col gap-2.5 font-mono text-xs">
-                {projections.productsDetails.map(item => (
-                  <div key={item.productId} className="flex justify-between items-center p-2.5 bg-black/25 border border-white/5 rounded">
-                    <span className="text-white font-bold">{item.productName}</span>
-                    <span className="text-greenGlow font-bold">Projected Profit: {formatCurrency(item.expectedProfit)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+        {activeTab === 'analytics' && (() => {
+          const activeSimProductId = selectedSimProductId || projections.productsDetails[0]?.productId || '';
+          const simProduct = projections.productsDetails.find(p => p.productId === activeSimProductId);
+          const activeSimPrice = simPrice || simProduct?.sellingPrice || simProduct?.basePrice || 0;
+          
+          let simDemandModPercent = 100;
+          let simExpectedCustomers = 0;
+          let simUnitsSold = 0;
+          let simRevenue = 0;
+          let simCost = 0;
+          let simProfit = 0;
+          let simMarketAveragePrice = 108;
+          let simPriceRatio = 1.0;
+          
+          if (simProduct) {
+            const basePrice = simProduct.basePrice || 100;
+            simMarketAveragePrice = basePrice * 1.08;
+            
+            // Calculate simulated elasticity
+            simPriceRatio = simMarketAveragePrice > 0 ? (activeSimPrice / simMarketAveragePrice) : 1;
+            let simPriceModifier = 1.0;
+            if (simPriceRatio > 0) {
+              simPriceModifier = 1 / Math.pow(simPriceRatio, 2);
+            }
+            simPriceModifier = Math.max(0.001, Math.min(3.0, simPriceModifier || 1.0));
+            simDemandModPercent = Math.round(simPriceModifier * 100);
+            
+            const demandConfig = BASE_DEMAND[startup.businessType]?.[simProduct.productId] || { base: 100 };
+            simExpectedCustomers = Math.ceil(demandConfig.base * simPriceModifier);
+            
+            // Assume simulated volume is either their current available stock or a standard batch size of 200 (if stock is 0)
+            const simulatedVolume = simProduct.availableStock > 0 ? simProduct.availableStock : 200;
+            simUnitsSold = Math.min(simulatedVolume, simExpectedCustomers);
+            
+            simRevenue = simUnitsSold * activeSimPrice;
+            simCost = simUnitsSold * simProduct.avgPurchaseCost;
+            simProfit = simRevenue - simCost;
+          }
 
-            <div className="glass-card p-5 border border-white/5 rounded-lg bg-gradient-to-b from-glassBg to-black/25 flex flex-col justify-center items-center text-center p-12">
-              <i className="fa-solid fa-chart-line text-4xl text-text-muted mb-4 animate-pulse"></i>
-              <h4 className="font-display font-extrabold text-xs uppercase text-text-secondary tracking-widest">
-                Ledger Graph Projections
-              </h4>
-              <p className="text-[10px] text-text-muted font-mono mt-1.5 max-w-xs leading-relaxed">
-                Visual demand trends and seasonal retail calibration metrics are currently under mapping engine configuration.
-              </p>
+          const getSimScenario = (priceMultiplier, label) => {
+            if (!simProduct) return null;
+            const targetPrice = Math.round(simProduct.basePrice * priceMultiplier);
+            const priceRatio = simMarketAveragePrice > 0 ? (targetPrice / simMarketAveragePrice) : 1;
+            let modifier = 1.0;
+            if (priceRatio > 0) {
+              modifier = 1 / Math.pow(priceRatio, 2);
+            }
+            modifier = Math.max(0.001, Math.min(3.0, modifier));
+            
+            const demandConfig = BASE_DEMAND[startup.businessType]?.[simProduct.productId] || { base: 100 };
+            const customers = Math.ceil(demandConfig.base * modifier);
+            const simulatedVolume = simProduct.availableStock > 0 ? simProduct.availableStock : 200;
+            const sold = Math.min(simulatedVolume, customers);
+            const revenue = sold * targetPrice;
+            const cost = sold * simProduct.avgPurchaseCost;
+            const profit = revenue - cost;
+            
+            return {
+              label,
+              price: targetPrice,
+              modifier: Math.round(modifier * 100),
+              customers,
+              sold,
+              revenue,
+              profit
+            };
+          };
+
+          const getOptimalScenario = () => {
+            if (!simProduct) return null;
+            const optimalPrice = Math.round(simProduct.avgPurchaseCost * 2);
+            const priceRatio = simMarketAveragePrice > 0 ? (optimalPrice / simMarketAveragePrice) : 1;
+            let modifier = 1.0;
+            if (priceRatio > 0) {
+              modifier = 1 / Math.pow(priceRatio, 2);
+            }
+            modifier = Math.max(0.001, Math.min(3.0, modifier));
+            
+            const demandConfig = BASE_DEMAND[startup.businessType]?.[simProduct.productId] || { base: 100 };
+            const customers = Math.ceil(demandConfig.base * modifier);
+            const simulatedVolume = simProduct.availableStock > 0 ? simProduct.availableStock : 200;
+            const sold = Math.min(simulatedVolume, customers);
+            const revenue = sold * optimalPrice;
+            const cost = sold * simProduct.avgPurchaseCost;
+            const profit = revenue - cost;
+            
+            return {
+              label: 'Optimal Profit Maximizer',
+              price: optimalPrice,
+              modifier: Math.round(modifier * 100),
+              customers,
+              sold,
+              revenue,
+              profit,
+              isOptimal: true
+            };
+          };
+
+          const scenarios = simProduct ? [
+            getSimScenario(0.8, 'Discount Strategy (0.8x base)'),
+            getSimScenario(1.0, 'Market Balanced (1.0x base)'),
+            getSimScenario(1.2, 'Premium Strategy (1.2x base)'),
+            getOptimalScenario()
+          ].filter(Boolean) : [];
+
+          const historyEntries = retailState.history || [];
+          const totalRevLast20 = historyEntries.reduce((sum, h) => sum + (h.revenue || 0), 0);
+          const totalProfitLast20 = historyEntries.reduce((sum, h) => sum + (h.profit || 0), 0);
+          const avgMarginLast20 = totalRevLast20 > 0 ? (totalProfitLast20 / totalRevLast20) * 100 : 0;
+          
+          const productUnitsMap = {};
+          historyEntries.forEach(h => {
+            Object.entries(h.productsSold || {}).forEach(([pId, qty]) => {
+              productUnitsMap[pId] = (productUnitsMap[pId] || 0) + qty;
+            });
+          });
+          
+          let bestSellingProduct = 'None';
+          let maxUnits = 0;
+          Object.entries(productUnitsMap).forEach(([pId, qty]) => {
+            if (qty > maxUnits) {
+              maxUnits = qty;
+              const config = BASE_DEMAND[startup.businessType]?.[pId];
+              bestSellingProduct = config ? config.name : pId;
+            }
+          });
+
+          const applyPriceToStore = async (productId, price) => {
+            setSimPrice(price);
+            await handlePriceChange(productId, price);
+          };
+
+          return (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full text-white">
+              
+              {/* Left Column (col-span-2): Simulator + Strategy Recommendations */}
+              <div className="lg:col-span-2 flex flex-col gap-6">
+                
+                {/* 1. Price Elasticity Simulator */}
+                <div className="glass-card p-5 border border-white/5 bg-gradient-to-b from-glassBg to-black/25 rounded-lg flex flex-col gap-4">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                    <h3 className="font-display font-extrabold text-sm uppercase text-cyanGlow tracking-wide flex items-center gap-2">
+                      <i className="fa-solid fa-sliders text-cyanGlow"></i>
+                      Pricing Elasticity Simulator
+                    </h3>
+                    
+                    {simProduct && (
+                      <select
+                        value={activeSimProductId}
+                        onChange={(e) => {
+                          const pId = e.target.value;
+                          setSelectedSimProductId(pId);
+                          setSimPrice(0);
+                        }}
+                        className="bg-black/60 text-white border border-white/10 rounded px-2 py-1 text-[10px] font-mono focus:outline-none focus:border-cyanGlow/40"
+                      >
+                        {projections.productsDetails.map(p => (
+                          <option key={p.productId} value={p.productId}>{p.productName}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  {simProduct ? (
+                    <div className="flex flex-col gap-4 font-mono text-xs">
+                      <p className="text-[10px] text-text-secondary leading-relaxed">
+                        Drag the slider to preview how changing the selling price of <strong>{simProduct.productName}</strong> impacts market demand modifiers and cycle margins.
+                      </p>
+
+                      {/* Slider Input */}
+                      <div className="flex flex-col gap-2 bg-black/35 p-4 rounded border border-white/5">
+                        <div className="flex justify-between items-center text-[10px] uppercase text-text-secondary">
+                          <span>Simulated Price</span>
+                          <span className="text-cyanGlow font-black text-xs">{formatCurrency(activeSimPrice)}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={Math.round(simProduct.basePrice * 0.5)}
+                          max={Math.round(simProduct.basePrice * 2.5)}
+                          value={activeSimPrice}
+                          onChange={(e) => setSimPrice(parseFloat(e.target.value) || 0)}
+                          className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-black/50"
+                        />
+                        <div className="flex justify-between text-[8px] text-text-muted">
+                          <span>0.5x Base ({formatCurrency(simProduct.basePrice * 0.5)})</span>
+                          <span>2.5x Base ({formatCurrency(simProduct.basePrice * 2.5)})</span>
+                        </div>
+                      </div>
+
+                      {/* Live Outcomes Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-black/25 p-4 rounded border border-white/5">
+                        <div>
+                          <span className="text-[8px] text-text-secondary uppercase tracking-wider block">Demand Modifier</span>
+                          <span className={`text-sm font-bold mt-1 block ${simDemandModPercent > 100 ? 'text-greenGlow' : simDemandModPercent < 50 ? 'text-red-400' : 'text-cyanGlow'}`}>
+                            {simDemandModPercent}%
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[8px] text-text-secondary uppercase tracking-wider block">Expected Customers</span>
+                          <span className="text-white text-sm font-bold mt-1 block">{simExpectedCustomers}</span>
+                        </div>
+                        <div>
+                          <span className="text-[8px] text-text-secondary uppercase tracking-wider block">Est. Units Sold</span>
+                          <span className="text-white text-sm font-bold mt-1 block">
+                            {simUnitsSold} <span className="text-[9px] text-text-muted">/{simProduct.availableStock > 0 ? `${simProduct.availableStock} stock` : '200 est'}</span>
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[8px] text-text-secondary uppercase tracking-wider block">Projected Profit</span>
+                          <span className={`text-sm font-black mt-1 block ${simProfit >= 0 ? 'text-greenGlow' : 'text-red-400'}`}>
+                            {formatCurrency(simProfit)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center text-text-muted font-mono">No simulation metrics available.</div>
+                  )}
+                </div>
+
+                {/* 2. Pricing Optimization Advisor */}
+                {simProduct && (
+                  <div className="glass-card p-5 border border-white/5 bg-gradient-to-b from-glassBg to-black/25 rounded-lg flex flex-col gap-4">
+                    <h3 className="font-display font-extrabold text-sm uppercase text-cyanGlow tracking-wide border-b border-white/5 pb-3 flex items-center gap-2">
+                      <i className="fa-solid fa-graduation-cap text-cyanGlow"></i>
+                      Pricing Optimization Advisor ({simProduct.productName})
+                    </h3>
+                    
+                    <p className="text-[10px] text-text-secondary leading-relaxed font-mono">
+                      Calibrate your target pricing based on strategic objectives. Click <strong>"Apply to Store"</strong> to save the price to your pricing registry.
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs mt-1">
+                      
+                      {/* Strategy 1: Peak Profit */}
+                      <div className="p-3.5 rounded border border-white/5 bg-black/25 flex flex-col justify-between gap-3">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[9px] bg-greenGlow/10 text-greenGlow px-2 py-0.5 rounded font-black uppercase tracking-wider self-start font-sans">Peak Profit Margin</span>
+                          <span className="text-white font-extrabold text-xs mt-1">Optimal High Margin</span>
+                          <p className="text-[9px] text-text-muted mt-1 leading-relaxed">
+                            Targets maximum total net profit. Calibrated at a 50% operating margin.
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-2 pt-2.5 border-t border-white/5">
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-text-secondary">Price:</span>
+                            <span className="text-cyanGlow font-bold">{formatCurrency(simProduct.avgPurchaseCost * 2)}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => applyPriceToStore(simProduct.productId, Math.round(simProduct.avgPurchaseCost * 2))}
+                            className="w-full text-center py-1.5 rounded bg-cyanGlow/10 hover:bg-cyanGlow/25 text-cyanGlow text-[10px] font-black uppercase transition-all tracking-wider"
+                          >
+                            Apply to Store
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Strategy 2: Max Volume */}
+                      <div className="p-3.5 rounded border border-white/5 bg-black/25 flex flex-col justify-between gap-3">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[9px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded font-black uppercase tracking-wider self-start font-sans">Max Volume (No Loss)</span>
+                          <span className="text-white font-extrabold text-xs mt-1">At-Cost Clearance</span>
+                          <p className="text-[9px] text-text-muted mt-1 leading-relaxed">
+                            Clears warehouse stock fastest without registering a loss on cost of goods.
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-2 pt-2.5 border-t border-white/5">
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-text-secondary">Price:</span>
+                            <span className="text-cyanGlow font-bold">{formatCurrency(simProduct.avgPurchaseCost)}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => applyPriceToStore(simProduct.productId, Math.round(simProduct.avgPurchaseCost))}
+                            className="w-full text-center py-1.5 rounded bg-cyanGlow/10 hover:bg-cyanGlow/25 text-cyanGlow text-[10px] font-black uppercase transition-all tracking-wider"
+                          >
+                            Apply to Store
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Strategy 3: Middle Ground */}
+                      <div className="p-3.5 rounded border border-white/5 bg-black/25 flex flex-col justify-between gap-3">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[9px] bg-cyanGlow/10 text-cyanGlow px-2 py-0.5 rounded font-black uppercase tracking-wider self-start font-sans">Balanced Compromise</span>
+                          <span className="text-white font-extrabold text-xs mt-1">Middle Ground Peak</span>
+                          <p className="text-[9px] text-text-muted mt-1 leading-relaxed">
+                            Achieves a strong blend: high client volume combined with a solid 33% profit margin.
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-2 pt-2.5 border-t border-white/5">
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-text-secondary">Price:</span>
+                            <span className="text-cyanGlow font-bold">{formatCurrency(simProduct.avgPurchaseCost * 1.5)}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => applyPriceToStore(simProduct.productId, Math.round(simProduct.avgPurchaseCost * 1.5))}
+                            className="w-full text-center py-1.5 rounded bg-cyanGlow/10 hover:bg-cyanGlow/25 text-cyanGlow text-[10px] font-black uppercase transition-all tracking-wider"
+                          >
+                            Apply to Store
+                          </button>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+              {/* Right Column (col-span-1): Price Diagnostics + Store Cumulative Ledger */}
+              <div className="lg:col-span-1 flex flex-col gap-6">
+                
+                {/* 2. Strategy Diagnostics */}
+                <div className="glass-card p-5 border border-white/5 bg-gradient-to-b from-glassBg to-black/25 rounded-lg flex flex-col gap-4">
+                  <h3 className="font-display font-extrabold text-sm uppercase text-cyanGlow tracking-wide border-b border-white/5 pb-3 flex items-center gap-2">
+                    <i className="fa-solid fa-clipboard-question text-cyanGlow"></i>
+                    Price Diagnostics
+                  </h3>
+
+                  <div className="flex flex-col gap-3 font-mono text-xs overflow-y-auto max-h-[360px] scrollbar-none pr-1">
+                    {projections.productsDetails.map(item => {
+                      const isOutOfStock = item.availableStock === 0;
+                      const marginPercent = (!isOutOfStock && item.sellingPrice > 0)
+                        ? ((item.sellingPrice - item.avgPurchaseCost) / item.sellingPrice) * 100 
+                        : 0;
+                      
+                      const marketAveragePrice = item.basePrice * 1.08;
+                      const priceRatio = marketAveragePrice > 0 ? (item.sellingPrice / marketAveragePrice) : 1;
+                      let modifier = 1.0;
+                      if (priceRatio > 0) {
+                        modifier = 1 / Math.pow(priceRatio, 2);
+                      }
+                      modifier = Math.max(0.001, Math.min(3.0, modifier));
+                      const demandPct = Math.round(modifier * 100);
+
+                      let stateColor = 'border-white/5 bg-black/15';
+                      let statusBadge = 'Balanced';
+                      let badgeColor = 'bg-white/10 text-white';
+                      let recommendation = 'Pricing is aligned with average retail parameters.';
+
+                      if (isOutOfStock) {
+                        stateColor = 'border-red-500/10 bg-red-950/5';
+                        statusBadge = 'No Stock';
+                        badgeColor = 'bg-red-950 text-red-400 border border-red-500/20';
+                        recommendation = 'Product out of stock. Manufacture or buy units to enable retail sales.';
+                      } else if (marginPercent < 15) {
+                        stateColor = 'border-red-500/20 bg-red-950/10';
+                        statusBadge = 'Low Margin';
+                        badgeColor = 'bg-red-500/20 text-red-400';
+                        recommendation = `Increase price closer to ${formatCurrency(item.avgPurchaseCost * 2)} (Optimal Profit Maximizer) to prevent operating losses.`;
+                      } else if (demandPct < 40) {
+                        stateColor = 'border-amber-500/20 bg-amber-950/10';
+                        statusBadge = 'High Price';
+                        badgeColor = 'bg-amber-500/20 text-amber-400';
+                        recommendation = `Decrease price to boost visitor foot traffic and clear shelf inventory faster.`;
+                      } else if (marginPercent >= 45 && marginPercent <= 55) {
+                        stateColor = 'border-green-500/25 bg-green-950/15';
+                        statusBadge = 'Optimal';
+                        badgeColor = 'bg-greenGlow/25 text-greenGlow border border-greenGlow/30';
+                        recommendation = 'Pricing is perfectly calibrated for profit maximization peak!';
+                      }
+
+                      return (
+                        <div key={item.productId} className={`p-3 rounded border flex flex-col gap-2 ${stateColor}`}>
+                          <div className="flex justify-between items-center">
+                            <span className="font-extrabold text-white flex items-center gap-1.5">
+                              <i className={item.icon}></i>
+                              {item.productName}
+                            </span>
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${badgeColor}`}>{statusBadge}</span>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-2 text-[10px] text-text-secondary py-1 border-y border-white/5">
+                            <span>Margin: <strong className="text-white">{marginPercent.toFixed(0)}%</strong></span>
+                            <span>Demand: <strong className="text-white">{demandPct}%</strong></span>
+                          </div>
+
+                          <p className="text-[9px] text-text-muted leading-relaxed italic">{recommendation}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 4. Store Cumulative Ledger */}
+                <div className="glass-card p-5 border border-white/5 bg-gradient-to-b from-glassBg to-black/25 rounded-lg flex flex-col gap-4 font-mono">
+                  <h3 className="font-display font-extrabold text-xs uppercase text-cyanGlow tracking-wide border-b border-white/5 pb-3 flex items-center gap-2">
+                    <i className="fa-solid fa-scale-balanced text-cyanGlow"></i>
+                    Ledger (Last 20 Cycles)
+                  </h3>
+
+                  <div className="grid grid-cols-2 gap-3 text-[10px]">
+                    <div className="p-2.5 bg-black/25 rounded border border-white/5">
+                      <span className="text-[8px] text-text-secondary uppercase">Revenue</span>
+                      <span className="text-cyanGlow font-black text-[11px] mt-0.5 block truncate">{formatCurrency(totalRevLast20)}</span>
+                    </div>
+                    <div className="p-2.5 bg-black/25 rounded border border-white/5">
+                      <span className="text-[8px] text-text-secondary uppercase">Net Profit</span>
+                      <span className="text-greenGlow font-black text-[11px] mt-0.5 block truncate">{formatCurrency(totalProfitLast20)}</span>
+                    </div>
+                    <div className="p-2.5 bg-black/25 rounded border border-white/5">
+                      <span className="text-[8px] text-text-secondary uppercase">Avg Margin</span>
+                      <span className="text-white font-bold text-[11px] mt-0.5 block">{avgMarginLast20.toFixed(1)}%</span>
+                    </div>
+                    <div className="p-2.5 bg-black/25 rounded border border-white/5">
+                      <span className="text-[8px] text-text-secondary uppercase">Best Seller</span>
+                      <span className="text-white font-bold text-[11px] mt-0.5 block truncate">{bestSellingProduct}</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* TAB 6 - HISTORY */}
         {activeTab === 'history' && (
-          <div className="glass-card border border-white/5 rounded-lg bg-black/25 overflow-hidden">
+          <div className="glass-card border border-white/5 rounded-lg bg-black/25 overflow-x-auto scrollbar-none">
             <table className="w-full text-left border-collapse font-sans text-xs">
               <thead>
                 <tr className="bg-white/3 text-[10px] uppercase font-display text-text-secondary tracking-wider border-b border-white/5">

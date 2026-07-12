@@ -253,6 +253,7 @@ export const getStartup = async (req, res) => {
           productName: econ.name,
           quantity: 0,
           sellingPrice: econ.price,
+          basePrice: econ.price,
           avgPurchaseCost: Math.round(econ.price * 0.75)
         };
       });
@@ -269,6 +270,7 @@ export const getStartup = async (req, res) => {
       if (typeof startup.markModified === 'function') {
         startup.markModified('retailInventory');
         startup.markModified('retailState');
+        startup.markModified('inventory');
         startup.markModified('financials');
       }
       await startup.save();
@@ -355,6 +357,7 @@ export const getStartup = async (req, res) => {
       const { getAveragePurchaseCost } = await import('./retailController.js');
       for (const item of startup.retailInventory) {
         const basePrice = localPrices[item.productId] || 100;
+        item.basePrice = basePrice;
         item.avgPurchaseCost = await getAveragePurchaseCost(startup._id, item.productId, basePrice);
       }
     }
