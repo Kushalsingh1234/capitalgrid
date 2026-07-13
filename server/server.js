@@ -13,8 +13,16 @@ import transactionRoutes from './routes/transactionRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
 import worldClockRoutes from './routes/worldClockRoutes.js';
 import retailRoutes from './routes/retailRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
+import rankingsRoutes from './routes/rankingsRoutes.js';
+import profileRoutes from './routes/profileRoutes.js';
+import contractRoutes from './routes/contractRoutes.js';
+import messageRoutes from './routes/messageRoutes.js';
+import agreementRoutes from './routes/agreementRoutes.js';
+import loanRoutes from './routes/loanRoutes.js';
 import { initializeClock } from './services/worldClockService.js';
 import { tickEngine, registerDefaultModules } from './services/economicEngine.js';
+import { evaluateAll } from './services/agreementExecutionService.js';
 
 // ES Modules __dirname setup
 const __filename = fileURLToPath(import.meta.url);
@@ -27,6 +35,11 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 connectDB().then(() => {
   initializeClock();
   registerDefaultModules();
+  // Start real-time supply agreements execution evaluation loops
+  evaluateAll();
+  setInterval(() => {
+    evaluateAll().catch(err => console.error('[Agreement Scheduler error]', err));
+  }, 10000);
 });
 
 const app = express();
@@ -54,6 +67,13 @@ app.use('/api/transaction', transactionRoutes);
 app.use('/api/employee', employeeRoutes);
 app.use('/api/world-clock', worldClockRoutes);
 app.use('/api/retail', retailRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/rankings', rankingsRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/contracts', contractRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/agreements', agreementRoutes);
+app.use('/api/loans', loanRoutes);
 
 // Static assets production routing - conditionally enabled if built frontend files are present
 const distPath = path.join(__dirname, '../dist');

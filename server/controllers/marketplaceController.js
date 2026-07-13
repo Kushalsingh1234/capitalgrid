@@ -6,6 +6,7 @@ import { getProductPrice } from '../config/countryEconomy.js';
 import countryEconomy from '../config/countryEconomy.js';
 import tradeService from '../services/tradeService.js';
 import * as accountingHelper from '../services/accountingHelper.js';
+import { createNotification, formatCurrency } from '../services/notificationService.js';
 
 /**
  * @desc    Create a new marketplace listing from seller inventory
@@ -459,6 +460,20 @@ export const buyListing = async (req, res) => {
       await listing.save({ validateBeforeSave: false });
     }
 
+    // Create notifications for buyer and seller
+    await createNotification(
+      listing.seller,
+      `Sold ${buyQty}x ${listing.productName} on the market to ${buyerStartup.startupName} for ${formatCurrency(sellerRevenue, sellerStartup.country)}.`,
+      'MarketSale',
+      sellerRevenue
+    );
+    await createNotification(
+      buyerStartup._id,
+      `Purchased ${buyQty}x ${listing.productName} on the market from ${sellerStartup.startupName} for ${formatCurrency(totalCost, buyerStartup.country)}.`,
+      'MarketPurchase',
+      -totalCost
+    );
+
     // 8. Create transaction history records (one for buyer, one for seller)
     if (global.useMockDb) {
       const sellerTx = {
@@ -634,6 +649,13 @@ export const buyFromNcr = async (req, res) => {
       await startup.save();
     }
 
+    await createNotification(
+      startup._id,
+      `Purchased ${qty}x ${ncrItem.productName} from National Commodity Reserve for ${formatCurrency(totalCost, startup.country)}.`,
+      'MarketPurchase',
+      -totalCost
+    );
+
     // Create Transaction
     let newTx;
     if (global.useMockDb) {
@@ -764,6 +786,13 @@ export const sellToNcr = async (req, res) => {
       startup.markModified('inventory');
       await startup.save();
     }
+
+    await createNotification(
+      startup._id,
+      `Sold ${qty}x ${ncrItem.productName} to National Commodity Reserve for ${formatCurrency(totalRevenue, startup.country)}.`,
+      'MarketSale',
+      totalRevenue
+    );
 
     // Create Transaction
     let newTx;

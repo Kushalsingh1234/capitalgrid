@@ -3,6 +3,7 @@ import GovernmentAccount from '../models/GovernmentAccount.js';
 import Transaction from '../models/Transaction.js';
 import { TAX_CONFIG } from '../config/taxConfig.js';
 import * as accountingHelper from './accountingHelper.js';
+import { createNotification, formatCurrency } from './notificationService.js';
 
 // Helper to format currency for console and description logs
 const formatCurrencyLog = (amount, country) => {
@@ -136,6 +137,13 @@ export const processMonthlyTax = async (clockData) => {
 
     // 4. Route collected revenue to Government Treasury & record Transaction
     if (amountPaid > 0) {
+      await createNotification(
+        startup._id,
+        `Corporate Tax Deducted: Paid ${formatCurrency(amountPaid, country)} (Outstanding: ${formatCurrency(newOutstanding, country)}).`,
+        'Tax',
+        -amountPaid
+      );
+
       const govAcc = await getOrCreateGovAccount(country);
       govAcc.corporateTaxCollected += amountPaid;
       govAcc.governmentBalance += amountPaid;

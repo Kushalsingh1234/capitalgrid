@@ -2,6 +2,17 @@ import EconomicEngineState from '../models/EconomicEngineState.js';
 import * as worldClockService from './worldClockService.js';
 import { payrollModuleHooks } from './payrollModule.js';
 import { corporateTaxModuleHooks } from './taxModule.js';
+import { processMonthlyLoans } from './loanService.js';
+
+export const loanModuleHooks = {
+  onMonth: async (clockData) => {
+    try {
+      await processMonthlyLoans(clockData);
+    } catch (err) {
+      console.error(`[Economic Engine] Loan Module monthly tick failed: ${err.message}`);
+    }
+  }
+};
 
 const modules = [];
 
@@ -237,12 +248,12 @@ export const registerDefaultModules = () => {
   // Register active simulation modules
   registerModule('Payroll', payrollModuleHooks);
   registerModule('Taxes', corporateTaxModuleHooks);
+  registerModule('Loan', loanModuleHooks);
 
   // Register remaining placeholders
   const placeholders = [
     'Inflation',
     'World Events',
-    'Loan',
     'Interest',
     'Government',
     'Company Reports',

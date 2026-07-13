@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   DrawerWrapper, 
   SectionHeader, 
@@ -10,6 +10,7 @@ import {
   FutureFeatureCard, 
   PlaceholderCard 
 } from './SharedUI';
+import { getNotifications, markNotificationsAsRead } from '../services/notificationService';
 
 const CURRENCY_SYMBOLS = {
   'India': '₹',
@@ -75,10 +76,34 @@ export default function DashboardDrawer({
   employeeToFire,
   setEmployeeToFire,
   user,
-  onLogout
+  onLogout,
+  token
 }) {
   const [selectedCompanyId, setSelectedCompanyId] = React.useState(startup?._id || 'main');
   const [hireDrafts, setHireDrafts] = React.useState({});
+
+  const [notifications, setNotifications] = useState([]);
+  const [isLoadingNotifs, setIsLoadingNotifs] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'Notifications' && token) {
+      const loadNotifs = async () => {
+        setIsLoadingNotifs(true);
+        try {
+          const res = await getNotifications(token);
+          if (res.success) {
+            setNotifications(res.notifications || []);
+            await markNotificationsAsRead(token);
+          }
+        } catch (err) {
+          console.error('[DashboardDrawer] Error fetching notifications:', err.message);
+        } finally {
+          setIsLoadingNotifs(false);
+        }
+      };
+      loadNotifs();
+    }
+  }, [isOpen, activeTab, token]);
 
   if (!isOpen) return null;
 
@@ -811,18 +836,77 @@ export default function DashboardDrawer({
 
       case 'Notifications': {
         return (
-          <div className="flex flex-col gap-6 text-sm">
-            <div className="text-center py-12">
-              <div className="w-14 h-14 rounded-full border border-white/5 bg-white/2 flex items-center justify-center text-text-muted text-xl mx-auto mb-5">
-                <i className="fa-solid fa-bell-slash"></i>
+          <div className="flex flex-col gap-4 text-xs font-mono">
+            <h3 className="font-display font-extrabold text-sm uppercase text-cyanGlow tracking-wider border-b border-white/5 pb-3">
+              Corporate Feed
+            </h3>
+            
+            {isLoadingNotifs ? (
+              <div className="text-center py-8 text-text-muted">
+                <i className="fa-solid fa-circle-notch animate-spin mr-2"></i>
+                Synchronizing feeds...
               </div>
-              <h4 className="font-display font-extrabold text-xs uppercase text-white tracking-wide">
-                No new notifications
-              </h4>
-              <p className="text-[10px] text-text-secondary mt-1 max-w-[200px] mx-auto leading-normal">
-                We will notify you here when transactions or events occur.
-              </p>
-            </div>
+            ) : notifications.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-12 h-12 rounded-full border border-white/5 bg-white/2 flex items-center justify-center text-text-muted text-lg mx-auto mb-4">
+                  <i className="fa-solid fa-bell-slash"></i>
+                </div>
+                <h4 className="font-display font-bold text-xs uppercase text-white tracking-wide">
+                  No notifications recorded
+                </h4>
+                <p className="text-[9px] text-text-muted mt-1 leading-normal max-w-[180px] mx-auto">
+                  Alerts will trigger here upon production completion, sales, payrolls, or tax runs.
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2.5 max-h-[500px] overflow-y-auto pr-1 scrollbar-none">
+                {notifications.map((notif) => {
+                  let icon = 'fa-bell';
+                  if (notif.type === 'Tax') icon = 'fa-building-columns';
+                  else if (notif.type === 'Payroll') icon = 'fa-users';
+                  else if (notif.type === 'MarketSale') icon = 'fa-shop';
+                  else if (notif.type === 'MarketPurchase') icon = 'fa-cart-shopping';
+                  else if (notif.type === 'Production') icon = 'fa-cubes';
+                  else if (notif.type === 'Retail') icon = 'fa-basket-shopping';
+
+                  const isDeduction = notif.amount < 0;
+                  const isEarning = notif.amount > 0;
+                  const colorClass = isDeduction 
+                    ? 'text-red-400 border-red-500/10 bg-red-950/5' 
+                    : isEarning 
+                      ? 'text-greenGlow border-green-500/10 bg-green-950/5' 
+                      : 'text-white border-white/5 bg-white/2';
+
+                  const iconColor = isDeduction 
+                    ? 'text-red-400' 
+                    : isEarning 
+                      ? 'text-greenGlow' 
+                      : 'text-cyanGlow';
+
+                  return (
+                    <div 
+                      key={notif._id} 
+                      className={`p-3 rounded border flex gap-3 items-start transition-all ${colorClass}`}
+                    >
+                      <div className={`w-7 h-7 rounded border border-white/5 flex items-center justify-center bg-black/35 shrink-0 mt-0.5 ${iconColor}`}>
+                        <i className={`fa-solid ${icon}`}></i>
+                      </div>
+                      <div className="flex-1 min-w-0 flex flex-col gap-1">
+                        <p className="leading-relaxed font-sans text-xs break-words">{notif.text}</p>
+                        <span className="text-[8px] text-text-muted select-none">
+                          {new Date(notif.createdAt).toLocaleString(undefined, { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         );
       }

@@ -12,11 +12,17 @@ import FacilityManagementDrawer from '../components/FacilityManagementDrawer';
 import MarketplaceInterface from '../components/MarketplaceInterface';
 import FinanceTerminal from '../components/FinanceTerminal';
 import RetailTerminal from '../components/RetailTerminal';
+import GlobalRankingsTerminal from '../components/GlobalRankingsTerminal';
 import * as transactionService from '../services/transactionService';
 import * as employeeService from '../services/employeeService';
 import { getProductsForBusiness, isRetailBusiness } from '../data/products';
 import { PRODUCT_DEPENDENCIES } from '../data/dependencies';
 import { getWorldClock } from '../services/worldClockService';
+import MessagesDrawer from '../components/MessagesDrawer';
+import ContractsDrawer from '../components/ContractsDrawer';
+import AgreementDraftModal from '../components/AgreementDraftModal';
+import { getUnreadCount } from '../services/messageService';
+import { getAgreementsList } from '../services/agreementService';
 
 const CURRENCY_SYMBOLS = {
   'India': '₹',
@@ -200,6 +206,111 @@ export default function PlayerDashboard() {
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const [pendingAgreementsCount, setPendingAgreementsCount] = useState(0);
+  const [agreementDraftContract, setAgreementDraftContract] = useState(null);
+  const [isAgreementDraftOpen, setIsAgreementDraftOpen] = useState(false);
+
+  const fetchUnreadCount = async () => {
+    if (!token) return;
+    try {
+      const data = await getUnreadCount(token);
+      if (data.success) {
+        setUnreadMessagesCount(data.count || 0);
+      }
+    } catch (err) {
+      console.error('Error fetching B2B unread counter:', err);
+    }
+  };
+
+  const fetchPendingAgreementsCount = async () => {
+    if (!token || !startup) return;
+    try {
+      const offersData = await getAgreementsList({ tab: 'Offers', page: 1, limit: 100 }, token);
+      let offersCount = 0;
+      if (offersData.success) {
+        const incomingPending = offersData.agreements.filter(a => 
+          a.status === 'Pending' && 
+          String(a.createdBy?._id || a.createdBy) !== String(startup._id)
+        );
+        offersCount = incomingPending.length;
+      }
+
+      const activeData = await getAgreementsList({ tab: 'Active', page: 1, limit: 100 }, token);
+      let deliveriesCount = 0;
+      if (activeData.success) {
+        const deliveries = activeData.pendingDeliveries || [];
+        const incomingDeliveries = deliveries.filter(d => {
+          const agreement = activeData.agreements.find(a => String(a._id) === String(d.agreementId));
+          if (!agreement) return false;
+          return String(agreement.buyer?._id || agreement.buyer) === String(startup._id);
+        });
+        deliveriesCount = incomingDeliveries.length;
+      }
+
+      setPendingAgreementsCount(offersCount + deliveriesCount);
+    } catch (err) {
+      console.error('Error fetching pending agreements count:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 15000);
+    return () => clearInterval(interval);
+  }, [token]);
+
+  useEffect(() => {
+    fetchPendingAgreementsCount();
+    const interval = setInterval(fetchPendingAgreementsCount, 20000);
+    return () => clearInterval(interval);
+  }, [token, startup]);
+
+  useEffect(() => {
+    if (activeTab === 'Messages') {
+      fetchUnreadCount();
+    }
+    if (activeTab === 'Contracts') {
+      fetchPendingAgreementsCount();
+    }
+  }, [activeTab]);
+
+  // Handle start-conversation external triggers
+  useEffect(() => {
+    const handleStartB2B = (e) => {
+      const { targetCompanyId, category, contractRef } = e.detail;
+      setCurrentView('world');
+      setActiveTab('Messages');
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('trigger-start-conversation', { 
+          detail: { targetCompanyId, category, contractRef } 
+        }));
+      }, 50);
+    };
+
+    const handleStartDraft = (e) => {
+      const { contract } = e.detail;
+      setAgreementDraftContract(contract);
+      setIsAgreementDraftOpen(true);
+    };
+
+    const handleRefresh = () => {
+      fetchDashboardData();
+      fetchPendingAgreementsCount();
+      fetchUnreadCount();
+    };
+
+    window.addEventListener('start-b2b-conversation', handleStartB2B);
+    window.addEventListener('start-agreement-draft', handleStartDraft);
+    window.addEventListener('refresh-dashboard-data', handleRefresh);
+    
+    return () => {
+      window.removeEventListener('start-b2b-conversation', handleStartB2B);
+      window.removeEventListener('start-agreement-draft', handleStartDraft);
+      window.removeEventListener('refresh-dashboard-data', handleRefresh);
+    };
+  }, [fetchDashboardData, startup]);
 
   // World Clock Sync & Interpolation loops
   useEffect(() => {
@@ -476,7 +587,7 @@ export default function PlayerDashboard() {
 
       <div className="main-game-layout relative">
         {/* BOTTOM HORIZONTAL SIDEBAR */}
-        {currentView !== 'marketplace' && currentView !== 'finance' && currentView !== 'retail' && (
+        {currentView !== 'marketplace' && currentView !== 'finance' && currentView !== 'retail' && currentView !== 'global' && (
           <nav className="sidebar-bottom">
             {[
               { id: 'Dashboard', icon: 'fa-chart-pie', label: 'Overview' },
@@ -484,6 +595,9 @@ export default function PlayerDashboard() {
               { id: 'Employees', icon: 'fa-users', label: 'Employees' },
               { id: 'Marketplace', icon: 'fa-shop', label: 'Market' },
               { id: 'Finance', icon: 'fa-wallet', label: 'Finance' },
+              { id: 'Global', icon: 'fa-globe', label: 'Global' },
+              { id: 'Contracts', icon: 'fa-file-signature', label: 'Contracts' },
+              { id: 'Messages', icon: 'fa-comments', label: 'Messages' },
               { id: 'Profile', icon: 'fa-user', label: 'Profile' },
             ].map((tab) => (
               <button
@@ -497,21 +611,36 @@ export default function PlayerDashboard() {
                   } else if (tab.id === 'Finance') {
                     setActiveTab(null);
                     setCurrentView(currentView === 'finance' ? 'world' : 'finance');
+                  } else if (tab.id === 'Global') {
+                    setActiveTab(null);
+                    setCurrentView(currentView === 'global' ? 'world' : 'global');
                   } else {
                     setCurrentView('world');
                     setActiveTab(activeTab === tab.id ? null : tab.id);
                   }
                 }}
-                className={`sidebar-nav-item ${
+                className={`sidebar-nav-item relative ${
                   tab.id === 'Marketplace'
                     ? (currentView === 'marketplace' ? 'active' : '')
                     : tab.id === 'Finance'
                     ? (currentView === 'finance' ? 'active' : '')
+                    : tab.id === 'Global'
+                    ? (currentView === 'global' ? 'active' : '')
                     : (activeTab === tab.id ? 'active' : '')
                 }`}
                 title={tab.label}
               >
                 <i className={`fa-solid ${tab.icon}`}></i>
+                {tab.id === 'Messages' && unreadMessagesCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-[8px] min-w-3.5 h-3.5 px-0.5 flex items-center justify-center font-mono font-bold leading-none select-none border border-black/40">
+                    {unreadMessagesCount}
+                  </span>
+                )}
+                {tab.id === 'Contracts' && pendingAgreementsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-[8px] min-w-3.5 h-3.5 px-0.5 flex items-center justify-center font-mono font-bold leading-none select-none border border-black/40">
+                    {pendingAgreementsCount}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
@@ -520,10 +649,10 @@ export default function PlayerDashboard() {
         {/* MAIN GAME WORLD AREA */}
         <main 
           className={`world-viewport ${activeTab || isFacilityDrawerOpen ? 'drawer-open' : ''}`}
-          style={currentView === 'marketplace' || currentView === 'finance' || currentView === 'retail' ? { overflow: 'auto', alignItems: 'flex-start', justifyContent: 'flex-start', padding: 0 } : {}}
+          style={currentView === 'marketplace' || currentView === 'finance' || currentView === 'retail' || currentView === 'global' ? { overflow: 'auto', alignItems: 'flex-start', justifyContent: 'flex-start', padding: 0 } : {}}
         >
           {/* GameWorld wrapper for hiding but maintaining mounted state */}
-          <div className={`w-full h-full ${currentView === 'marketplace' || currentView === 'finance' || currentView === 'retail' ? 'absolute pointer-events-none invisible opacity-0' : ''}`}>
+          <div className={`w-full h-full ${currentView === 'marketplace' || currentView === 'finance' || currentView === 'retail' || currentView === 'global' ? 'absolute pointer-events-none invisible opacity-0' : ''}`}>
             {startup ? (
               <GameWorld 
                 startup={startup} 
@@ -584,6 +713,15 @@ export default function PlayerDashboard() {
             />
           )}
 
+          {/* Full Screen Global Company Rankings Terminal */}
+          {currentView === 'global' && (
+            <GlobalRankingsTerminal
+              startup={startup}
+              token={token}
+              onClose={() => setCurrentView('world')}
+            />
+          )}
+
           {/* Dim Overlay blocking interaction on canvas but keeping Phaser running */}
           {isFacilityDrawerOpen && (
             <div className="absolute inset-0 bg-black/15 z-10 pointer-events-auto cursor-default animate-fade-in" />
@@ -606,6 +744,41 @@ export default function PlayerDashboard() {
           setEmployeeToFire={setEmployeeToFire}
           user={user}
           onLogout={handleLogout}
+          token={token}
+        />
+
+        {/* MESSAGES DRAWER */}
+        <MessagesDrawer
+          isOpen={activeTab === 'Messages'}
+          onClose={() => setActiveTab(null)}
+          startup={startup}
+          token={token}
+        />
+
+        {/* CONTRACTS DRAWER */}
+        <ContractsDrawer
+          isOpen={activeTab === 'Contracts'}
+          onClose={() => setActiveTab(null)}
+          startup={startup}
+          token={token}
+        />
+
+        {/* AGREEMENT DRAFT MODAL */}
+        <AgreementDraftModal
+          isOpen={isAgreementDraftOpen}
+          onClose={() => {
+            setIsAgreementDraftOpen(false);
+            setAgreementDraftContract(null);
+          }}
+          contract={agreementDraftContract}
+          startup={startup}
+          token={token}
+          onSubmitSuccess={() => {
+            setIsAgreementDraftOpen(false);
+            setAgreementDraftContract(null);
+            fetchPendingAgreementsCount();
+            setActiveTab('Contracts');
+          }}
         />
 
         {/* FACILITY MANAGEMENT DRAWER */}

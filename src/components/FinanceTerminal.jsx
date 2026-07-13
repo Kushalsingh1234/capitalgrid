@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getWorldClock } from '../services/worldClockService';
+import LoanCenter from './LoanCenter';
 
 const CURRENCY_SYMBOLS = {
   'India': '₹',
@@ -192,7 +193,7 @@ export default function FinanceTerminal({
   };
 
   return (
-    <div className="w-full h-full flex flex-col justify-start bg-[#090e17] text-white p-6 relative font-body select-none">
+    <div className="w-full min-h-full flex flex-col justify-start bg-[#090e17] text-white p-4 md:p-6 relative font-body select-none overflow-y-auto scrollbar-thin">
       
       {/* Finance Header */}
       <div className="mb-6 p-4 bg-white/2 border border-white/5 rounded-lg flex justify-between items-center gap-4 bg-gradient-to-b from-glassBg to-black/30 shrink-0">
@@ -252,7 +253,7 @@ export default function FinanceTerminal({
       </div>
 
       {/* Main Responsive Grid Columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-1 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* LEFT PANEL - Financial Navigation (lg:col-span-2) */}
         <div className="lg:col-span-2 flex flex-col gap-4">
@@ -550,60 +551,13 @@ export default function FinanceTerminal({
 
             {/* View 4: Loan Center */}
             {activeSubTab === 'Loan Center' && (
-              <div className="flex flex-col gap-4 font-mono text-xs">
-                <h3 className="font-display font-extrabold text-xs uppercase text-white pb-2 border-b border-white/5 tracking-wider">
-                  Commercial Bank Debt Portal
-                </h3>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 bg-black/25 rounded border border-white/5">
-                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Outstanding Loans</span>
-                    <span className="font-bold text-white text-sm">{formatCurrency(0, startup?.country)}</span>
-                  </div>
-                  <div className="p-3 bg-black/25 rounded border border-white/5">
-                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Annual Interest Rate</span>
-                    <span className="font-bold text-white text-sm">4.5%</span>
-                  </div>
-                  <div className="p-3 bg-black/25 rounded border border-white/5">
-                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Monthly Loan Payment</span>
-                    <span className="font-bold text-white text-sm">{formatCurrency(0, startup?.country)}</span>
-                  </div>
-                  <div className="p-3 bg-black/25 rounded border border-white/5">
-                    <span className="text-[9px] text-text-secondary uppercase block mb-1">Available Borrowing Limit</span>
-                    <span className="font-bold text-cyanGlow text-sm">{formatCurrency(250000, startup?.country)}</span>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 mt-2">
-                  <button 
-                    disabled 
-                    className="flex-1 py-2 rounded bg-white/2 border border-white/5 text-text-muted hover:text-white transition-all opacity-50 relative group cursor-not-allowed text-center uppercase tracking-widest font-display text-[10px] font-bold"
-                  >
-                    <span>Borrow Funds</span>
-                    <span className="absolute inset-0 flex items-center justify-center bg-black/95 opacity-0 group-hover:opacity-100 transition-opacity rounded">
-                      <span className="text-[8px] font-mono text-cyanGlow uppercase tracking-widest">
-                        Future Update
-                      </span>
-                    </span>
-                  </button>
-                  <button 
-                    disabled 
-                    className="flex-1 py-2 rounded bg-white/2 border border-white/5 text-text-muted hover:text-white transition-all opacity-50 relative group cursor-not-allowed text-center uppercase tracking-widest font-display text-[10px] font-bold"
-                  >
-                    <span>Repay Debt</span>
-                    <span className="absolute inset-0 flex items-center justify-center bg-black/95 opacity-0 group-hover:opacity-100 transition-opacity rounded">
-                      <span className="text-[8px] font-mono text-cyanGlow uppercase tracking-widest">
-                        Future Update
-                      </span>
-                    </span>
-                  </button>
-                </div>
-
-                <div className="p-3.5 bg-cyan-950/15 border border-cyanGlow/15 rounded-lg text-cyanGlow flex items-center gap-3 mt-2">
-                  <i className="fa-solid fa-circle-info"></i>
-                  <span>Debt Financing features will be unlocked in a future application release.</span>
-                </div>
-              </div>
+              <LoanCenter 
+                startup={startup}
+                token={token}
+                onBalanceChange={() => {
+                  window.dispatchEvent(new CustomEvent('refresh-dashboard-data'));
+                }}
+              />
             )}
 
             {/* View 5: Tax Center */}

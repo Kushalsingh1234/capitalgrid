@@ -3,6 +3,7 @@ import Employee from '../models/Employee.js';
 import Transaction from '../models/Transaction.js';
 import { getSalary } from '../config/countryEconomy.js';
 import * as accountingHelper from './accountingHelper.js';
+import { createNotification, formatCurrency } from './notificationService.js';
 
 const getMonthName = (monthNum) => {
   const monthNames = [
@@ -115,11 +116,25 @@ const processMonthlyPayroll = async (clockData) => {
         date: new Date()
       };
 
+      await createNotification(
+        startup._id,
+        `Monthly Payroll Processed: Paid ${formatCurrency(totalPayroll, startup.country)} to ${totalEmployees} employees.`,
+        'Payroll',
+        -totalPayroll
+      );
+
       console.log(`[Payroll] Startup: ${startup.startupName} | Employees: ${totalEmployees} | Payroll: ${totalPayroll} | Status: Success`);
 
     } else {
       // FAILED PAYROLL POSTING
       startup.employeeMorale = Math.max(0, (startup.employeeMorale !== undefined ? startup.employeeMorale : 100) - 25);
+
+      await createNotification(
+        startup._id,
+        `Monthly Payroll FAILED: Insufficient funds to pay ${formatCurrency(totalPayroll, startup.country)} to ${totalEmployees} employees.`,
+        'Payroll',
+        0
+      );
 
       const failTxPayload = {
         startup: startup._id,

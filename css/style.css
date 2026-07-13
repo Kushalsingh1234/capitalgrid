@@ -2422,5 +2422,41 @@ p {
   }
 }
 
+@media (max-width: 480px) {
+  .sidebar-bottom {
+    width: calc(100% - 20px);
+    max-width: 360px;
+    padding: 4px 6px;
+    gap: 4px;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+  .sidebar-nav-item {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+  }
+  .sidebar-nav-item i {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 360px) {
+  .sidebar-bottom {
+    width: calc(100% - 10px);
+    max-width: 310px;
+    padding: 3px 4px;
+    gap: 3px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+  .sidebar-nav-item {
+    width: 28px;
+    height: 28px;
+    border-radius: 5px;
+  }
+  .sidebar-nav-item i {
+    font-size: 10px;
+  }
+}
+
 
 

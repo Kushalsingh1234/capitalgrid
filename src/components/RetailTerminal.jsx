@@ -388,10 +388,10 @@ export default function RetailTerminal({ startup: initialStartup, employees = []
 
           <button 
             onClick={onClose}
-            className="absolute top-4 right-4 lg:static w-10 h-10 border border-white/10 hover:border-white/30 rounded-lg flex items-center justify-center text-text-muted hover:text-white hover:bg-white/5 transition-all cursor-pointer shrink-0 z-50"
+            className="absolute top-4 right-4 lg:static w-6 h-6 border border-white/5 hover:border-white/20 rounded flex items-center justify-center text-text-muted hover:text-white transition-colors cursor-pointer shrink-0 z-50"
             title="Close Management Terminal"
           >
-            <i className="fa-solid fa-xmark text-sm"></i>
+            <i className="fa-solid fa-xmark text-xs"></i>
           </button>
         </div>
       </div>

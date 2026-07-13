@@ -31,6 +31,19 @@ const startupSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  banner: {
+    type: String,
+    default: ''
+  },
+  description: {
+    type: String,
+    maxlength: 200,
+    default: ''
+  },
+  level: {
+    type: Number,
+    default: 1
+  },
   startingCapital: {
     type: Number,
     required: true
@@ -67,6 +80,11 @@ const startupSchema = new mongoose.Schema({
   outstandingTax: {
     type: Number,
     default: 0
+  },
+  creditRating: {
+    type: String,
+    enum: ['AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'CCC', 'CC', 'C', 'D'],
+    default: 'BBB'
   },
   productionSpeedMultiplier: {
     type: Number,

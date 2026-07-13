@@ -2,6 +2,7 @@ import Startup from '../models/Startup.js';
 import Transaction from '../models/Transaction.js';
 import Employee from '../models/Employee.js';
 import countryEconomy from '../config/countryEconomy.js';
+import { createNotification, formatCurrency } from '../services/notificationService.js';
 
 // Base demand catalog for retail stores
 const BASE_DEMAND = {
@@ -169,7 +170,7 @@ export const calculateDemandDetails = async (startup, selectedQuantities = {}) =
 /**
  * Auto-resolves a completed retail cycle.
  */
-export const checkAndResolveRetailCycle = (startup) => {
+export const checkAndResolveRetailCycle = async (startup) => {
   if (!startup.retailState || startup.retailState.activeCycle?.status !== 'Running') {
     return false;
   }
@@ -253,6 +254,14 @@ export const checkAndResolveRetailCycle = (startup) => {
     productsSold
   });
 
+  // Create notification
+  await createNotification(
+    startup._id,
+    `Retail Sales Cycle finished: Generated ${formatCurrency(totalRevenue, startup.country)} in revenue and ${formatCurrency(grossProfit, startup.country)} in profit.`,
+    'Retail',
+    totalRevenue
+  );
+
   if (startup.retailState.history.length > 20) {
     startup.retailState.history = startup.retailState.history.slice(0, 20);
   }
@@ -308,7 +317,7 @@ export const getRetailStatus = async (req, res) => {
     }
 
     // Resolve offline completed cycles
-    const resolved = checkAndResolveRetailCycle(startup);
+    const resolved = await checkAndResolveRetailCycle(startup);
     if (resolved && !global.useMockDb) {
       if (typeof startup.markModified === 'function') {
         startup.markModified('inventory');
@@ -580,7 +589,7 @@ export const completeSalesCycle = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Startup not found' });
     }
 
-    const resolved = checkAndResolveRetailCycle(startup);
+    const resolved = await checkAndResolveRetailCycle(startup);
     if (!resolved) {
       return res.status(400).json({ success: false, message: 'Cycle is not ready to complete.' });
     }

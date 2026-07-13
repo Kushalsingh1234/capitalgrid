@@ -2,6 +2,7 @@ import Startup from '../models/Startup.js';
 import Transaction from '../models/Transaction.js';
 import Employee from '../models/Employee.js';
 import ProductionTask from '../models/ProductionTask.js';
+import { createNotification } from '../services/notificationService.js';
 import { BUSINESS_REQUIRED_EMPLOYEES } from './employeeController.js';
 import { PRODUCT_DEPENDENCIES } from '../config/dependencies.js';
 import { PRODUCTION_TIME_CONFIG } from '../config/productionTimeConfig.js';
@@ -118,6 +119,16 @@ export const processCompletedTasks = async (startupId) => {
     }
 
     startup.inventory = inventory;
+
+    // Create notifications for completed tasks
+    for (const task of completedTasks) {
+      await createNotification(
+        startup._id,
+        `Completed production of ${task.quantity}x ${task.productName}.`,
+        'Production',
+        0
+      );
+    }
 
     // Persist changes
     if (global.useMockDb) {

@@ -4,6 +4,7 @@ import ProductionTask from '../models/ProductionTask.js';
 import { processCompletedTasks } from './productionController.js';
 import countryEconomy from '../config/countryEconomy.js';
 import { checkAndResolveRetailCycle } from '../controllers/retailController.js';
+import { getCompanyValuation } from '../services/companyValuationService.js';
 
 // Capital mappings based on country choice
 const STARTING_CAPITALS = {
@@ -261,7 +262,7 @@ export const getStartup = async (req, res) => {
     }
 
     // Resolve completed retail cycle
-    const resolvedRetail = checkAndResolveRetailCycle(startup);
+    const resolvedRetail = await checkAndResolveRetailCycle(startup);
     if (resolvedRetail) {
       startupDirty = true;
     }
@@ -362,11 +363,14 @@ export const getStartup = async (req, res) => {
       }
     }
 
+    const companyValuation = await getCompanyValuation(startup._id);
+
     res.status(200).json({
       success: true,
       startup: {
         ...startup.toObject ? startup.toObject() : startup,
-        localPrices
+        localPrices,
+        companyValuation
       },
       tasks: activeTasks,
       serverTime: new Date()
