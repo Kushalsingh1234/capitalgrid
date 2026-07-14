@@ -1,4 +1,4 @@
-const API_BASE = '/api/loans';
+const API_BASE = `${import.meta.env.VITE_API_URL || ''}/api/loans`;
 
 export const getLoanEligibility = async (token) => {
   const response = await fetch(`${API_BASE}/eligibility`, {
