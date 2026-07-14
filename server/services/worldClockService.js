@@ -142,7 +142,6 @@ export const initializeClock = async () => {
       cachedClockDoc = doc;
     } catch (err) {
       console.error(`[World Clock Service] Error initializing clock database: ${err.message}`);
-      global.useMockDb = true;
       cachedClockDoc = getMockClock();
     }
   }

@@ -225,7 +225,6 @@ export const tickEngine = async () => {
       }
     } catch (err) {
       console.error(`[Economic Engine Service] Error loading engine state: ${err.message}`);
-      global.useMockDb = true;
       state = getMockState();
     }
   }

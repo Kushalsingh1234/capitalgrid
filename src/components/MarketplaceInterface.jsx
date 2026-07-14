@@ -489,6 +489,22 @@ export default function MarketplaceInterface({
     }
   }, [selectedMarket, selectedCategory, searchQuery, listings]);
 
+  // Auto-scroll to trade console on mobile screens when a product is selected
+  useEffect(() => {
+    if (selectedProductId) {
+      const isMobile = window.innerWidth < 1024;
+      if (isMobile) {
+        const timer = setTimeout(() => {
+          const consoleEl = document.getElementById(tradeMode === 'sell' ? 'sell-trade-console' : 'mobile-trade-console');
+          if (consoleEl) {
+            consoleEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }, 150);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [selectedProductId, selectedListing, tradeMode]);
+
   // Console active selection model
   const activeListingForConsole = selectedMarket === 'global'
     ? selectedListing
@@ -516,6 +532,23 @@ export default function MarketplaceInterface({
         shippingCost: 0,
         tariff: 0
       } : null));
+
+  const getSelectedProductObject = () => {
+    if (!selectedProductId) return null;
+    let prod = productsWithPrices.find(p => p.id === selectedProductId);
+    if (prod) return prod;
+    const ncrItem = ncrCatalog.find(item => item.productId === selectedProductId);
+    if (ncrItem) {
+      return {
+        id: ncrItem.productId,
+        name: ncrItem.productName,
+        categoryGroup: ncrItem.category,
+        icon: NCR_ICONS[ncrItem.productId] || 'fa-solid fa-circle-question',
+        basePrice: localPrices[ncrItem.productId] || 10
+      };
+    }
+    return null;
+  };
 
   const buyPrice = activeListingForConsole ? activeListingForConsole.finalPrice : (selectedProduct ? selectedProduct.basePrice * 1.25 : 0);
   const sellPrice = activeListingForConsole?.isNcr ? activeListingForConsole.ncrBuyPrice : (selectedProduct ? +(selectedProduct.basePrice * 0.65).toFixed(2) : 0);
@@ -816,8 +849,8 @@ export default function MarketplaceInterface({
           </div>
         </div>
         {tradeMode === 'sell' && selectedProductId && (
-          <div className="mt-3">
-            {renderQuickTradeConsoleInline(productsWithPrices.find(p => p.id === selectedProductId))}
+          <div id="sell-trade-console" className="mt-3">
+            {renderQuickTradeConsoleInline(getSelectedProductObject())}
           </div>
         )}
       </div>
@@ -1335,9 +1368,9 @@ export default function MarketplaceInterface({
 
           {/* Mobile-only Buy console (rendered below listings card to prevent table-width overflow scroll) */}
           {tradeMode === 'buy' && selectedProductId && (
-            <div className="block lg:hidden mt-3">
+            <div id="mobile-trade-console" className="block lg:hidden mt-3">
               {renderQuickTradeConsoleInline(
-                productsWithPrices.find(p => p.id === selectedProductId),
+                getSelectedProductObject(),
                 selectedMarket === 'global' ? selectedListing : null
               )}
             </div>

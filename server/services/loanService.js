@@ -86,17 +86,24 @@ export const calculateLoanEligibility = async (startupId) => {
   const outstandingTax = startup.outstandingTax || 0;
 
   // Base calculation
-  let eligibility = valuation * ratingFactor;
+  const baseEligibility = valuation * ratingFactor;
+  let eligibility = baseEligibility;
 
   // Profit/Loss adjustments
   if (netProfit > 0) {
     eligibility += netProfit * 2;
-  } else {
-    eligibility += netProfit * 1.5; // Decreases limit for net losses
+  } else if (netProfit < 0) {
+    const lossPenalty = Math.abs(netProfit) * 1.5;
+    const maxLossPenalty = baseEligibility * 0.50; // Cap loss penalty at 50% of base
+    eligibility -= Math.min(lossPenalty, maxLossPenalty);
   }
 
   // Outstanding tax penalty
-  eligibility -= outstandingTax * 1.5;
+  if (outstandingTax > 0) {
+    const taxPenalty = outstandingTax * 1.5;
+    const maxTaxPenalty = baseEligibility * 0.50; // Cap tax penalty at 50% of base
+    eligibility -= Math.min(taxPenalty, maxTaxPenalty);
+  }
 
   // Debt ratio multiplier penalty (Cap at 50%)
   if (debtRatio >= 0.50) {

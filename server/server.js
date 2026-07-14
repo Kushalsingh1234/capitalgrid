@@ -32,14 +32,16 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 // Establish DB connection
-connectDB().then(() => {
-  initializeClock();
+let dbReady = false;
+connectDB().then(async () => {
+  await initializeClock();
   registerDefaultModules();
   // Start real-time supply agreements execution evaluation loops
   evaluateAll();
   setInterval(() => {
     evaluateAll().catch(err => console.error('[Agreement Scheduler error]', err));
   }, 10000);
+  dbReady = true;
 });
 
 const app = express();
@@ -50,10 +52,12 @@ app.use(express.json());
 
 // Economic Engine Tick Interceptor
 app.use('/api', async (req, res, next) => {
-  try {
-    await tickEngine();
-  } catch (err) {
-    console.error(`[Economic Engine Middleware Error] ${err.message}`);
+  if (dbReady) {
+    try {
+      await tickEngine();
+    } catch (err) {
+      console.error(`[Economic Engine Middleware Error] ${err.message}`);
+    }
   }
   next();
 });
