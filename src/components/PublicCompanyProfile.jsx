@@ -228,7 +228,7 @@ export default function PublicCompanyProfile({ companyId, token, startup, onClos
         {/* TABS CONTAINER */}
         <div className="flex flex-col gap-4">
           {/* Menu triggers */}
-          <div className="flex items-center border-b border-white/5 pb-1 select-none">
+          <div className="flex items-center border-b border-white/5 pb-1 select-none w-full">
             {[
               { id: 'overview', label: 'Company Overview & Stats', icon: 'fa-chart-pie' },
               { id: 'production', label: 'Production Output', icon: 'fa-industry' },
@@ -237,7 +237,7 @@ export default function PublicCompanyProfile({ companyId, token, startup, onClos
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 border-b-2 text-[10px] font-display uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-all ${
+                className={`flex-1 sm:flex-none justify-center sm:justify-start px-2 sm:px-4 py-2 border-b-2 text-[9px] sm:text-[10px] font-display uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-all ${
                   activeTab === tab.id
                     ? 'border-cyanGlow text-cyanGlow font-bold bg-cyanGlow/5'
                     : 'border-transparent text-text-secondary hover:text-white'

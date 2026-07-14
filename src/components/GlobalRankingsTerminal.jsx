@@ -253,53 +253,70 @@ export default function GlobalRankingsTerminal({ startup, token, onClose }) {
     <div className="w-full h-full bg-black/95 text-white flex flex-col font-sans select-none overflow-hidden relative">
       
       {/* HEADER SECTION */}
-      <header className="px-6 py-4 border-b border-cyanGlow/20 bg-cyanGlow/5 flex items-center justify-between z-10 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded border border-cyanGlow/30 flex items-center justify-center text-cyanGlow text-base bg-black/60 shadow-[0_0_10px_rgba(0,243,255,0.1)]">
-            <i className="fa-solid fa-globe"></i>
+      <header className="px-4 py-3 md:px-6 md:py-4 border-b border-cyanGlow/20 bg-cyanGlow/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 z-10 shrink-0">
+        
+        {/* Row 1: Logo & Title + Close Button (on mobile) */}
+        <div className="flex items-center justify-between w-full sm:w-auto gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded border border-cyanGlow/30 flex items-center justify-center text-cyanGlow text-base bg-black/60 shadow-[0_0_10px_rgba(0,243,255,0.1)]">
+              <i className="fa-solid fa-globe"></i>
+            </div>
+            <div>
+              <h1 className="text-xs md:text-sm font-display font-extrabold uppercase text-white tracking-widest leading-none">
+                CapitalGrid Network <span className="text-cyanGlow font-mono">(CGN)</span>
+              </h1>
+              <p className="text-[9px] md:text-[10px] text-text-muted mt-1.5 leading-none font-mono">
+                Global Company Discovery & Rankings Portal
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-sm font-display font-extrabold uppercase text-white tracking-widest leading-none">
-              CapitalGrid Network <span className="text-cyanGlow font-mono">(CGN)</span>
-            </h1>
-            <p className="text-[10px] text-text-muted mt-1 leading-none font-mono">
-              Global Company Discovery & Rankings Portal
-            </p>
-          </div>
-        </div>
-
-        {/* TOP WINDOW SEGMENT TOGGLE */}
-        <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded p-0.5 select-none">
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('rankings')}
-            className={`px-3.5 py-1 rounded text-[10px] uppercase font-display tracking-wider transition-all cursor-pointer ${
-              activeSubTab === 'rankings'
-                ? 'bg-cyanGlow/25 text-white border border-cyanGlow/35 font-bold shadow-[0_0_8px_rgba(0,243,255,0.1)]'
-                : 'text-text-secondary hover:text-white border border-transparent'
-            }`}
+          
+          {/* Close button visible only on mobile/small screens (inside Row 1) */}
+          <button 
+            onClick={onClose}
+            className="sm:hidden w-6 h-6 border border-white/10 hover:border-red-500/50 rounded flex items-center justify-center text-xs text-text-secondary hover:text-red-400 bg-white/2 hover:bg-red-950/20 transition-all cursor-pointer"
           >
-            Global Rankings
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('contracts')}
-            className={`px-3.5 py-1 rounded text-[10px] uppercase font-display tracking-wider transition-all cursor-pointer ${
-              activeSubTab === 'contracts'
-                ? 'bg-cyanGlow/25 text-white border border-cyanGlow/35 font-bold shadow-[0_0_8px_rgba(0,243,255,0.1)]'
-                : 'text-text-secondary hover:text-white border border-transparent'
-            }`}
-          >
-            Contracts
+            <i className="fa-solid fa-xmark"></i>
           </button>
         </div>
 
-        <button 
-          onClick={onClose}
-          className="w-6 h-6 border border-white/10 hover:border-red-500/50 rounded flex items-center justify-center text-xs text-text-secondary hover:text-red-400 bg-white/2 hover:bg-red-950/20 transition-all cursor-pointer"
-        >
-          <i className="fa-solid fa-xmark"></i>
-        </button>
+        {/* Row 2 on mobile / Right block on desktop */}
+        <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+          {/* TOP WINDOW SEGMENT TOGGLE */}
+          <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded p-0.5 select-none w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('rankings')}
+              className={`flex-1 sm:flex-none text-center px-3 py-1 rounded text-[10px] uppercase font-display tracking-wider transition-all cursor-pointer ${
+                activeSubTab === 'rankings'
+                  ? 'bg-cyanGlow/25 text-white border border-cyanGlow/35 font-bold shadow-[0_0_8px_rgba(0,243,255,0.1)]'
+                  : 'text-text-secondary hover:text-white border border-transparent'
+              }`}
+            >
+              Global Rankings
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('contracts')}
+              className={`flex-1 sm:flex-none text-center px-3 py-1 rounded text-[10px] uppercase font-display tracking-wider transition-all cursor-pointer ${
+                activeSubTab === 'contracts'
+                  ? 'bg-cyanGlow/25 text-white border border-cyanGlow/35 font-bold shadow-[0_0_8px_rgba(0,243,255,0.1)]'
+                  : 'text-text-secondary hover:text-white border border-transparent'
+              }`}
+            >
+              Contracts
+            </button>
+          </div>
+
+          {/* Close button visible only on desktop */}
+          <button 
+            onClick={onClose}
+            className="hidden sm:flex w-6 h-6 border border-white/10 hover:border-red-500/50 rounded items-center justify-center text-xs text-text-secondary hover:text-red-400 bg-white/2 hover:bg-red-950/20 transition-all cursor-pointer"
+          >
+            <i className="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
       </header>
 
       <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5 pb-6">
@@ -668,8 +685,8 @@ export default function GlobalRankingsTerminal({ startup, token, onClose }) {
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse font-sans text-xs">
+                <div className="overflow-x-auto scrollbar-thin">
+                  <table className="w-full min-w-[650px] text-left border-collapse font-sans text-xs">
                     <thead>
                       <tr className="bg-white/5 border-b border-white/10 font-display uppercase tracking-widest text-[9px] text-text-secondary select-none">
                         <th className="py-3 px-4 w-16">Rank</th>
@@ -839,8 +856,8 @@ export default function GlobalRankingsTerminal({ startup, token, onClose }) {
                 <p className="text-xs font-mono">No open B2B contracts discovered.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse font-sans text-xs">
+              <div className="overflow-x-auto scrollbar-thin">
+                <table className="w-full min-w-[700px] text-left border-collapse font-sans text-xs">
                   <thead>
                     <tr className="bg-white/5 border-b border-white/10 font-display uppercase tracking-widest text-[9px] text-text-secondary select-none">
                       <th className="py-3 px-4 w-20">Type</th>

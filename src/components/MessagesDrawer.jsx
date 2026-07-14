@@ -224,6 +224,22 @@ export default function MessagesDrawer({ isOpen, onClose, startup, token }) {
     return `${sym}${Number(val).toLocaleString()}`;
   };
 
+  const renderCompanyLogo = (logoStr, fallbackIconClass = "fa-building text-base") => {
+    if (!logoStr) {
+      return <i className={`fa-solid ${fallbackIconClass}`}></i>;
+    }
+    if (logoStr.startsWith('data:image') || logoStr.startsWith('http') || logoStr.startsWith('/')) {
+      return <img src={logoStr} alt="" className="w-full h-full object-cover" />;
+    }
+    // Assume it's a raw SVG/HTML string
+    return (
+      <div 
+        className="w-full h-full flex items-center justify-center logo-svg-wrapper [&_svg]:w-full [&_svg]:h-full" 
+        dangerouslySetInnerHTML={{ __html: logoStr }} 
+      />
+    );
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -302,11 +318,7 @@ export default function MessagesDrawer({ isOpen, onClose, startup, token }) {
                     >
                       {/* Logo indicator */}
                       <div className="w-10 h-10 rounded border border-white/10 bg-black/40 flex items-center justify-center overflow-hidden shrink-0 text-text-secondary">
-                        {partner.logo ? (
-                          <img src={partner.logo} alt="logo" className="w-full h-full object-cover" />
-                        ) : (
-                          <i className="fa-solid fa-building text-base"></i>
-                        )}
+                        {renderCompanyLogo(partner.logo, "fa-building text-base")}
                       </div>
 
                       {/* Info text */}
@@ -369,11 +381,7 @@ export default function MessagesDrawer({ isOpen, onClose, startup, token }) {
 
                 <div className="flex items-center gap-3 mt-1">
                   <div className="w-10 h-10 rounded border border-white/10 bg-black/40 flex items-center justify-center overflow-hidden shrink-0">
-                    {targetCompany.logo ? (
-                      <img src={targetCompany.logo} alt="logo" className="w-full h-full object-cover" />
-                    ) : (
-                      <i className="fa-solid fa-building text-base text-text-secondary"></i>
-                    )}
+                    {renderCompanyLogo(targetCompany.logo, "fa-building text-base text-text-secondary")}
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-white text-xs truncate leading-none">{targetCompany.startupName}</h4>
@@ -383,12 +391,6 @@ export default function MessagesDrawer({ isOpen, onClose, startup, token }) {
                       <span>•</span>
                       <span className="truncate">{targetCompany.businessType}</span>
                     </div>
-                  </div>
-                  <div className="text-right flex flex-col items-end shrink-0">
-                    <span className="text-[10.5px] text-text-muted uppercase tracking-wider font-mono">Valuation</span>
-                    <span className="text-xs font-bold text-greenGlow mt-0.5 font-mono">
-                      {formatCurrency(targetCompany.companyValuation, targetCompany.country)}
-                    </span>
                   </div>
                 </div>
               </div>
