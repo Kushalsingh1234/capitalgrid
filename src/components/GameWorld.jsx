@@ -25,7 +25,7 @@ export default function GameWorld({ startup, onBuildingClick, disableClicks }) {
       width: '100%',
       height: '100%',
       parent: containerRef.current,
-      backgroundColor: '#2e7d32', // Matches GameScene grass backdrop
+      transparent: true,
       physics: {
         default: 'arcade',
         arcade: {

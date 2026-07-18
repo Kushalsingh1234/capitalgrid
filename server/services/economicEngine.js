@@ -3,13 +3,16 @@ import * as worldClockService from './worldClockService.js';
 import { payrollModuleHooks } from './payrollModule.js';
 import { corporateTaxModuleHooks } from './taxModule.js';
 import { processMonthlyLoans } from './loanService.js';
+import { acquireLock, releaseLock } from './lockService.js';
 
 export const loanModuleHooks = {
   onMonth: async (clockData) => {
     try {
       await processMonthlyLoans(clockData);
+      return { success: true };
     } catch (err) {
       console.error(`[Economic Engine] Loan Module monthly tick failed: ${err.message}`);
+      return { success: false, error: err.message };
     }
   }
 };
@@ -24,14 +27,14 @@ export const registerModule = (name, hooks) => {
   console.log(`[Economic Engine] Registered simulation module: ${name}`);
 };
 
-// Lifecycle trigger executors
-const triggerHour = (clockData) => {
+// Lifecycle trigger executors (Refactored to be fully asynchronous to ensure sequential catch-ups)
+const triggerHour = async (clockData) => {
   console.log(`[Economic Engine] Hour Transition to: ${clockData.formatted}`);
   const executed = [];
   for (const m of modules) {
     if (m.hooks.onHour) {
       try {
-        m.hooks.onHour(clockData);
+        await m.hooks.onHour(clockData);
         executed.push(m.name);
       } catch (err) {
         console.error(`[Economic Engine Error] Module ${m.name} failed onHour: ${err.message}`);
@@ -43,13 +46,13 @@ const triggerHour = (clockData) => {
   }
 };
 
-const triggerDay = (clockData) => {
+const triggerDay = async (clockData) => {
   console.log(`[Economic Engine] Day Transition to: ${clockData.formatted}`);
   const executed = [];
   for (const m of modules) {
     if (m.hooks.onDay) {
       try {
-        m.hooks.onDay(clockData);
+        await m.hooks.onDay(clockData);
         executed.push(m.name);
       } catch (err) {
         console.error(`[Economic Engine Error] Module ${m.name} failed onDay: ${err.message}`);
@@ -61,13 +64,13 @@ const triggerDay = (clockData) => {
   }
 };
 
-const triggerWeek = (clockData) => {
+const triggerWeek = async (clockData) => {
   console.log(`[Economic Engine] Week Transition to: ${clockData.formatted}`);
   const executed = [];
   for (const m of modules) {
     if (m.hooks.onWeek) {
       try {
-        m.hooks.onWeek(clockData);
+        await m.hooks.onWeek(clockData);
         executed.push(m.name);
       } catch (err) {
         console.error(`[Economic Engine Error] Module ${m.name} failed onWeek: ${err.message}`);
@@ -79,31 +82,82 @@ const triggerWeek = (clockData) => {
   }
 };
 
-const triggerMonth = (clockData) => {
+const triggerMonth = async (clockData) => {
   console.log(`[Economic Engine] Month Transition to: ${clockData.formatted}`);
+  const startTime = Date.now();
   const executed = [];
+  const failures = [];
+  let payrollStats = null;
+  let taxStats = null;
+
   for (const m of modules) {
     if (m.hooks.onMonth) {
       try {
-        m.hooks.onMonth(clockData);
+        const stats = await m.hooks.onMonth(clockData);
         executed.push(m.name);
+        if (m.name === 'Payroll') {
+          payrollStats = stats;
+        } else if (m.name === 'Taxes') {
+          taxStats = stats;
+        }
       } catch (err) {
         console.error(`[Economic Engine Error] Module ${m.name} failed onMonth: ${err.message}`);
+        failures.push(`${m.name}: ${err.message}`);
       }
     }
   }
-  if (executed.length > 0) {
-    console.log(`[Economic Engine] Executed Modules (Month): ${executed.join(', ')}`);
+
+  const duration = Date.now() - startTime;
+
+  // Rich detailed production logging report
+  console.log(`\n==================================================`);
+  console.log(`[Economic Engine] MONTHLY SIMULATION AUDIT REPORT`);
+  console.log(`--------------------------------------------------`);
+  console.log(`- Month Processed      : ${clockData.formatted}`);
+  console.log(`- Total Execution Time : ${duration}ms`);
+  console.log(`- Modules Executed     : ${executed.join(', ') || 'None'}`);
+
+  if (payrollStats) {
+    console.log(`\n[Payroll Module Execution Summary]`);
+    console.log(`  * Total Startups Processed  : ${payrollStats.processedCount}`);
+    console.log(`  * Payroll Deductions Success : ${payrollStats.successCount}`);
+    console.log(`  * Payroll Deductions Failed  : ${payrollStats.failedCount}`);
+    console.log(`  * Startups Skipped           : ${payrollStats.skippedCount}`);
+    if (payrollStats.skippedReasons && payrollStats.skippedReasons.length > 0) {
+      console.log(`  * Skipped Details            :`);
+      payrollStats.skippedReasons.forEach(item => {
+        console.log(`    - ${item.startupName}: ${item.reason}`);
+      });
+    }
   }
+
+  if (taxStats) {
+    console.log(`\n[Tax Module Execution Summary]`);
+    console.log(`  * Total Startups Processed  : ${taxStats.processedCount}`);
+    console.log(`  * Tax Deductions Completed  : ${taxStats.successCount}`);
+    console.log(`  * Startups Skipped           : ${taxStats.skippedCount}`);
+    if (taxStats.skippedReasons && taxStats.skippedReasons.length > 0) {
+      console.log(`  * Skipped Details            :`);
+      taxStats.skippedReasons.forEach(item => {
+        console.log(`    - ${item.startupName}: ${item.reason}`);
+      });
+    }
+  }
+
+  if (failures.length > 0) {
+    console.log(`\n[Simulation Tick Failures]`);
+    failures.forEach(fail => console.log(`  * ${fail}`));
+  }
+  console.log(`==================================================\n`);
 };
 
-const triggerYear = (clockData) => {
+const triggerYear = async (clockData) => {
   console.log(`[Economic Engine] Year Transition to: ${clockData.formatted}`);
   const executed = [];
   for (const m of modules) {
     if (m.hooks.onYear) {
       try {
-        m.hooks.onYear(clockData);
+        await m.hooks.onYear(clockData);
         executed.push(m.name);
       } catch (err) {
         console.error(`[Economic Engine Error] Module ${m.name} failed onYear: ${err.message}`);
@@ -142,7 +196,7 @@ export const processEconomicTick = async (state, currentGameTime) => {
   let nextHour = new Date(new Date(state.lastProcessedHour).getTime() + 60 * 60 * 1000);
   while (nextHour <= currentGameTime) {
     const clockData = worldClockService.getFormattedClock(nextHour);
-    triggerHour(clockData);
+    await triggerHour(clockData);
     state.lastProcessedHour = nextHour;
     hourChanged = true;
     nextHour = new Date(new Date(state.lastProcessedHour).getTime() + 60 * 60 * 1000);
@@ -152,7 +206,7 @@ export const processEconomicTick = async (state, currentGameTime) => {
   let nextDay = new Date(new Date(state.lastProcessedDay).getTime() + 24 * 60 * 60 * 1000);
   while (nextDay <= currentGameTime) {
     const clockData = worldClockService.getFormattedClock(nextDay);
-    triggerDay(clockData);
+    await triggerDay(clockData);
     state.lastProcessedDay = nextDay;
     dayChanged = true;
     nextDay = new Date(new Date(state.lastProcessedDay).getTime() + 24 * 60 * 60 * 1000);
@@ -162,7 +216,7 @@ export const processEconomicTick = async (state, currentGameTime) => {
   let nextWeek = new Date(new Date(state.lastProcessedWeek).getTime() + 7 * 24 * 60 * 60 * 1000);
   while (nextWeek <= currentGameTime) {
     const clockData = worldClockService.getFormattedClock(nextWeek);
-    triggerWeek(clockData);
+    await triggerWeek(clockData);
     state.lastProcessedWeek = nextWeek;
     weekChanged = true;
     nextWeek = new Date(new Date(state.lastProcessedWeek).getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -173,7 +227,7 @@ export const processEconomicTick = async (state, currentGameTime) => {
   nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
   while (nextMonth <= currentGameTime) {
     const clockData = worldClockService.getFormattedClock(nextMonth);
-    triggerMonth(clockData);
+    await triggerMonth(clockData);
     state.lastProcessedMonth = nextMonth;
     monthChanged = true;
     nextMonth = new Date(state.lastProcessedMonth);
@@ -185,7 +239,7 @@ export const processEconomicTick = async (state, currentGameTime) => {
   nextYear.setUTCFullYear(nextYear.getUTCFullYear() + 1);
   while (nextYear <= currentGameTime) {
     const clockData = worldClockService.getFormattedClock(nextYear);
-    triggerYear(clockData);
+    await triggerYear(clockData);
     state.lastProcessedYear = nextYear;
     yearChanged = true;
     nextYear = new Date(state.lastProcessedYear);
@@ -206,30 +260,39 @@ export const processEconomicTick = async (state, currentGameTime) => {
  * Public invocation point to tick the Economic Engine
  */
 export const tickEngine = async () => {
-  const currentGameTime = worldClockService.getCurrentGameTime();
-  let state;
-
-  if (global.useMockDb) {
-    state = getMockState();
-  } else {
-    try {
-      state = await EconomicEngineState.findOne();
-      if (!state) {
-        state = await EconomicEngineState.create({
-          lastProcessedHour: new Date('2026-07-01T00:00:00.000Z'),
-          lastProcessedDay: new Date('2026-07-01T00:00:00.000Z'),
-          lastProcessedWeek: new Date('2026-07-01T00:00:00.000Z'),
-          lastProcessedMonth: new Date('2026-07-01T00:00:00.000Z'),
-          lastProcessedYear: new Date('2026-07-01T00:00:00.000Z')
-        });
-      }
-    } catch (err) {
-      console.error(`[Economic Engine Service] Error loading engine state: ${err.message}`);
-      state = getMockState();
-    }
+  const hasLock = await acquireLock('economic_engine_tick');
+  if (!hasLock) {
+    return;
   }
 
-  await processEconomicTick(state, currentGameTime);
+  try {
+    const currentGameTime = worldClockService.getCurrentGameTime();
+    let state;
+
+    if (global.useMockDb) {
+      state = getMockState();
+    } else {
+      try {
+        state = await EconomicEngineState.findOne();
+        if (!state) {
+          state = await EconomicEngineState.create({
+            lastProcessedHour: new Date('2026-07-01T00:00:00.000Z'),
+            lastProcessedDay: new Date('2026-07-01T00:00:00.000Z'),
+            lastProcessedWeek: new Date('2026-07-01T00:00:00.000Z'),
+            lastProcessedMonth: new Date('2026-07-01T00:00:00.000Z'),
+            lastProcessedYear: new Date('2026-07-01T00:00:00.000Z')
+          });
+        }
+      } catch (err) {
+        console.error(`[Economic Engine Service] Error loading engine state: ${err.message}`);
+        state = getMockState();
+      }
+    }
+
+    await processEconomicTick(state, currentGameTime);
+  } finally {
+    await releaseLock('economic_engine_tick');
+  }
 };
 
 // Default Simulation Modules Registration
@@ -238,7 +301,10 @@ const createPlaceholderModule = (moduleName) => {
     onHour: (clock) => console.log(`[Economic Engine] [${moduleName}] Executing onHour hook at: ${clock.formatted}`),
     onDay: (clock) => console.log(`[Economic Engine] [${moduleName}] Executing onDay hook at: ${clock.formatted}`),
     onWeek: (clock) => console.log(`[Economic Engine] [${moduleName}] Executing onWeek hook at: ${clock.formatted}`),
-    onMonth: (clock) => console.log(`[Economic Engine] [${moduleName}] Executing onMonth hook at: ${clock.formatted}`),
+    onMonth: (clock) => {
+      console.log(`[Economic Engine] [${moduleName}] Executing onMonth hook at: ${clock.formatted}`);
+      return { processedCount: 0, successCount: 0, skippedCount: 0 };
+    },
     onYear: (clock) => console.log(`[Economic Engine] [${moduleName}] Executing onYear hook at: ${clock.formatted}`)
   };
 };
@@ -261,3 +327,4 @@ export const registerDefaultModules = () => {
 
   placeholders.forEach(name => registerModule(name, createPlaceholderModule(name)));
 };
+

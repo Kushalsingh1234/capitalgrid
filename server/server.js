@@ -41,6 +41,16 @@ connectDB().then(async () => {
   setInterval(() => {
     evaluateAll().catch(err => console.error('[Agreement Scheduler error]', err));
   }, 10000);
+
+  // Economic Engine Background Tick loop (Decoupled from API polling)
+  setInterval(async () => {
+    try {
+      await tickEngine();
+    } catch (err) {
+      console.error('[Economic Engine Background tick error]', err);
+    }
+  }, 5000);
+
   dbReady = true;
 });
 
@@ -48,18 +58,36 @@ const app = express();
 
 // Global request filters
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
-// Economic Engine Tick Interceptor
-app.use('/api', async (req, res, next) => {
-  if (dbReady) {
-    try {
-      await tickEngine();
-    } catch (err) {
-      console.error(`[Economic Engine Middleware Error] ${err.message}`);
+// Route to write generated assets to disk for Phaser loader (Phase 33C)
+app.post('/api/save-assets', (req, res) => {
+  try {
+    const { files } = req.body; // array of { relPath, data }
+    if (!files || !Array.isArray(files)) {
+      return res.status(400).json({ error: 'Missing or invalid files array' });
     }
+
+    const saved = [];
+    files.forEach(file => {
+      const cleanData = file.data.replace(/^data:image\/png;base64,/, '');
+      const fullPath = path.join(__dirname, '../public/assets', file.relPath);
+      const targetDir = path.dirname(fullPath);
+
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+
+      fs.writeFileSync(fullPath, Buffer.from(cleanData, 'base64'));
+      saved.push(fullPath);
+    });
+
+    console.log('[API] Saved assets successfully:', saved);
+    res.json({ success: true, saved });
+  } catch (err) {
+    console.error('[API Save Assets Error]', err);
+    res.status(500).json({ error: err.message });
   }
-  next();
 });
 
 // Routing linkages
@@ -103,5 +131,9 @@ if (fs.existsSync(distPath)) {
 // App listener activation
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
+  // Trigger Nodemon Restart
   console.log(`[CapitalGrid Server] Server activated on port ${PORT}`);
 });
+
+// Boost Reload: 1784394131159
+// Normal Reload: 1784394577694

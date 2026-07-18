@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CapitalGrid Isometric Asset Generator</title>
+</head>
+<body>
+  <h2>Generating High-Fidelity 3D Isometric Buildings (Cool-Toned Night Streetlights)...</h2>
+  
+  <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+    <div>
+      <h3>1. Farming (Rustic Barn, Silo & Tractor)</h3>
+      <canvas id="canvas-farm" width="480" height="300" style="border:1px solid #ccc;"></canvas>
+    </div>
+    <div>
+      <h3>2. Mining (Detailed Cave Shaft & Crane Rig)</h3>
+      <canvas id="canvas-mine" width="480" height="300" style="border:1px solid #ccc;"></canvas>
+    </div>
+    <div>
+      <h3>3. Factory / Industrial Complex</h3>
+      <canvas id="canvas-factory" width="480" height="300" style="border:1px solid #ccc;"></canvas>
+    </div>
+    <div>
+      <h3>4. Retail Plaza / Showroom</h3>
+      <canvas id="canvas-retail" width="480" height="300" style="border:1px solid #ccc;"></canvas>
+    </div>
+  </div>
+  
+  <h3 id="status" style="color: blue;">Writing base64 image streams...</h3>
+
+  <script>
+    const W = 480;
+    const H = 160;
+    const baseOffsetY = 140;
+
+    // Helper: draw base foundation diamond (covers entire top surface)
+    function drawFoundation(ctx, color) {
+      ctx.clearRect(0, 0, W, 300);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(W / 2, baseOffsetY);
+      ctx.lineTo(W, baseOffsetY + H / 2);
+      ctx.lineTo(W / 2, baseOffsetY + H);
+      ctx.lineTo(0, baseOffsetY + H / 2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Flat face shadow/borders
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)'; // Cool cyan-blue rim light reflection
+      ctx.stroke();
+    }
+
+    // --- PART 1: TERRAIN BLOCK GENERATION (Cool-Toned Streetlight Lighting) ---
+    const blockCanvas = document.createElement('canvas');
+    blockCanvas.width = 480;
+    blockCanvas.height = 200;
+    const ctxBlock = blockCanvas.getContext('2d');
+
+    const bW = 480;
+    const bH = 160;
+    const bD = 40;
+
+    ctxBlock.clearRect(0, 0, bW, bH + bD);
+
+    // Left vertical wall (cool blue slate shaded side)
+    ctxBlock.fillStyle = '#182235';
+    ctxBlock.beginPath();
+    ctxBlock.moveTo(0, bH / 2);
+    ctxBlock.lineTo(bW / 2, bH);
+    ctxBlock.lineTo(bW / 2, bH + bD);
+    ctxBlock.lineTo(0, bH / 2 + bD);
+    ctxBlock.closePath();
+    ctxBlock.fill();
+
+    // Right vertical wall (deep shadow side)
+    ctxBlock.fillStyle = '#0b0f17';
+    ctxBlock.beginPath();
+    ctxBlock.moveTo(bW / 2, bH);
+    ctxBlock.lineTo(bW, bH / 2);
+    ctxBlock.lineTo(bW, bH / 2 + bD);
+    ctxBlock.lineTo(bW / 2, bH + bD);
+    ctxBlock.closePath();
+    ctxBlock.fill();
+
+    // Top surface (cool light blue-grey, lit by streetlights)
+    ctxBlock.fillStyle = '#b4c6e7';
+    ctxBlock.beginPath();
+    ctxBlock.moveTo(bW / 2, 0);
+    ctxBlock.lineTo(bW, bH / 2);
+    ctxBlock.lineTo(bW / 2, bH);
+    ctxBlock.lineTo(0, bH / 2);
+    ctxBlock.closePath();
+    ctxBlock.fill();
+
+    // Expansion seams on the top face
+    ctxBlock.strokeStyle = '#8da2c4';
+    ctxBlock.lineWidth = 1;
+    ctxBlock.beginPath();
+    ctxBlock.moveTo(bW / 4, bH / 4);
+    ctxBlock.lineTo(bW * 0.75, bH * 0.75);
+    ctxBlock.moveTo(bW * 0.75, bH / 4);
+    ctxBlock.lineTo(bW / 4, bH * 0.75);
+    ctxBlock.stroke();
+
+    // Noise and light speckles
+    for (let i = 0; i < 600; i++) {
+      const rx = Math.random() * bW;
+      const ry = Math.random() * (bH + bD);
+      ctxBlock.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.12)';
+      ctxBlock.fillRect(rx, ry, 1.5, 1.5);
+    }
+
+    // High-intensity white/cyan specular rim edge highlight (streetlight specular glow)
+    ctxBlock.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+    ctxBlock.lineWidth = 2;
+    ctxBlock.beginPath();
+    ctxBlock.moveTo(0, bH / 2);
+    ctxBlock.lineTo(bW / 2, 0);
+    ctxBlock.lineTo(bW, bH / 2);
+    ctxBlock.stroke();
+
+    // --- PART 2: COOL SHADOW ---
+    const shadowCanvas = document.createElement('canvas');
+    shadowCanvas.width = 480;
+    shadowCanvas.height = 160;
+    const ctxShadow = shadowCanvas.getContext('2d');
+    ctxShadow.clearRect(0, 0, bW, bH);
+    const gradS = ctxShadow.createRadialGradient(bW / 2, bH / 2, 10, bW / 2, bH / 2, bW / 2);
+    gradS.addColorStop(0, 'rgba(8, 12, 24, 0.65)');
+    gradS.addColorStop(0.7, 'rgba(8, 12, 24, 0.22)');
+    gradS.addColorStop(1, 'rgba(8, 12, 24, 0)');
+    ctxShadow.fillStyle = gradS;
+    ctxShadow.beginPath();
+    ctxShadow.ellipse(bW / 2, bH / 2, bW / 2 - 30, bH / 2 - 10, 0, 0, Math.PI * 2);
+    ctxShadow.fill();
+
+
+    // --- PART 3: 10 HIGH-FIDELITY PLOTS GENERATION ---
+    const pW = 400;
+    const pH = 133;
+    const extraHeight = 67;
+
+    // Grass turf illuminated by bright white/cyan searchlight spotlights
+    function drawPremiumGrassBase(ctx) {
+      ctx.clearRect(0, 0, pW, pH + extraHeight);
+
+      // Soil edge underlay
+      ctx.fillStyle = '#221914';
+      ctx.beginPath();
+      ctx.moveTo(pW / 2, extraHeight);
+      ctx.lineTo(pW, extraHeight + pH / 2);
+      ctx.lineTo(pW / 2, extraHeight + pH + 2);
+      ctx.lineTo(0, extraHeight + pH / 2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Grass base color (cool forest green)
+      ctx.fillStyle = '#14532d';
+      ctx.beginPath();
+      ctx.moveTo(pW / 2, extraHeight);
+      ctx.lineTo(pW, extraHeight + pH / 2);
+      ctx.lineTo(pW / 2, extraHeight + pH);
+      ctx.lineTo(0, extraHeight + pH / 2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Spotlight patches (high-intensity illuminated turf zones)
+      for (let i = 0; i < 35; i++) {
+        const px = Math.random() * pW;
+        const py = extraHeight + Math.random() * pH;
+        const dx = Math.abs(px - pW / 2) / (pW / 2);
+        const dy = Math.abs(py - (extraHeight + pH / 2)) / (pH / 2);
+        if (dx + dy <= 0.85) {
+          ctx.fillStyle = Math.random() > 0.65 ? 'rgba(74, 222, 128, 0.28)' : 'rgba(21, 128, 61, 0.28)';
+          ctx.beginPath();
+          ctx.ellipse(px, py, 20 + Math.random() * 20, 10 + Math.random() * 8, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Cool spotlight grass micro-blades (bright neon highlights)
+      for (let i = 0; i < 1500; i++) {
+        const rx = Math.random() * pW;
+        const ry = extraHeight + Math.random() * pH;
+        const dx = Math.abs(rx - pW / 2) / (pW / 2);
+        const dy = Math.abs(ry - (extraHeight + pH / 2)) / (pH / 2);
+        if (dx + dy <= 0.98) {
+          ctx.strokeStyle = Math.random() > 0.5 ? 'rgba(74, 222, 128, 0.45)' : 'rgba(22, 101, 52, 0.35)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(rx, ry);
+          ctx.lineTo(rx + (Math.random() * 2 - 1), ry - (2 + Math.random() * 2));
+          ctx.stroke();
+        }
+      }
+
+      // Cool blue rim light reflection
+      ctx.strokeStyle = 'rgba(186, 230, 253, 0.3)';
+      ctx.beginPath();
+      ctx.moveTo(0, extraHeight + pH / 2);
+      ctx.lineTo(pW / 2, extraHeight);
+      ctx.lineTo(pW, extraHeight + pH / 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(8, 12, 24, 0.5)';
+      ctx.beginPath();
+      ctx.moveTo(0, extraHeight + pH / 2);
+      ctx.lineTo(pW / 2, extraHeight + pH);
+      ctx.lineTo(pW, extraHeight + pH / 2);
+      ctx.stroke();
+    }
+
+    function drawPremiumHedge(ctx, x, y, width, height) {
+      ctx.fillStyle = 'rgba(8, 12, 24, 0.3)';
+      ctx.beginPath();
+      ctx.ellipse(x, y + 2, width + 2, height / 2 + 1, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#14532d';
+      ctx.beginPath();
+      ctx.ellipse(x, y, width, height, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      for (let i = 0; i < 4; i++) {
+        const ox = x + (Math.random() * width * 0.5 - width * 0.25);
+        const oy = y + (Math.random() * height * 0.5 - height * 0.25);
+        const r = height * (0.6 + Math.random() * 0.3);
+
+        ctx.fillStyle = '#166534';
+        ctx.beginPath();
+        ctx.arc(ox, oy, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#22c55e'; // Bright neon spotlight hedge tips
+        ctx.beginPath();
+        ctx.arc(ox - r * 0.2, oy - r * 0.2, r * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawPremiumFlowers(ctx, x, y, density) {
+      const colors = ['#f43f5e', '#fbbf24', '#3b82f6', '#ec4899', '#ffffff'];
+      for (let i = 0; i < density; i++) {
+        const fx = x + (Math.random() * 16 - 8);
+        const fy = y + (Math.random() * 10 - 5);
+        
+        ctx.fillStyle = 'rgba(8,12,24,0.3)';
+        ctx.beginPath();
+        ctx.arc(fx, fy + 1, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+        ctx.beginPath();
+        ctx.arc(fx, fy, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawPremiumTree(ctx, x, y) {
+      // Tree drop shadow
+      ctx.fillStyle = 'rgba(8, 12, 24, 0.4)';
+      ctx.beginPath();
+      ctx.ellipse(x, y + 2, 26, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Trunk
+      ctx.beginPath();
+      ctx.strokeStyle = '#271c19';
+      ctx.lineWidth = 5;
+      ctx.moveTo(x, y);
+      ctx.lineTo(x, y - 44);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.strokeStyle = '#452a22';
+      ctx.lineWidth = 2;
+      ctx.moveTo(x - 1, y);
+      ctx.lineTo(x - 1, y - 44);
+      ctx.stroke();
+
+      // Branch forks
+      ctx.beginPath();
+      ctx.strokeStyle = '#271c19';
+      ctx.lineWidth = 3;
+      ctx.moveTo(x, y - 35);
+      ctx.lineTo(x - 8, y - 46);
+      ctx.moveTo(x, y - 35);
+      ctx.lineTo(x + 8, y - 46);
+      ctx.stroke();
+
+      // Layered foliage clusters (cool forest/neon spotlight green)
+      const clusters = [
+        { dx: -12, dy: -52, r: 18 },
+        { dx: 12, dy: -52, r: 18 },
+        { dx: -18, dy: -66, r: 16 },
+        { dx: 18, dy: -66, r: 16 },
+        { dx: 0, dy: -74, r: 20 }
+      ];
+
+      clusters.forEach(c => {
+        const cx = x + c.dx;
+        const cy = y + c.dy;
+        
+        ctx.fillStyle = '#064e3b';
+        ctx.beginPath();
+        ctx.arc(cx, cy, c.r, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#0f766e';
+        ctx.beginPath();
+        ctx.arc(cx - 2, cy - 2, c.r - 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#22c55e'; // Bright neon tips
+        ctx.beginPath();
+        ctx.arc(cx - 4, cy - 4, c.r - 5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      drawPremiumFlowers(ctx, x, y + 2, 3);
+    }
+
+
+    // --- PLOT INSTANTIATIONS ---
+    const plotCanvases = {
+      grass: document.createElement('canvas'),
+      flowers: document.createElement('canvas'),
+      hedge: document.createElement('canvas'),
+      tree: document.createElement('canvas'),
+      stone: document.createElement('canvas'),
+      shrubs: document.createElement('canvas'),
+      flowerIsland: document.createElement('canvas'),
+      landscaped: document.createElement('canvas'),
+      mixed: document.createElement('canvas'),
+      premium: document.createElement('canvas')
+    };
+
+    Object.values(plotCanvases).forEach(c => {
+      c.width = 400;
+      c.height = 200;
+    });
+
+    // 01. plot_grass
+    drawPremiumGrassBase(plotCanvases.grass.getContext('2d'));
+    drawPremiumTree(plotCanvases.grass.getContext('2d'), 175, extraHeight + pH / 2 - 10);
+    drawPremiumTree(plotCanvases.grass.getContext('2d'), 225, extraHeight + pH / 2 + 10);
+
+    // 02. plot_flowers
+    const ctxFl = plotCanvases.flowers.getContext('2d');
+    drawPremiumGrassBase(ctxFl);
+    drawPremiumTree(ctxFl, 180, extraHeight + pH / 2 - 12);
+    drawPremiumTree(ctxFl, 220, extraHeight + pH / 2 + 12);
+    drawPremiumHedge(ctxFl, 22, extraHeight + pH / 2, 10, 6);
+    drawPremiumFlowers(ctxFl, 22, extraHeight + pH / 2 - 3, 12);
+    drawPremiumHedge(ctxFl, pW - 22, extraHeight + pH / 2, 10, 6);
+    drawPremiumFlowers(ctxFl, pW - 22, extraHeight + pH / 2 + 3, 12);
+
+    // 03. plot_hedge
+    const ctxHd = plotCanvases.hedge.getContext('2d');
+    drawPremiumGrassBase(ctxHd);
+    drawPremiumTree(ctxHd, 180, extraHeight + pH / 2 - 15);
+    drawPremiumTree(ctxHd, 230, extraHeight + pH / 2 + 12);
+    drawPremiumTree(ctxHd, 150, extraHeight + pH / 2 + 5);
+    drawPremiumHedge(ctxHd, 60, extraHeight + 30, 24, 10);
+    drawPremiumHedge(ctxHd, pW - 60, extraHeight + 30, 24, 10);
+
+    // 04. plot_tree
+    const ctxTr = plotCanvases.tree.getContext('2d');
+    drawPremiumGrassBase(ctxTr);
+    drawPremiumTree(ctxTr, 180, extraHeight + pH / 2 - 15);
+    drawPremiumTree(ctxTr, 230, extraHeight + pH / 2 + 12);
+    drawPremiumTree(ctxTr, 150, extraHeight + pH / 2 + 5);
+
+    // 05. plot_stone
+    const ctxSt = plotCanvases.stone.getContext('2d');
+    drawPremiumGrassBase(ctxSt);
+    drawPremiumTree(ctxSt, 175, extraHeight + pH / 2 - 10);
+    drawPremiumTree(ctxSt, 225, extraHeight + pH / 2 + 10);
+    drawPremiumHedge(ctxSt, pW / 2 - 20, extraHeight + 15, 14, 8);
+    drawPremiumHedge(ctxSt, pW / 2 + 15, extraHeight + 12, 14, 8);
+    drawPremiumFlowers(ctxSt, pW / 2, extraHeight + 15, 10);
+
+    // 06. plot_shrubs
+    const ctxSh = plotCanvases.shrubs.getContext('2d');
+    drawPremiumGrassBase(ctxSh);
+    drawPremiumTree(ctxSh, 180, extraHeight + pH / 2 - 12);
+    drawPremiumTree(ctxSh, 220, extraHeight + pH / 2 + 12);
+    drawPremiumHedge(ctxSh, 30, extraHeight + pH / 2, 14, 8);
+    drawPremiumHedge(ctxSh, pW - 30, extraHeight + pH / 2, 14, 8);
+
+    // 07. plot_flower_island
+    const ctxFI = plotCanvases.flowerIsland.getContext('2d');
+    drawPremiumGrassBase(ctxFI);
+    drawPremiumTree(ctxFI, 180, extraHeight + pH / 2 - 15);
+    drawPremiumTree(ctxFI, 230, extraHeight + pH / 2 + 12);
+    drawPremiumTree(ctxFI, 150, extraHeight + pH / 2 + 5);
+    drawPremiumFlowers(ctxFI, 80, extraHeight + 35, 14);
+
+    // 08. plot_landscaped
+    const ctxLa = plotCanvases.landscaped.getContext('2d');
+    drawPremiumGrassBase(ctxLa);
+    drawPremiumTree(ctxLa, 180, extraHeight + pH / 2 - 15);
+    drawPremiumTree(ctxLa, 230, extraHeight + pH / 2 + 12);
+    drawPremiumTree(ctxLa, 150, extraHeight + pH / 2 + 5);
+    drawPremiumHedge(ctxLa, pW / 2, extraHeight + 12, 22, 8);
+    drawPremiumFlowers(ctxLa, pW / 2 - 30, extraHeight + 15, 8);
+
+    // 09. plot_mixed
+    const ctxMx = plotCanvases.mixed.getContext('2d');
+    drawPremiumGrassBase(ctxMx);
+    drawPremiumTree(ctxMx, 175, extraHeight + pH / 2 - 10);
+    drawPremiumTree(ctxMx, 225, extraHeight + pH / 2 + 10);
+    drawPremiumHedge(ctxMx, pW - 60, extraHeight + 35, 12, 6);
+    drawPremiumFlowers(ctxMx, pW / 2, extraHeight + pH - 20, 8);
+
+    // 10. plot_premium
+    const ctxPr = plotCanvases.premium.getContext('2d');
+    drawPremiumGrassBase(ctxPr);
+    drawPremiumTree(ctxPr, 180, extraHeight + pH / 2 - 15);
+    drawPremiumTree(ctxPr, 230, extraHeight + pH / 2 + 12);
+    drawPremiumTree(ctxPr, 150, extraHeight + pH / 2 + 5);
+    drawPremiumHedge(ctxPr, pW / 2, extraHeight + 14, 18, 8);
+    drawPremiumHedge(ctxPr, 30, extraHeight + pH / 2, 12, 6);
+    drawPremiumHedge(ctxPr, pW - 30, extraHeight + pH / 2, 12, 6);
+    drawPremiumFlowers(ctxPr, pW / 2, extraHeight + pH - 18, 12);
+
+
+    // --- PART 4: HIGH-FIDELITY BUILDINGS GENERATION (Streetlit Glows) ---
+    
+    // 1. RENDER FARMING BUILDING (Farming, Barn & Silo)
+    const cFarm = document.getElementById('canvas-farm');
+    const ctxFarm = cFarm.getContext('2d');
+    drawFoundation(ctxFarm, '#14532d'); // cool forest green base
+
+    // Red Barn Hall (illuminated by searchlights)
+    ctxFarm.fillStyle = '#dc2626'; // Bright clean red
+    ctxFarm.beginPath();
+    ctxFarm.moveTo(140, baseOffsetY + 30);
+    ctxFarm.lineTo(240, baseOffsetY + 80);
+    ctxFarm.lineTo(240, baseOffsetY + 130);
+    ctxFarm.lineTo(140, baseOffsetY + 80);
+    ctxFarm.closePath();
+    ctxFarm.fill();
+
+    ctxFarm.fillStyle = '#881337'; // Darker shaded side
+    ctxFarm.beginPath();
+    ctxFarm.moveTo(240, baseOffsetY + 80);
+    ctxFarm.lineTo(340, baseOffsetY + 30);
+    ctxFarm.lineTo(340, baseOffsetY + 80);
+    ctxFarm.lineTo(240, baseOffsetY + 130);
+    ctxFarm.closePath();
+    ctxFarm.fill();
+
+    // Gable Roof (light specular reflections)
+    ctxFarm.fillStyle = '#450a0a';
+    ctxFarm.beginPath();
+    ctxFarm.moveTo(140, baseOffsetY + 30);
+    ctxFarm.lineTo(240, baseOffsetY + 80);
+    ctxFarm.lineTo(240, baseOffsetY + 45);
+    ctxFarm.lineTo(190, baseOffsetY + 10);
+    ctxFarm.closePath();
+    ctxFarm.fill();
+
+    ctxFarm.fillStyle = '#991b1b';
+    ctxFarm.beginPath();
+    ctxFarm.moveTo(240, baseOffsetY + 80);
+    ctxFarm.lineTo(340, baseOffsetY + 30);
+    ctxFarm.lineTo(290, baseOffsetY + 10);
+    ctxFarm.lineTo(240, baseOffsetY + 45);
+    ctxFarm.closePath();
+    ctxFarm.fill();
+
+    // White sliding barn doors with glowing yellow interior details
+    ctxFarm.strokeStyle = '#ffffff';
+    ctxFarm.lineWidth = 3;
+    ctxFarm.strokeRect(175, baseOffsetY + 72, 22, 28);
+    ctxFarm.beginPath();
+    ctxFarm.moveTo(175, baseOffsetY + 72);
+    ctxFarm.lineTo(197, baseOffsetY + 100);
+    ctxFarm.moveTo(197, baseOffsetY + 72);
+    ctxFarm.lineTo(175, baseOffsetY + 100);
+    ctxFarm.stroke();
+
+    // Glowing window in the attic (emissive yellow spotlight glow)
+    ctxFarm.fillStyle = '#fef08a';
+    ctxFarm.beginPath();
+    ctxFarm.arc(215, baseOffsetY + 55, 5, 0, Math.PI * 2);
+    ctxFarm.fill();
+    ctxFarm.strokeStyle = '#ffffff';
+    ctxFarm.lineWidth = 1;
+    ctxFarm.stroke();
+
+    // Silo (Metal cylinder with circular bands)
+    const silGrad = ctxFarm.createLinearGradient(70, 0, 110, 0);
+    silGrad.addColorStop(0, '#334155');
+    silGrad.addColorStop(0.5, '#cbd5e1');
+    silGrad.addColorStop(1, '#1e293b');
+    ctxFarm.fillStyle = silGrad;
+    ctxFarm.fillRect(72, baseOffsetY - 30, 36, 75);
+
+    ctxFarm.fillStyle = '#94a3b8';
+    ctxFarm.beginPath();
+    ctxFarm.arc(90, baseOffsetY - 30, 18, Math.PI, 0);
+    ctxFarm.fill();
+
+    // Silo horizontal rings
+    ctxFarm.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctxFarm.lineWidth = 2;
+    for (let rY = baseOffsetY - 20; rY < baseOffsetY + 40; rY += 15) {
+      ctxFarm.beginPath();
+      ctxFarm.moveTo(72, rY);
+      ctxFarm.lineTo(108, rY);
+      ctxFarm.stroke();
+    }
+
+
+    // 2. RENDER MINING BUILDING (Mining, Cave & Scaffold)
+    const cMine = document.getElementById('canvas-mine');
+    const ctxMine = cMine.getContext('2d');
+    drawFoundation(ctxMine, '#1c1917'); // Dark slate/gravel base
+
+    // Cave entrance portal
+    ctxMine.fillStyle = '#020617'; // deep dark void
+    ctxMine.beginPath();
+    ctxMine.moveTo(170, baseOffsetY + 30);
+    ctxMine.lineTo(250, baseOffsetY + 70);
+    ctxMine.lineTo(250, baseOffsetY + 130);
+    ctxMine.lineTo(170, baseOffsetY + 90);
+    ctxMine.closePath();
+    ctxMine.fill();
+
+    // Wooden support beams framing cave
+    ctxMine.strokeStyle = '#7c2d12';
+    ctxMine.lineWidth = 6;
+    ctxMine.beginPath();
+    ctxMine.moveTo(170, baseOffsetY + 90);
+    ctxMine.lineTo(170, baseOffsetY + 30);
+    ctxMine.lineTo(250, baseOffsetY + 70);
+    ctxMine.lineTo(250, baseOffsetY + 130);
+    ctxMine.stroke();
+
+    // Secondary support
+    ctxMine.strokeStyle = '#9a3412';
+    ctxMine.beginPath();
+    ctxMine.moveTo(185, baseOffsetY + 98);
+    ctxMine.lineTo(185, baseOffsetY + 38);
+    ctxMine.lineTo(235, baseOffsetY + 63);
+    ctxMine.lineTo(235, baseOffsetY + 123);
+    ctxMine.stroke();
+
+    // Mine tracks (reflecting cool white light)
+    ctxMine.strokeStyle = '#cbd5e1';
+    ctxMine.lineWidth = 2;
+    ctxMine.beginPath();
+    ctxMine.moveTo(210, baseOffsetY + 80);
+    ctxMine.lineTo(260, baseOffsetY + 155);
+    ctxMine.moveTo(225, baseOffsetY + 87);
+    ctxMine.lineTo(275, baseOffsetY + 162);
+    ctxMine.stroke();
+
+    // Track ties
+    ctxMine.strokeStyle = '#292524';
+    ctxMine.lineWidth = 3;
+    for (let t = 0; t < 6; t++) {
+      const offset = t * 13;
+      ctxMine.beginPath();
+      ctxMine.moveTo(206 + offset, baseOffsetY + 84 + offset * 1.5);
+      ctxMine.lineTo(228 + offset, baseOffsetY + 80 + offset * 1.5);
+      ctxMine.stroke();
+    }
+
+    // Golden Scaffold Rig
+    ctxMine.strokeStyle = '#fbbf24'; // Bright yellow-gold
+    ctxMine.lineWidth = 4;
+    ctxMine.beginPath();
+    ctxMine.moveTo(90, baseOffsetY + 90);
+    ctxMine.lineTo(90, baseOffsetY - 10);
+    ctxMine.moveTo(120, baseOffsetY + 105);
+    ctxMine.lineTo(120, baseOffsetY + 5);
+    ctxMine.lineTo(90, baseOffsetY - 10);
+    ctxMine.moveTo(90, baseOffsetY + 40);
+    ctxMine.lineTo(120, baseOffsetY + 55);
+    ctxMine.moveTo(120, baseOffsetY + 5);
+    ctxMine.lineTo(90, baseOffsetY + 90);
+    ctxMine.stroke();
+
+    // Boom arm
+    ctxMine.beginPath();
+    ctxMine.moveTo(105, baseOffsetY - 10);
+    ctxMine.lineTo(60, baseOffsetY - 35);
+    ctxMine.stroke();
+
+    // Steel chain with gold basket
+    ctxMine.strokeStyle = '#94a3b8';
+    ctxMine.lineWidth = 1.5;
+    ctxMine.beginPath();
+    ctxMine.moveTo(60, baseOffsetY - 35);
+    ctxMine.lineTo(60, baseOffsetY + 15);
+    ctxMine.stroke();
+
+    ctxMine.fillStyle = '#fbbf24';
+    ctxMine.beginPath();
+    ctxMine.arc(60, baseOffsetY + 20, 6, 0, Math.PI * 2);
+    ctxMine.fill();
+
+
+    // 3. RENDER FACTORY/MANUFACTURING (Factory, Sawtooth & Stacks)
+    const cFactory = document.getElementById('canvas-factory');
+    const ctxFact = cFactory.getContext('2d');
+    drawFoundation(ctxFact, '#1e293b'); // Cool asphalt dark-blue base
+
+    // High-Contrast clean white concrete hall
+    ctxFact.fillStyle = '#f8fafc'; // White wall light side
+    ctxFact.beginPath();
+    ctxFact.moveTo(120, baseOffsetY + 30);
+    ctxFact.lineTo(260, baseOffsetY + 100);
+    ctxFact.lineTo(260, baseOffsetY + 140);
+    ctxFact.lineTo(120, baseOffsetY + 70);
+    ctxFact.closePath();
+    ctxFact.fill();
+
+    ctxFact.fillStyle = '#334155'; // Dark slate side wall
+    ctxFact.beginPath();
+    ctxFact.moveTo(260, baseOffsetY + 100);
+    ctxFact.lineTo(360, baseOffsetY + 50);
+    ctxFact.lineTo(360, baseOffsetY + 90);
+    ctxFact.lineTo(260, baseOffsetY + 140);
+    ctxFact.closePath();
+    ctxFact.fill();
+
+    // Saw-tooth roof profiles (reflecting cool blue light)
+    ctxFact.fillStyle = '#0f172a';
+    ctxFact.beginPath();
+    ctxFact.moveTo(120, baseOffsetY + 30);
+    ctxFact.lineTo(170, baseOffsetY + 15);
+    ctxFact.lineTo(170, baseOffsetY + 35);
+    ctxFact.lineTo(220, baseOffsetY + 20);
+    ctxFact.lineTo(220, baseOffsetY + 40);
+    ctxFact.lineTo(260, baseOffsetY + 35);
+    ctxFact.lineTo(260, baseOffsetY + 100);
+    ctxFact.lineTo(120, baseOffsetY + 30);
+    ctxFact.closePath();
+    ctxFact.fill();
+
+    // Glowing cyan horizontal window bands (high-tech neon energy)
+    ctxFact.fillStyle = '#06b6d4';
+    ctxFact.beginPath();
+    ctxFact.ellipse(190, baseOffsetY + 80, 45, 6, 0.45, 0, Math.PI * 2);
+    ctxFact.fill();
+
+    // Factory smokestacks
+    ctxFact.fillStyle = '#cbd5e1';
+    ctxFact.fillRect(100, baseOffsetY - 40, 16, 60);
+    ctxFact.fillRect(78, baseOffsetY - 30, 14, 50);
+
+    // Hazard bands
+    ctxFact.fillStyle = '#ef4444';
+    ctxFact.fillRect(100, baseOffsetY - 30, 16, 6);
+    ctxFact.fillRect(100, baseOffsetY - 15, 16, 6);
+    ctxFact.fillRect(78, baseOffsetY - 22, 14, 5);
+
+    // Exhaust pipes on side wall
+    ctxFact.strokeStyle = '#94a3b8';
+    ctxFact.lineWidth = 3;
+    ctxFact.beginPath();
+    ctxFact.moveTo(280, baseOffsetY + 80);
+    ctxFact.lineTo(310, baseOffsetY + 65);
+    ctxFact.lineTo(310, baseOffsetY + 95);
+    ctxFact.stroke();
+
+    // Cool white smoke clouds
+    ctxFact.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    ctxFact.beginPath();
+    ctxFact.arc(108, baseOffsetY - 52, 12, 0, Math.PI * 2);
+    ctxFact.arc(120, baseOffsetY - 64, 18, 0, Math.PI * 2);
+    ctxFact.arc(85, baseOffsetY - 42, 9, 0, Math.PI * 2);
+    ctxFact.fill();
+
+
+    // 4. RENDER RETAIL PLAZA (Showroom, Plaza & Sign)
+    const cRetail = document.getElementById('canvas-retail');
+    const ctxRet = cRetail.getContext('2d');
+    drawFoundation(ctxRet, '#1e293b'); // Cool concrete base
+
+    // Plaza joints
+    ctxRet.strokeStyle = '#334155';
+    ctxRet.lineWidth = 1;
+    for (let step = 0; step < W; step += 40) {
+      ctxRet.beginPath();
+      ctxRet.moveTo(step, baseOffsetY);
+      ctxRet.lineTo(step - H, baseOffsetY + H);
+      ctxRet.stroke();
+    }
+
+    // Modern glass storefront block
+    ctxRet.fillStyle = '#0f172a'; // dark metal
+    ctxRet.beginPath();
+    ctxRet.moveTo(130, baseOffsetY + 40);
+    ctxRet.lineTo(250, baseOffsetY + 100);
+    ctxRet.lineTo(250, baseOffsetY + 140);
+    ctxRet.lineTo(130, baseOffsetY + 80);
+    ctxRet.closePath();
+    ctxRet.fill();
+
+    ctxRet.fillStyle = '#f8fafc'; // Clean white side column
+    ctxRet.beginPath();
+    ctxRet.moveTo(250, baseOffsetY + 100);
+    ctxRet.lineTo(350, baseOffsetY + 50);
+    ctxRet.lineTo(350, baseOffsetY + 90);
+    ctxRet.lineTo(250, baseOffsetY + 140);
+    ctxRet.closePath();
+    ctxRet.fill();
+
+    // Large glowing cyan showroom window outlines
+    ctxRet.strokeStyle = '#06b6d4';
+    ctxRet.lineWidth = 3;
+    ctxRet.strokeRect(150, baseOffsetY + 65, 30, 30);
+    ctxRet.strokeRect(190, baseOffsetY + 85, 30, 30);
+
+    // Glowing yellow showroom display interiors
+    ctxRet.fillStyle = '#fbbf24';
+    ctxRet.fillRect(160, baseOffsetY + 78, 12, 8);
+    ctxRet.fillRect(200, baseOffsetY + 98, 12, 8);
+
+    // Blue glass canopy roof
+    ctxRet.fillStyle = '#2563eb';
+    ctxRet.beginPath();
+    ctxRet.moveTo(110, baseOffsetY + 30);
+    ctxRet.lineTo(260, baseOffsetY + 105);
+    ctxRet.lineTo(240, baseOffsetY + 115);
+    ctxRet.lineTo(90, baseOffsetY + 40);
+    ctxRet.closePath();
+    ctxRet.fill();
+
+    // Glowing digital green billboard
+    ctxRet.fillStyle = '#10b981';
+    ctxRet.fillRect(280, baseOffsetY + 20, 42, 18);
+    ctxRet.strokeStyle = '#ffffff';
+    ctxRet.lineWidth = 1.5;
+    ctxRet.strokeRect(280, baseOffsetY + 20, 42, 18);
+
+    ctxRet.fillStyle = '#ffffff';
+    ctxRet.fillRect(285, baseOffsetY + 25, 4, 8);
+    ctxRet.fillRect(293, baseOffsetY + 25, 4, 8);
+    ctxRet.fillRect(301, baseOffsetY + 25, 4, 8);
+    ctxRet.fillRect(309, baseOffsetY + 25, 4, 8);
+
+
+    // --- PART 5: ISO METRO ROAD NETWORK GENERATION ---
+    const rW = 320;
+    const rH = 150; // Height adjusted to support 40px concrete wall depth
+
+    // A. road_v (Vertical road segment along col axis)
+    const cRoadV = document.createElement('canvas');
+    cRoadV.width = rW;
+    cRoadV.height = rH;
+    const ctxRV = cRoadV.getContext('2d');
+    ctxRV.clearRect(0, 0, rW, rH);
+
+    // Left vertical concrete wall
+    ctxRV.fillStyle = '#182235';
+    ctxRV.beginPath();
+    ctxRV.moveTo(0, 80);
+    ctxRV.lineTo(80, 107);
+    ctxRV.lineTo(80, 147);
+    ctxRV.lineTo(0, 120);
+    ctxRV.closePath();
+    ctxRV.fill();
+
+    // Right vertical concrete wall
+    ctxRV.fillStyle = '#0b0f17';
+    ctxRV.beginPath();
+    ctxRV.moveTo(80, 107);
+    ctxRV.lineTo(320, 27);
+    ctxRV.lineTo(320, 67);
+    ctxRV.lineTo(80, 147);
+    ctxRV.closePath();
+    ctxRV.fill();
+
+    // Top surface asphalt road (ultra-premium dark slate black)
+    ctxRV.fillStyle = '#0e121a';
+    ctxRV.beginPath();
+    ctxRV.moveTo(240, 0);
+    ctxRV.lineTo(320, 27);
+    ctxRV.lineTo(80, 107);
+    ctxRV.lineTo(0, 80);
+    ctxRV.closePath();
+    ctxRV.fill();
+
+    // Specular glossy reflection overlay
+    const glossRV = ctxRV.createLinearGradient(0, 0, 320, 107);
+    glossRV.addColorStop(0, 'rgba(255, 255, 255, 0.01)');
+    glossRV.addColorStop(0.5, 'rgba(255, 255, 255, 0.08)');
+    glossRV.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctxRV.fillStyle = glossRV;
+    ctxRV.beginPath();
+    ctxRV.moveTo(240, 0);
+    ctxRV.lineTo(320, 27);
+    ctxRV.lineTo(80, 107);
+    ctxRV.lineTo(0, 80);
+    ctxRV.closePath();
+    ctxRV.fill();
+
+
+
+
+
+    // Dashed center yellow lines (long premium dashes matching reference image)
+    ctxRV.strokeStyle = '#eab308';
+    ctxRV.lineWidth = 3.5;
+    ctxRV.setLineDash([30, 60]);
+    ctxRV.beginPath();
+    ctxRV.moveTo(40, 93.5);
+    ctxRV.lineTo(280, 13.5);
+    ctxRV.stroke();
+
+    // B. road_h (Horizontal road segment along row axis)
+    const cRoadH = document.createElement('canvas');
+    cRoadH.width = rW;
+    cRoadH.height = rH;
+    const ctxRH = cRoadH.getContext('2d');
+    ctxRH.clearRect(0, 0, rW, rH);
+
+    // Left vertical concrete wall
+    ctxRH.fillStyle = '#182235';
+    ctxRH.beginPath();
+    ctxRH.moveTo(0, 27);
+    ctxRH.lineTo(240, 107);
+    ctxRH.lineTo(240, 147);
+    ctxRH.lineTo(0, 67);
+    ctxRH.closePath();
+    ctxRH.fill();
+
+    // Right vertical concrete wall
+    ctxRH.fillStyle = '#0b0f17';
+    ctxRH.beginPath();
+    ctxRH.moveTo(240, 107);
+    ctxRH.lineTo(320, 80);
+    ctxRH.lineTo(320, 120);
+    ctxRH.lineTo(240, 147);
+    ctxRH.closePath();
+    ctxRH.fill();
+
+    // Top surface asphalt road
+    ctxRH.fillStyle = '#0e121a';
+    ctxRH.beginPath();
+    ctxRH.moveTo(80, 0);
+    ctxRH.lineTo(0, 27);
+    ctxRH.lineTo(240, 107);
+    ctxRH.lineTo(320, 80);
+    ctxRH.closePath();
+    ctxRH.fill();
+
+    // Specular glossy reflection overlay
+    const glossRH = ctxRH.createLinearGradient(320, 0, 0, 107);
+    glossRH.addColorStop(0, 'rgba(255, 255, 255, 0.01)');
+    glossRH.addColorStop(0.5, 'rgba(255, 255, 255, 0.08)');
+    glossRH.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctxRH.fillStyle = glossRH;
+    ctxRH.beginPath();
+    ctxRH.moveTo(80, 0);
+    ctxRH.lineTo(0, 27);
+    ctxRH.lineTo(240, 107);
+    ctxRH.lineTo(320, 80);
+    ctxRH.closePath();
+    ctxRH.fill();
+
+
+
+
+
+    // Dashed center yellow lines (long premium dashes matching reference image)
+    ctxRH.strokeStyle = '#eab308';
+    ctxRH.lineWidth = 3.5;
+    ctxRH.setLineDash([30, 60]);
+    ctxRH.beginPath();
+    ctxRH.moveTo(40, 13.5);
+    ctxRH.lineTo(280, 93.5);
+    ctxRH.stroke();
+
+    // C. road_intersection (Crossing intersection)
+    const cRoadI = document.createElement('canvas');
+    cRoadI.width = 160;
+    cRoadI.height = 120; // Expanded height to support 40px vertical walls
+    const ctxRI = cRoadI.getContext('2d');
+    ctxRI.clearRect(0, 0, 160, 120);
+
+    // Left vertical concrete wall
+    ctxRI.fillStyle = '#182235';
+    ctxRI.beginPath();
+    ctxRI.moveTo(0, 36.5);
+    ctxRI.lineTo(80, 63);
+    ctxRI.lineTo(80, 103);
+    ctxRI.lineTo(0, 76.5);
+    ctxRI.closePath();
+    ctxRI.fill();
+
+    // Right vertical concrete wall
+    ctxRI.fillStyle = '#0b0f17';
+    ctxRI.beginPath();
+    ctxRI.moveTo(80, 63);
+    ctxRI.lineTo(160, 36.5);
+    ctxRI.lineTo(160, 76.5);
+    ctxRI.lineTo(80, 103);
+    ctxRI.closePath();
+    ctxRI.fill();
+
+    // Top surface asphalt crossing
+    ctxRI.fillStyle = '#0e121a';
+    ctxRI.beginPath();
+    ctxRI.moveTo(80, 10);
+    ctxRI.lineTo(160, 36.5);
+    ctxRI.lineTo(80, 63);
+    ctxRI.lineTo(0, 36.5);
+    ctxRI.closePath();
+    ctxRI.fill();
+
+
+
+
+
+
+    // POST assets
+    const payload = {
+      files: [
+        { relPath: 'terrain/iso-block.png', data: blockCanvas.toDataURL('image/png') },
+        { relPath: 'terrain/iso-shadow.png', data: shadowCanvas.toDataURL('image/png') },
+        { relPath: 'plots/plot_grass.png', data: plotCanvases.grass.toDataURL('image/png') },
+        { relPath: 'plots/plot_flowers.png', data: plotCanvases.flowers.toDataURL('image/png') },
+        { relPath: 'plots/plot_hedge.png', data: plotCanvases.hedge.toDataURL('image/png') },
+        { relPath: 'plots/plot_tree.png', data: plotCanvases.tree.toDataURL('image/png') },
+        { relPath: 'plots/plot_stone.png', data: plotCanvases.stone.toDataURL('image/png') },
+        { relPath: 'plots/plot_shrubs.png', data: plotCanvases.shrubs.toDataURL('image/png') },
+        { relPath: 'plots/plot_flower_island.png', data: plotCanvases.flowerIsland.toDataURL('image/png') },
+        { relPath: 'plots/plot_landscaped.png', data: plotCanvases.landscaped.toDataURL('image/png') },
+        { relPath: 'plots/plot_mixed.png', data: plotCanvases.mixed.toDataURL('image/png') },
+        { relPath: 'plots/plot_premium.png', data: plotCanvases.premium.toDataURL('image/png') },
+        { relPath: 'buildings/building_farming.png', data: cFarm.toDataURL('image/png') },
+        { relPath: 'buildings/building_mining.png', data: cMine.toDataURL('image/png') },
+        { relPath: 'buildings/building_factory.png', data: cFactory.toDataURL('image/png') },
+        { relPath: 'buildings/building_retail.png', data: cRetail.toDataURL('image/png') },
+        { relPath: 'terrain/road_v.png', data: cRoadV.toDataURL('image/png') },
+        { relPath: 'terrain/road_h.png', data: cRoadH.toDataURL('image/png') },
+        { relPath: 'terrain/road_intersection.png', data: cRoadI.toDataURL('image/png') }
+      ]
+    };
+
+    fetch('/api/save-assets', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log('Success:', data);
+      document.getElementById('status').innerText = 'SUCCESS: Assets written to disk!';
+      document.getElementById('status').style.color = 'green';
+    })
+    .catch(err => {
+      console.error('Error:', err);
+      document.getElementById('status').innerText = 'ERROR: Failed to save assets.';
+      document.getElementById('status').style.color = 'red';
+    });
+  </script>
+</body>
+</html>

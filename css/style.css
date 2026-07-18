@@ -2319,7 +2319,10 @@ p {
   height: 100%;
   padding: 0;
   position: relative;
-  background: var(--bg-color);
+  background-image: linear-gradient(rgba(11, 15, 25, 0.80), rgba(11, 15, 25, 0.80)), url('/assets/sky_city_bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   overflow: hidden;
   display: flex;
   align-items: center;

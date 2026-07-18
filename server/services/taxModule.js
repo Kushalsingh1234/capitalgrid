@@ -1,6 +1,7 @@
 import Startup from '../models/Startup.js';
 import GovernmentAccount from '../models/GovernmentAccount.js';
 import Transaction from '../models/Transaction.js';
+import MonthlyExecutionLedger from '../models/MonthlyExecutionLedger.js';
 import { TAX_CONFIG } from '../config/taxConfig.js';
 import * as accountingHelper from './accountingHelper.js';
 import { createNotification, formatCurrency } from './notificationService.js';
@@ -64,12 +65,59 @@ export const processMonthlyTax = async (clockData) => {
   // 1. Fetch all active startups
   let startups = [];
   if (global.useMockDb) {
-    startups = global.mockStartups.filter(s => s.status === 'Active');
+    startups = (global.mockStartups || []).filter(s => s.status === 'Active');
   } else {
-    startups = await Startup.find({ status: 'Active' });
+    try {
+      startups = await Startup.find({ status: 'Active' });
+    } catch (err) {
+      console.error(`[CorporateTaxModule Error] Failed to fetch active startups: ${err.message}`);
+      return {
+        processedCount: 0,
+        successCount: 0,
+        skippedCount: 0,
+        skippedReasons: [{ startupName: 'ALL', reason: `Database error: ${err.message}` }]
+      };
+    }
   }
 
+  let successCount = 0;
+  let skippedCount = 0;
+  const skippedReasons = [];
+
   for (const startup of startups) {
+    // 2. Idempotency Check using MonthlyExecutionLedger
+    let ledgerExists = false;
+    if (global.useMockDb) {
+      if (!global.mockMonthlyExecutionLedgers) {
+        global.mockMonthlyExecutionLedgers = [];
+      }
+      ledgerExists = global.mockMonthlyExecutionLedgers.some(
+        l => String(l.startupId) === String(startup._id) &&
+             l.gameMonth === clockData.month &&
+             l.gameYear === clockData.year &&
+             l.action === 'Tax'
+      );
+    } else {
+      try {
+        ledgerExists = await MonthlyExecutionLedger.exists({
+          startupId: startup._id,
+          gameMonth: clockData.month,
+          gameYear: clockData.year,
+          action: 'Tax'
+        });
+      } catch (err) {
+        console.error(`[Tax Ledger Error] Failed to check ledger for ${startup.startupName}: ${err.message}`);
+        continue;
+      }
+    }
+
+    if (ledgerExists) {
+      console.log(`[CorporateTaxModule] Skipping startup ${startup.startupName} - already processed for this game month.`);
+      skippedCount++;
+      skippedReasons.push({ startupName: startup.startupName, reason: 'Already processed' });
+      continue;
+    }
+
     const country = startup.country || 'United States';
     const config = TAX_CONFIG[country] || TAX_CONFIG['United States'];
     const taxRate = config.corporateTaxRate;
@@ -87,9 +135,38 @@ export const processMonthlyTax = async (clockData) => {
       // Still need to reset monthly counters for the new month
       accountingHelper.resetMonthlyCounters(startup);
       if (!global.useMockDb) {
-        startup.markModified('financials');
-        await startup.save();
+        try {
+          startup.markModified('financials');
+          await startup.save();
+        } catch (err) {
+          console.error(`[CorporateTaxModule Error] Failed to save startup ${startup.startupName}: ${err.message}`);
+        }
       }
+
+      // Create execution ledger record
+      if (global.useMockDb) {
+        global.mockMonthlyExecutionLedgers.push({
+          startupId: startup._id,
+          gameMonth: clockData.month,
+          gameYear: clockData.year,
+          action: 'Tax',
+          processedAt: new Date()
+        });
+      } else {
+        try {
+          await MonthlyExecutionLedger.create({
+            startupId: startup._id,
+            gameMonth: clockData.month,
+            gameYear: clockData.year,
+            action: 'Tax'
+          });
+        } catch (err) {
+          console.error(`[Tax Ledger Error] Failed to write ledger for ${startup.startupName}: ${err.message}`);
+        }
+      }
+
+      skippedCount++;
+      skippedReasons.push({ startupName: startup.startupName, reason: 'No tax liability (zero profit and zero outstanding)' });
       continue;
     }
 
@@ -131,8 +208,12 @@ export const processMonthlyTax = async (clockData) => {
 
     // Save startup
     if (!global.useMockDb) {
-      startup.markModified('financials');
-      await startup.save();
+      try {
+        startup.markModified('financials');
+        await startup.save();
+      } catch (err) {
+        console.error(`[CorporateTaxModule Error] Failed to persist tax updates for ${startup.startupName}: ${err.message}`);
+      }
     }
 
     // 4. Route collected revenue to Government Treasury & record Transaction
@@ -144,10 +225,14 @@ export const processMonthlyTax = async (clockData) => {
         -amountPaid
       );
 
-      const govAcc = await getOrCreateGovAccount(country);
-      govAcc.corporateTaxCollected += amountPaid;
-      govAcc.governmentBalance += amountPaid;
-      await saveGovAccount(govAcc);
+      try {
+        const govAcc = await getOrCreateGovAccount(country);
+        govAcc.corporateTaxCollected += amountPaid;
+        govAcc.governmentBalance += amountPaid;
+        await saveGovAccount(govAcc);
+      } catch (err) {
+        console.error(`[CorporateTaxModule Error] Failed to update treasury: ${err.message}`);
+      }
 
       // Record a rich transaction log description for easy audit
       const description = `Corporate Tax | Taxable Profit: ${formatCurrencyLog(taxableProfit, country)} | Rate: ${(taxRate * 100).toFixed(0)}% | Tax Due: ${formatCurrencyLog(corporateTax, country)} | Paid: ${formatCurrencyLog(amountPaid, country)} | Outstanding: ${formatCurrencyLog(newOutstanding, country)}`;
@@ -174,14 +259,49 @@ export const processMonthlyTax = async (clockData) => {
           createdAt: new Date()
         });
       } else {
-        await Transaction.create(txPayload);
+        try {
+          await Transaction.create(txPayload);
+        } catch (err) {
+          console.error(`[CorporateTaxModule Error] Failed to write tax transaction: ${err.message}`);
+        }
       }
     }
 
+    // Create execution ledger record
+    if (global.useMockDb) {
+      global.mockMonthlyExecutionLedgers.push({
+        startupId: startup._id,
+        gameMonth: clockData.month,
+        gameYear: clockData.year,
+        action: 'Tax',
+        processedAt: new Date()
+      });
+    } else {
+      try {
+        await MonthlyExecutionLedger.create({
+          startupId: startup._id,
+          gameMonth: clockData.month,
+          gameYear: clockData.year,
+          action: 'Tax'
+        });
+      } catch (err) {
+        console.error(`[Tax Ledger Error] Failed to write ledger for ${startup.startupName}: ${err.message}`);
+      }
+    }
+
+    successCount++;
     console.log(`[CorporateTaxModule] Startup: ${startup.startupName} | Taxable Profit: ${taxableProfit} | Tax Paid: ${amountPaid} | New Outstanding: ${newOutstanding}`);
   }
+
+  return {
+    processedCount: startups.length,
+    successCount,
+    skippedCount,
+    skippedReasons
+  };
 };
 
 export const corporateTaxModuleHooks = {
   onMonth: processMonthlyTax
 };
+

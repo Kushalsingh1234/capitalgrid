@@ -6,13 +6,19 @@ export default class BaseBuilding extends Phaser.GameObjects.Container {
     this.buildingData = buildingData;
 
     // Find the plot from the scene to determine scaling bounds
-    const plot = scene.plotsData?.find(p => p.plotId === buildingData.plotId);
+    const plot = scene.parcels?.find(p => p.plotId === buildingData.plotId || p.id === buildingData.plotId) ||
+                 scene.plotsData?.find(p => p.plotId === buildingData.plotId || p.id === buildingData.plotId);
     this.plotWidth = plot ? plot.width : 240;
     this.plotHeight = plot ? plot.height : 160;
 
-    // The building should occupy approximately 60-70% of the plot
-    this.width = this.plotWidth * 0.65;
-    this.height = this.plotHeight * 0.65;
+    // Scale building dynamically based on the parcel's buildingFootprint config
+    if (plot && plot.buildingFootprint) {
+      this.width = plot.buildingFootprint.width;
+      this.height = plot.buildingFootprint.height;
+    } else {
+      this.width = this.plotWidth * 0.65;
+      this.height = this.plotHeight * 0.65;
+    }
 
     // 1. Create a Graphics object for the unrotated Ground Shadow (light angle matches environment)
     this.shadowGraphics = scene.add.graphics();
@@ -32,8 +38,12 @@ export default class BaseBuilding extends Phaser.GameObjects.Container {
     this.highlightGraphics.setVisible(false);
     this.contentContainer.add(this.highlightGraphics);
 
-    // Add this container to the scene and set depth above map lines/driveways
-    scene.add.existing(this);
+    // Add this container to the correct rendering layer or scene
+    if (scene.buildingsLayer) {
+      scene.buildingsLayer.add(this);
+    } else {
+      scene.add.existing(this);
+    }
     this.setDepth(10);
 
     // Enable interaction
@@ -111,10 +121,17 @@ export default class BaseBuilding extends Phaser.GameObjects.Container {
   }
 
   onPointerDown(pointer) {
-    // Consume pointer click so camera panning does not trigger
     if (pointer.button === 0) {
-      pointer.event.stopPropagation();
-      this.scene.game.events.emit('building-click', this.buildingData);
+      this.clickStartX = pointer.x;
+      this.clickStartY = pointer.y;
+      
+      this.once('pointerup', (upPointer) => {
+        const dist = Phaser.Math.Distance.Between(this.clickStartX, this.clickStartY, upPointer.x, upPointer.y);
+        if (dist < 8) {
+          upPointer.event.stopPropagation();
+          this.scene.game.events.emit('building-click', this.buildingData);
+        }
+      });
     }
   }
 

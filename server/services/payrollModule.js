@@ -1,6 +1,7 @@
 import Startup from '../models/Startup.js';
 import Employee from '../models/Employee.js';
 import Transaction from '../models/Transaction.js';
+import MonthlyExecutionLedger from '../models/MonthlyExecutionLedger.js';
 import { getSalary } from '../config/countryEconomy.js';
 import * as accountingHelper from './accountingHelper.js';
 import { createNotification, formatCurrency } from './notificationService.js';
@@ -24,11 +25,55 @@ const processMonthlyPayroll = async (clockData) => {
       startupsList = await Startup.find();
     } catch (err) {
       console.error(`[Payroll Error] Failed to fetch active startups: ${err.message}`);
-      return;
+      return {
+        processedCount: 0,
+        successCount: 0,
+        failedCount: 0,
+        skippedCount: 0,
+        skippedReasons: [{ startupName: 'ALL', reason: `Database error: ${err.message}` }]
+      };
     }
   }
 
+  let successCount = 0;
+  let failedCount = 0;
+  let skippedCount = 0;
+  const skippedReasons = [];
+
   for (const startup of startupsList) {
+    // 1. Idempotency Check using MonthlyExecutionLedger
+    let ledgerExists = false;
+    if (global.useMockDb) {
+      if (!global.mockMonthlyExecutionLedgers) {
+        global.mockMonthlyExecutionLedgers = [];
+      }
+      ledgerExists = global.mockMonthlyExecutionLedgers.some(
+        l => String(l.startupId) === String(startup._id) &&
+             l.gameMonth === clockData.month &&
+             l.gameYear === clockData.year &&
+             l.action === 'Payroll'
+      );
+    } else {
+      try {
+        ledgerExists = await MonthlyExecutionLedger.exists({
+          startupId: startup._id,
+          gameMonth: clockData.month,
+          gameYear: clockData.year,
+          action: 'Payroll'
+        });
+      } catch (err) {
+        console.error(`[Payroll Ledger Error] Failed to check ledger for ${startup.startupName}: ${err.message}`);
+        continue;
+      }
+    }
+
+    if (ledgerExists) {
+      console.log(`[Payroll] Skipping startup ${startup.startupName} - already processed for this game month.`);
+      skippedCount++;
+      skippedReasons.push({ startupName: startup.startupName, reason: 'Already processed' });
+      continue;
+    }
+
     let activeEmployees = [];
     if (global.useMockDb) {
       activeEmployees = (global.mockEmployees || []).filter(e => String(e.startupId) === String(startup._id));
@@ -43,6 +88,29 @@ const processMonthlyPayroll = async (clockData) => {
 
     const totalEmployees = activeEmployees.reduce((sum, e) => sum + e.quantity, 0);
     if (totalEmployees === 0) {
+      // Create execution ledger record
+      if (global.useMockDb) {
+        global.mockMonthlyExecutionLedgers.push({
+          startupId: startup._id,
+          gameMonth: clockData.month,
+          gameYear: clockData.year,
+          action: 'Payroll',
+          processedAt: new Date()
+        });
+      } else {
+        try {
+          await MonthlyExecutionLedger.create({
+            startupId: startup._id,
+            gameMonth: clockData.month,
+            gameYear: clockData.year,
+            action: 'Payroll'
+          });
+        } catch (err) {
+          console.error(`[Payroll Ledger Error] Failed to write ledger for ${startup.startupName}: ${err.message}`);
+          continue;
+        }
+      }
+
       startup.recentPayroll = {
         status: 'Success',
         month: `${getMonthName(clockData.month)} ${clockData.year}`,
@@ -52,8 +120,14 @@ const processMonthlyPayroll = async (clockData) => {
         date: new Date()
       };
       if (!global.useMockDb) {
-        await startup.save();
+        try {
+          await startup.save();
+        } catch (err) {
+          console.error(`[Payroll Error] Failed to save startup ${startup.startupName}: ${err.message}`);
+        }
       }
+      skippedCount++;
+      skippedReasons.push({ startupName: startup.startupName, reason: 'No active employees' });
       continue;
     }
 
@@ -123,6 +197,29 @@ const processMonthlyPayroll = async (clockData) => {
         -totalPayroll
       );
 
+      // Create execution ledger record
+      if (global.useMockDb) {
+        global.mockMonthlyExecutionLedgers.push({
+          startupId: startup._id,
+          gameMonth: clockData.month,
+          gameYear: clockData.year,
+          action: 'Payroll',
+          processedAt: new Date()
+        });
+      } else {
+        try {
+          await MonthlyExecutionLedger.create({
+            startupId: startup._id,
+            gameMonth: clockData.month,
+            gameYear: clockData.year,
+            action: 'Payroll'
+          });
+        } catch (err) {
+          console.error(`[Payroll Ledger Error] Failed to write ledger for ${startup.startupName}: ${err.message}`);
+        }
+      }
+
+      successCount++;
       console.log(`[Payroll] Startup: ${startup.startupName} | Employees: ${totalEmployees} | Payroll: ${totalPayroll} | Status: Success`);
 
     } else {
@@ -172,6 +269,29 @@ const processMonthlyPayroll = async (clockData) => {
         date: new Date()
       };
 
+      // Create execution ledger record
+      if (global.useMockDb) {
+        global.mockMonthlyExecutionLedgers.push({
+          startupId: startup._id,
+          gameMonth: clockData.month,
+          gameYear: clockData.year,
+          action: 'Payroll',
+          processedAt: new Date()
+        });
+      } else {
+        try {
+          await MonthlyExecutionLedger.create({
+            startupId: startup._id,
+            gameMonth: clockData.month,
+            gameYear: clockData.year,
+            action: 'Payroll'
+          });
+        } catch (err) {
+          console.error(`[Payroll Ledger Error] Failed to write ledger for ${startup.startupName}: ${err.message}`);
+        }
+      }
+
+      failedCount++;
       console.warn(`[Payroll] Startup: ${startup.startupName} | Employees: ${totalEmployees} | Payroll: ${totalPayroll} | Status: Failed`);
     }
 
@@ -185,8 +305,17 @@ const processMonthlyPayroll = async (clockData) => {
       }
     }
   }
+
+  return {
+    processedCount: startupsList.length,
+    successCount,
+    failedCount,
+    skippedCount,
+    skippedReasons
+  };
 };
 
 export const payrollModuleHooks = {
   onMonth: processMonthlyPayroll
 };
+

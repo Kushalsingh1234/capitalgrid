@@ -1,7 +1,9 @@
+import { PARCELS } from '../../gameConfig/mapConfig.js';
+
 export default class WorldManager {
   constructor(scene) {
     this.scene = scene;
-    this.plots = scene.plotsData || [];
+    this.plots = PARCELS;
   }
 
   /**
@@ -13,15 +15,19 @@ export default class WorldManager {
   getBuildingForStartup(startup) {
     if (!startup) return null;
 
-    // In Phase 4, the player's business is assigned to plot_5 (the visual centerpiece)
-    const plotId = 'plot_5';
-    const plot = this.plots.find(p => p.plotId === plotId);
+    // Dynamically find the centerpiece plot marked as owned in the configuration
+    const plot = this.plots.find(p => p.ownershipStatus === 'owned') || this.plots[0];
+    const plotId = plot ? plot.id : 'parcel_012';
 
     // Default coordinates in case plot lookup fails
-    const defaultX = 2200;
-    const defaultY = 2200;
-    const x = plot ? plot.x : defaultX;
-    const y = plot ? plot.y : defaultY;
+    const defaultX = 1200;
+    const defaultY = 1100;
+    
+    // Position using the parcel's buildingFootprint anchor offset
+    const anchorX = (plot && plot.buildingFootprint) ? (plot.buildingFootprint.anchorX || 0) : 0;
+    const anchorY = (plot && plot.buildingFootprint) ? (plot.buildingFootprint.anchorY || 0) : 0;
+    const x = plot ? (plot.x + anchorX) : defaultX;
+    const y = plot ? (plot.y + anchorY) : defaultY;
 
     // Calculate rotation/orientation based on its connection to the road
     let rotation = 0;
