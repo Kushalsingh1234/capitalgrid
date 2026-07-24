@@ -26,16 +26,23 @@ export default function GameWorld({ startup, onBuildingClick, disableClicks }) {
       height: '100%',
       parent: containerRef.current,
       transparent: true,
+      resolution: window.devicePixelRatio || 1,
+      scale: {
+        mode: Phaser.Scale.NONE,
+        autoCenter: Phaser.Scale.CENTER_BOTH
+      },
+      render: {
+        antialias: true,
+        antialiasGL: true,
+        roundPixels: false,
+        mipmapFilter: 'LINEAR_MIPMAP_NEAREST'
+      },
       physics: {
         default: 'arcade',
         arcade: {
           gravity: { y: 0 },
           debug: false
         }
-      },
-      scale: {
-        mode: Phaser.Scale.RESIZE,
-        autoCenter: Phaser.Scale.CENTER_BOTH
       },
       scene: [GameScene]
     };

@@ -17,7 +17,7 @@ export default class IsometricTile extends Phaser.GameObjects.Container {
     this.tileData = tileData;
 
     // 1. Soft ground shadow at y=0 (stays on ground plane)
-    this.shadow = scene.add.image(0, 0, 'iso-shadow').setOrigin(0.5, 0.5);
+    this.shadow = scene.add.image(0, 0, 'iso-shadow').setOrigin(0.5, 0.5).setScale(0.5);
     this.shadow.setAlpha(0.6);
     this.add(this.shadow);
 
@@ -26,7 +26,7 @@ export default class IsometricTile extends Phaser.GameObjects.Container {
     this.add(this.contentGroup);
 
     // 3. 3D Extruded Block Sprite
-    this.block = scene.add.image(0, 0, 'iso-block').setOrigin(0.5, 0.5);
+    this.block = scene.add.image(0, 0, 'iso-block').setOrigin(0.5, 0.5).setScale(0.5);
     this.contentGroup.add(this.block);
 
     // Apply a slight per-tile brightness variation (±3% around a 96% base tint)
@@ -36,13 +36,20 @@ export default class IsometricTile extends Phaser.GameObjects.Container {
     const tintColor = Phaser.Display.Color.GetColor(tintVal, tintVal, tintVal);
     this.block.setTint(tintColor);
 
-    // 4. Instantiate centerpiece player building or empty plot layer
+    // 4. Instantiate centerpiece player building, corporate HQ tower, CGN HQ tower, fountain, or empty plot layer
     const isCenterpiece = (tileData.row === 2 && tileData.col === 2);
+    const isCorporate = (tileData.row === 1 && tileData.col === 1);
+    const isCGN = (tileData.row === 1 && tileData.col === 3);
+    const isFountain = (tileData.row === 3 && tileData.col === 2);
+    const isStockExchange = (tileData.row === 3 && tileData.col === 1);
+    const isHouse = (tileData.row === 2 && tileData.col === 1);
+    const isComplex = (tileData.row === 1 && tileData.col === 2);
+
     if (isCenterpiece) {
       // Fetch the registered account startup information
       const startup = scene.game.registry.get('startup');
       const businessType = startup ? startup.businessType : 'Farming';
-      
+
       const getBuildingKey = (bType) => {
         const type = (bType || '').toLowerCase();
         if (['farming', 'dairy'].includes(type)) {
@@ -57,10 +64,39 @@ export default class IsometricTile extends Phaser.GameObjects.Container {
       };
 
       const buildingKey = getBuildingKey(businessType);
-      
+
       // Instantiate and display 3D building covering the entire block top face
-      // Origin (0.5, 0.7333) centers the base diamond perfectly at local (0, -20)
-      this.buildingSprite = scene.add.image(0, -20, buildingKey).setOrigin(0.5, 0.7333);
+      // Origin (0.5, 0.63671875) centers the base diamond perfectly at local (0, -20)
+      this.buildingSprite = scene.add.image(0, -20, buildingKey).setOrigin(0.5, 0.63671875).setScale(0.5);
+      this.contentGroup.add(this.buildingSprite);
+    } else if (isCorporate) {
+      // Self-contained 3D Corporate Tower tile asset covering the full diamond and side walls
+      this.block.setVisible(false);
+      this.buildingSprite = scene.add.image(0, -20, 'building_corporate').setOrigin(0.5, 0.765625).setScale(0.5);
+      this.contentGroup.add(this.buildingSprite);
+    } else if (isCGN) {
+      // Self-contained 3D CGN Headquarters Tower tile asset covering the full diamond and side walls
+      this.block.setVisible(false);
+      this.buildingSprite = scene.add.image(0, -20, 'building_cgn').setOrigin(0.5, 0.765625).setScale(0.5);
+      this.contentGroup.add(this.buildingSprite);
+    } else if (isStockExchange) {
+      // Self-contained 3D Stock Exchange Skyscraper tile asset covering the full diamond and side walls
+      this.block.setVisible(false);
+      this.buildingSprite = scene.add.image(0, -20, 'building_stock_exchange').setOrigin(0.5, 0.765625).setScale(0.5);
+      this.contentGroup.add(this.buildingSprite);
+    } else if (isHouse) {
+      // Self-contained 3D Premium Modern Architecture House tile asset covering the full diamond and side walls
+      this.buildingSprite = scene.add.image(0, -20, 'building_house').setOrigin(0.5, 0.51).setScale(0.5);
+      this.contentGroup.add(this.buildingSprite);
+    } else if (isComplex) {
+      // Self-contained 3D Premium Modern Multicomplex tile asset
+      this.buildingSprite = scene.add.image(0, -20, 'building_multicomplex').setOrigin(0.5, 0.493).setScale(0.5);
+      this.contentGroup.add(this.buildingSprite);
+
+    } else if (isFountain) {
+      // Self-contained 3D Grand Fountain tile asset covering the full diamond and 40px side walls
+      this.block.setVisible(false);
+      this.buildingSprite = scene.add.image(0, 0, 'building_fountain').setOrigin(0.5, 0.5).setScale(0.5);
       this.contentGroup.add(this.buildingSprite);
     } else if (tileData.buildable) {
       this.plot = new BuildablePlot(scene, tileData).setPosition(0, -20);
@@ -74,10 +110,10 @@ export default class IsometricTile extends Phaser.GameObjects.Container {
     // - Bottom: (240, 160)
     // - Left: (0, 80)
     const localDiamond = new Phaser.Geom.Polygon([
-      240, 0,
-      480, 80,
-      240, 160,
-      0, 80
+      480, 0,
+      960, 160,
+      480, 320,
+      0, 160
     ]);
 
     // Make block interactive using the custom polygon detector
@@ -92,10 +128,10 @@ export default class IsometricTile extends Phaser.GameObjects.Container {
       this.dropDown();
     });
 
-    // Emits building-click to open React drawer (if centerpiece is clicked and not dragging)
+    // Emits building-click to open React drawer (if centerpiece, corporate, CGN, or fountain is clicked and not dragging)
     this.block.on('pointerup', (pointer) => {
       if (scene.isDragging || !pointer.wasTouch && pointer.button !== 0) return;
-      if (isCenterpiece) {
+      if (isCenterpiece || isCorporate || isCGN || isFountain || isStockExchange || isHouse || isComplex) {
         scene.game.events.emit('building-click', tileData);
       }
     });
@@ -125,8 +161,8 @@ export default class IsometricTile extends Phaser.GameObjects.Container {
     // Shrink and fade ground shadow to simulate height elevation
     this.scene.tweens.add({
       targets: this.shadow,
-      scaleX: 0.8,
-      scaleY: 0.8,
+      scaleX: 0.4, // 0.8 * 0.5 (scaled down by 2x asset support)
+      scaleY: 0.4, // 0.8 * 0.5 (scaled down by 2x asset support)
       alpha: 0.15,
       duration: 180,
       ease: 'Back.easeOut'
@@ -150,8 +186,8 @@ export default class IsometricTile extends Phaser.GameObjects.Container {
     // Restore shadow size and opacity
     this.scene.tweens.add({
       targets: this.shadow,
-      scaleX: 1.0,
-      scaleY: 1.0,
+      scaleX: 0.5, // 1.0 * 0.5 (scaled down by 2x asset support)
+      scaleY: 0.5, // 1.0 * 0.5 (scaled down by 2x asset support)
       alpha: 0.6,
       duration: 180,
       ease: 'Back.easeOut'

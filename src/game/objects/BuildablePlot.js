@@ -28,8 +28,8 @@ export default class BuildablePlot extends Phaser.GameObjects.Container {
     const assetKey = `plot_${this.plotVariant}`;
 
     // 3. Render the plot image.
-    // Origin (0.5, 0.6675) centers the grass diamond exactly at local (0, 0)
-    this.sprite = scene.add.image(0, 0, assetKey).setOrigin(0.5, 0.6675);
+    // Origin (0.5, 0.630859375) centers the grass diamond exactly at local (0, 0)
+    this.sprite = scene.add.image(0, 0, assetKey).setOrigin(0.5, 0.630859375).setScale(0.5);
     this.add(this.sprite);
 
     // Add container to the scene

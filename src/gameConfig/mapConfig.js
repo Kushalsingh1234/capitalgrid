@@ -87,7 +87,9 @@ const generateIsometricParcels = () => {
       const variantRoll = Math.random();
       let plotVariant = 'grass';
       
-      if (isReserved) {
+      if (r === 3 && c === 3) {
+        plotVariant = 'tree';
+      } else if (isReserved) {
         plotVariant = 'grass';
       } else {
         if (variantRoll < 0.30) {

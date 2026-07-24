@@ -12,34 +12,40 @@ export default class GameScene extends Phaser.Scene {
   }
 
   preload() {
-    const version = Date.now();
-
-    // Load concrete slab assets with cache busting
-    this.load.image('iso-block', `/assets/terrain/iso-block.png?v=${version}`);
-    this.load.image('iso-shadow', `/assets/terrain/iso-shadow.png?v=${version}`);
+    // Load concrete slab assets
+    this.load.image('iso-block', '/assets/terrain/iso-block.png?v=3');
+    this.load.image('iso-shadow', '/assets/terrain/iso-shadow.png?v=3');
 
     // Load buildable plot variant assets (Phase 33C)
-    this.load.image('plot_grass', '/assets/plots/plot_grass.png');
-    this.load.image('plot_flowers', '/assets/plots/plot_flowers.png');
-    this.load.image('plot_hedge', '/assets/plots/plot_hedge.png');
-    this.load.image('plot_tree', '/assets/plots/plot_tree.png');
-    this.load.image('plot_stone', '/assets/plots/plot_stone.png');
-    this.load.image('plot_shrubs', '/assets/plots/plot_shrubs.png');
-    this.load.image('plot_flower-island', '/assets/plots/plot_flower_island.png');
-    this.load.image('plot_landscaped', '/assets/plots/plot_landscaped.png');
-    this.load.image('plot_mixed', '/assets/plots/plot_mixed.png');
-    this.load.image('plot_premium', '/assets/plots/plot_premium.png');
+    this.load.image('plot_grass', '/assets/plots/plot_grass.png?v=3');
+    this.load.image('plot_flowers', '/assets/plots/plot_flowers.png?v=3');
+    this.load.image('plot_hedge', '/assets/plots/plot_hedge.png?v=3');
+    this.load.image('plot_tree', '/assets/plots/plot_tree.png?v=3');
+    this.load.image('plot_stone', '/assets/plots/plot_stone.png?v=3');
+    this.load.image('plot_shrubs', '/assets/plots/plot_shrubs.png?v=3');
+    this.load.image('plot_flower-island', '/assets/plots/plot_flower_island.png?v=3');
+    this.load.image('plot_landscaped', '/assets/plots/plot_landscaped.png?v=3');
+    this.load.image('plot_mixed', '/assets/plots/plot_mixed.png?v=3');
+    this.load.image('plot_premium', '/assets/plots/plot_premium.png?v=3');
+    this.load.image('plot_fountain', '/assets/plots/plot_fountain.png?v=3');
 
-    // Load 3D isometric building assets (Phase 33D centerpiece)
-    this.load.image('building_farming', '/assets/buildings/building_farming.png');
-    this.load.image('building_mining', '/assets/buildings/building_mining.png');
-    this.load.image('building_factory', '/assets/buildings/building_factory.png');
-    this.load.image('building_retail', '/assets/buildings/building_retail.png');
+    // Load 3D isometric building assets (Phase 33D centerpiece, corporate HQ & CGN HQ)
+    this.load.image('building_farming', '/assets/buildings/building_farming.png?v=3');
+    this.load.image('building_mining', '/assets/buildings/building_mining.png?v=3');
+    this.load.image('building_factory', '/assets/buildings/building_factory.png?v=3');
+    this.load.image('building_retail', '/assets/buildings/building_retail.png?v=3');
+    this.load.image('building_corporate', '/assets/buildings/building_corporate.png?v=3');
+    this.load.image('building_cgn', '/assets/buildings/building_cgn.png?v=3');
+    this.load.image('building_stock_exchange', '/assets/buildings/building_stock_exchange.png?v=3');
+    this.load.image('building_house', '/assets/buildings/building_house.png?v=3');
+    this.load.image('building_multicomplex', '/assets/buildings/building_multicomplex.png?v=3');
+    this.load.image('building_terminal', '/assets/buildings/building_terminal.png?v=5');
+    this.load.image('building_fountain', '/assets/buildings/building_fountain.png?v=3');
 
-    // Load modern metro road network assets with cache busting (Phase 36)
-    this.load.image('road_v', `/assets/terrain/road_v.png?v=${version}`);
-    this.load.image('road_h', `/assets/terrain/road_h.png?v=${version}`);
-    this.load.image('road_intersection', `/assets/terrain/road_intersection.png?v=${version}`);
+    // Load modern metro road network assets (Phase 36)
+    this.load.image('road_v', '/assets/terrain/road_v.png?v=3');
+    this.load.image('road_h', '/assets/terrain/road_h.png?v=3');
+    this.load.image('road_intersection', '/assets/terrain/road_intersection.png?v=3');
   }
 
   create() {
@@ -63,7 +69,7 @@ export default class GameScene extends Phaser.Scene {
       for (let c = 0; c < GRID_COLS - 1; c++) {
         const rx = (getX(r, c) + getX(r, c + 1)) / 2;
         const ry = (getY(r, c) + getY(r, c + 1)) / 2;
-        const road = this.add.image(rx, ry, 'road_v');
+        const road = this.add.image(rx, ry, 'road_v').setScale(0.5);
         road.setDepth(r + c + 0.5); // Fractional depth to interleave between block rows
         this.groundLayer.add(road);
       }
@@ -74,7 +80,7 @@ export default class GameScene extends Phaser.Scene {
       for (let c = 0; c < GRID_COLS; c++) {
         const rx = (getX(r, c) + getX(r + 1, c)) / 2;
         const ry = (getY(r, c) + getY(r + 1, c)) / 2;
-        const road = this.add.image(rx, ry, 'road_h');
+        const road = this.add.image(rx, ry, 'road_h').setScale(0.5);
         road.setDepth(r + c + 0.5); // Fractional depth to interleave between block rows
         this.groundLayer.add(road);
       }
@@ -85,7 +91,7 @@ export default class GameScene extends Phaser.Scene {
       for (let c = 0; c < GRID_COLS - 1; c++) {
         const rx = (getX(r, c) + getX(r + 1, c + 1)) / 2;
         const ry = (getY(r, c) + getY(r + 1, c + 1)) / 2;
-        const road = this.add.image(rx, ry, 'road_intersection');
+        const road = this.add.image(rx, ry, 'road_intersection').setScale(0.5);
         road.setDepth(r + c + 1.0); // Fractional depth to align with crossing block rows
         this.groundLayer.add(road);
       }
@@ -129,11 +135,20 @@ export default class GameScene extends Phaser.Scene {
     this.targetParallaxX = 0;
     this.targetParallaxY = 0;
 
-    // Set initial responsive zoom and centering
-    this.handleResize(this.scale);
+    this.hasZoomedManually = false;
+    this.isResizing = false;
 
-    // Register scale resize listener for mobile responsive layout updates
-    this.scale.on('resize', this.handleResize, this);
+    // Set initial responsive zoom and centering
+    this.handleResize();
+
+    // Register ResizeObserver on parent container to capture layout changes and React mounts
+    const parent = this.scale.parent;
+    if (parent) {
+      this.resizeObserver = new ResizeObserver(() => {
+        this.handleResize();
+      });
+      this.resizeObserver.observe(parent);
+    }
 
     // Event listeners
     this.input.on('pointerdown', this.handlePointerDown, this);
@@ -150,46 +165,73 @@ export default class GameScene extends Phaser.Scene {
     // Handle centering event on dashboard requests
     const handleCenterEvent = () => {
       this.targetZoom = this.defaultZoom;
+      this.hasZoomedManually = false;
     };
 
     window.addEventListener('center-player-building', handleCenterEvent);
     this.events.once('shutdown', () => {
       window.removeEventListener('center-player-building', handleCenterEvent);
-      this.scale.off('resize', this.handleResize, this);
+      if (this.resizeObserver) {
+        this.resizeObserver.disconnect();
+      }
     });
   }
 
   /**
    * Resizes viewport zoom dynamically to ensure entire grid remains visible on mobile/desktop.
    */
-  handleResize(gameSize) {
-    const width = gameSize.width;
-    const height = gameSize.height;
+  handleResize() {
+    if (this.isResizing) return;
 
-    // Snug padding to maximize visible layout size on mobile/tablet viewports
-    const padding = 60;
-    const zoomX = width / (this.terrainWidth + padding);
-    const zoomY = height / (this.terrainHeight + padding);
+    const parent = this.scale.parent;
+    if (!parent) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const targetWidth = parent.clientWidth * dpr;
+    const targetHeight = parent.clientHeight * dpr;
+
+    // Prevent rendering or resizing if layout measurements are not yet settled
+    if (targetWidth <= 0 || targetHeight <= 0) return;
+
+    // Resize Phaser's canvas container to physical device resolution bounds
+    if (this.scale.width !== targetWidth || this.scale.height !== targetHeight) {
+      this.isResizing = true;
+      this.scale.resize(targetWidth, targetHeight);
+      this.isResizing = false;
+    }
+
+    // Convert dimensions back to logical game units for layout math
+    const logicalWidth = targetWidth / dpr;
+    const logicalHeight = targetHeight / dpr;
+
+    // Generous padding margins to account for top/bottom HUD overlay offsets and edge decorations
+    const paddingX = 240;
+    const paddingY = 320;
+    const zoomX = logicalWidth / (this.terrainWidth + paddingX);
+    const zoomY = logicalHeight / (this.terrainHeight + paddingY);
 
     // Minimum clamp set to 0.05 to prevent grid edge cutoff on vertical mobile aspect ratios
     let defaultZoom = Phaser.Math.Clamp(Math.min(zoomX, zoomY), 0.05, 1.5);
 
-    // On mobile viewports (width < 768px), scale zoom in by 80% to make details larger and visible
-    if (width < 768) {
-      defaultZoom = defaultZoom * 1.80;
+    // Multiply logical camera zoom by DPR so sprites map exactly 1-to-1 with screen physical pixels
+    defaultZoom = defaultZoom * dpr;
+
+    // Mobile/similar screens: increase default zoom by 121% total (8% more than before) to zoom in closer
+    if (window.innerWidth < 768) {
+      defaultZoom = defaultZoom * 2.21;
     }
 
     this.defaultZoom = defaultZoom;
 
-    // Lock initial or current zoom factor if near default
-    if (!this.targetZoom || Math.abs(this.targetZoom - this.defaultZoom) < 0.1) {
+    // Lock initial or current zoom factor if the user has not manually zoomed
+    if (!this.hasZoomedManually) {
       this.targetZoom = defaultZoom;
       this.cameras.main.setZoom(defaultZoom);
     }
 
-    // Centered scroll coordinates without dividing by zoom (Phaser 3 center-zoom standard)
-    this.targetScrollX = this.focusX - width / 2;
-    this.targetScrollY = this.focusY - height / 2;
+    // Centered scroll coordinates are computed in physical viewport space
+    this.targetScrollX = this.focusX - this.scale.width / 2;
+    this.targetScrollY = this.focusY - this.scale.height / 2;
     
     this.cameras.main.scrollX = this.targetScrollX;
     this.cameras.main.scrollY = this.targetScrollY;
@@ -198,10 +240,52 @@ export default class GameScene extends Phaser.Scene {
   handlePointerDown(pointer) {
     if (pointer.rightButtonDown()) return;
     this.isPointerDown = true;
+    this.startX = pointer.x;
+    this.startY = pointer.y;
+    this.startScrollX = this.cameras.main.scrollX;
+    this.startScrollY = this.cameras.main.scrollY;
     this.isDragging = false;
   }
 
   handlePointerMove(pointer) {
+    if (this.isPointerDown && window.innerWidth < 768) {
+      const dx = pointer.x - this.startX;
+      const dy = pointer.y - this.startY;
+
+      // Classify as dragging if displacement is greater than small threshold
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+        this.isDragging = true;
+      }
+
+      if (this.isDragging) {
+        this.hasZoomedManually = true; // Lock auto-centering
+
+        const zoom = this.cameras.main.zoom;
+        this.targetScrollX = this.startScrollX - dx / zoom;
+        this.targetScrollY = this.startScrollY - dy / zoom;
+
+        // Clamp scroll coordinate bounds to prevent sliding off the map area
+        const viewW = this.scale.width / zoom;
+        const viewH = this.scale.height / zoom;
+        const minFocalX = this.focusX - this.terrainWidth / 2 - 200;
+        const maxFocalX = this.focusX + this.terrainWidth / 2 + 200;
+        const minFocalY = this.focusY - this.terrainHeight / 2 - 200;
+        const maxFocalY = this.focusY + this.terrainHeight / 2 + 200;
+
+        const minScrollX = minFocalX - viewW / 2;
+        const maxScrollX = maxFocalX - viewW / 2;
+        const minScrollY = minFocalY - viewH / 2;
+        const maxScrollY = maxFocalY - viewH / 2;
+
+        this.targetScrollX = Phaser.Math.Clamp(this.targetScrollX, minScrollX, maxScrollX);
+        this.targetScrollY = Phaser.Math.Clamp(this.targetScrollY, minScrollY, maxScrollY);
+
+        // Apply scroll offset instantly for dragging responsiveness
+        this.cameras.main.scrollX = this.targetScrollX;
+        this.cameras.main.scrollY = this.targetScrollY;
+      }
+    }
+
     // Parallax Shift Offset math based on mouse position relative to window center
     const centerX = this.scale.width / 2;
     const centerY = this.scale.height / 2;
@@ -217,6 +301,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   handleWheelZoom(pointer, gameObjects, deltaX, deltaY) {
+    this.hasZoomedManually = true;
     const zoomSpeed = 0.08;
     const nextZoom = this.targetZoom - Math.sign(deltaY) * zoomSpeed;
     // Allow zooming in/out relative to the screen layout limits
@@ -241,9 +326,11 @@ export default class GameScene extends Phaser.Scene {
     const interpolatedZoom = Phaser.Math.Linear(currentZoom, this.targetZoom, lerpZoom);
     this.cameras.main.setZoom(interpolatedZoom);
 
-    // Centered scroll coordinates without dividing by zoom (Phaser 3 center-zoom standard)
-    this.targetScrollX = this.focusX - this.scale.width / 2;
-    this.targetScrollY = this.focusY - this.scale.height / 2;
+    // Centered scroll coordinates are based on physical viewport dimensions when not manually zoomed or dragged
+    if (!this.hasZoomedManually) {
+      this.targetScrollX = this.focusX - this.scale.width / 2;
+      this.targetScrollY = this.focusY - this.scale.height / 2;
+    }
 
     // Smooth scroll interpolation (lerp)
     const lerpScroll = 0.12;

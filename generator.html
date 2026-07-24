@@ -1,40 +1,105 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>CapitalGrid Isometric Asset Generator</title>
 </head>
+
 <body>
   <h2>Generating High-Fidelity 3D Isometric Buildings (Cool-Toned Night Streetlights)...</h2>
-  
+
   <div style="display: flex; gap: 10px; flex-wrap: wrap;">
     <div>
       <h3>1. Farming (Rustic Barn, Silo & Tractor)</h3>
-      <canvas id="canvas-farm" width="480" height="300" style="border:1px solid #ccc;"></canvas>
+      <canvas id="canvas-farm" width="1024" height="1024"
+        style="border:1px solid #ccc; width: 512px; height: 512px;"></canvas>
     </div>
     <div>
       <h3>2. Mining (Detailed Cave Shaft & Crane Rig)</h3>
-      <canvas id="canvas-mine" width="480" height="300" style="border:1px solid #ccc;"></canvas>
+      <canvas id="canvas-mine" width="1024" height="1024"
+        style="border:1px solid #ccc; width: 512px; height: 512px;"></canvas>
     </div>
     <div>
-      <h3>3. Factory / Industrial Complex</h3>
-      <canvas id="canvas-factory" width="480" height="300" style="border:1px solid #ccc;"></canvas>
+      <h3>3. Factory (Sawtooth Industrial Roof & Stacks)</h3>
+      <canvas id="canvas-factory" width="1024" height="1024"
+        style="border:1px solid #ccc; width: 512px; height: 512px;"></canvas>
     </div>
     <div>
-      <h3>4. Retail Plaza / Showroom</h3>
-      <canvas id="canvas-retail" width="480" height="300" style="border:1px solid #ccc;"></canvas>
+      <h3>4. Retail Plaza (Showroom, Parking & Corporate Sign)</h3>
+      <canvas id="canvas-retail" width="1024" height="1024"
+        style="border:1px solid #ccc; width: 512px; height: 512px;"></canvas>
+    </div>
+    <div>
+      <h3>5. Corporate Tower (Glass Skyscraper, Plaza & Helipad)</h3>
+      <canvas id="canvas-corporate" width="1024" height="1024"
+        style="border:1px solid #ccc; width: 512px; height: 512px;"></canvas>
+    </div>
+    <div>
+      <h3>6. CGN Tower (Ultra-Modern Headquarters & CGN Logo)</h3>
+      <canvas id="canvas-cgn" width="1024" height="1024"
+        style="border:1px solid #ccc; width: 512px; height: 512px;"></canvas>
+    </div>
+    <div>
+      <h3>7. Grand Fountain (Tiered Marble Water Fountain & Plaza)</h3>
+      <canvas id="canvas-fountain" width="1024" height="1024"
+        style="border:1px solid #ccc; width: 512px; height: 512px;"></canvas>
+    </div>
+    <div>
+      <h3>8. Stock Exchange Skyscraper (Champagne Gold & Ticker Wrap)</h3>
+      <canvas id="canvas-stock-exchange" width="1024" height="1024"
+        style="border:1px solid #ccc; width: 512px; height: 512px;"></canvas>
+    </div>
+    <div>
+      <h3>9. Premium Modern Architecture House</h3>
+      <canvas id="canvas-house" width="1024" height="1024"
+        style="border:1px solid #ccc; width: 512px; height: 512px;"></canvas>
+    </div>
+    <div>
+      <h3>10. Premium Modern Multicomplex</h3>
+      <canvas id="canvas-multicomplex" width="1024" height="1024"
+        style="border:1px solid #ccc; width: 512px; height: 512px;"></canvas>
+    </div>
+    <div>
+      <h3>11. Premium Global Trade Terminal</h3>
+      <canvas id="canvas-terminal" width="1024" height="1024"
+        style="border:1px solid #ccc; width: 512px; height: 512px;"></canvas>
     </div>
   </div>
-  
+
   <h3 id="status" style="color: blue;">Writing base64 image streams...</h3>
 
   <script>
+    // 0. Remote Error Reporting Pipeline
+    window.onerror = function (message, source, lineno, colno, error) {
+      const errMsg = 'JS ERROR: ' + message + ' at ' + source + ':' + lineno + ':' + colno;
+      console.error(errMsg);
+      document.getElementById('status').innerText = errMsg;
+      document.getElementById('status').style.color = 'red';
+      try {
+        const b64Data = btoa(unescape(encodeURIComponent(errMsg)));
+        const payload = {
+          files: [
+            { relPath: 'buildings/client_error.txt', data: 'data:text/plain;base64,' + b64Data }
+          ]
+        };
+        fetch('/api/save-assets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch (e) {
+        console.error('Failed to post client error:', e);
+      }
+      return false;
+    };
+
     const W = 480;
     const H = 160;
     const baseOffsetY = 140;
 
-    // Helper: draw base foundation diamond (covers entire top surface)
+    // Helper: draw base foundation diamond (covers entire top surface seamlessly)
     function drawFoundation(ctx, color) {
-      ctx.clearRect(0, 0, W, 300);
+      ctx.clearRect(-16, -106, 512, 512);
       ctx.fillStyle = color;
       ctx.beginPath();
       ctx.moveTo(W / 2, baseOffsetY);
@@ -43,24 +108,23 @@
       ctx.lineTo(0, baseOffsetY + H / 2);
       ctx.closePath();
       ctx.fill();
-
-      // Flat face shadow/borders
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)'; // Cool cyan-blue rim light reflection
-      ctx.stroke();
     }
 
     // --- PART 1: TERRAIN BLOCK GENERATION (Cool-Toned Streetlight Lighting) ---
     const blockCanvas = document.createElement('canvas');
-    blockCanvas.width = 480;
-    blockCanvas.height = 200;
+    blockCanvas.width = 1024;
+    blockCanvas.height = 512;
     const ctxBlock = blockCanvas.getContext('2d');
+    ctxBlock.imageSmoothingEnabled = true;
+    ctxBlock.imageSmoothingQuality = 'high';
+    ctxBlock.scale(2, 2);
+    ctxBlock.translate(16, 28);
 
     const bW = 480;
     const bH = 160;
     const bD = 40;
 
-    ctxBlock.clearRect(0, 0, bW, bH + bD);
+    ctxBlock.clearRect(-16, -28, 512, 256);
 
     // Left vertical wall (cool blue slate shaded side)
     ctxBlock.fillStyle = '#182235';
@@ -121,10 +185,14 @@
 
     // --- PART 2: COOL SHADOW ---
     const shadowCanvas = document.createElement('canvas');
-    shadowCanvas.width = 480;
-    shadowCanvas.height = 160;
+    shadowCanvas.width = 1024;
+    shadowCanvas.height = 512;
     const ctxShadow = shadowCanvas.getContext('2d');
-    ctxShadow.clearRect(0, 0, bW, bH);
+    ctxShadow.imageSmoothingEnabled = true;
+    ctxShadow.imageSmoothingQuality = 'high';
+    ctxShadow.scale(2, 2);
+    ctxShadow.translate(16, 48);
+    ctxShadow.clearRect(-16, -48, 512, 256);
     const gradS = ctxShadow.createRadialGradient(bW / 2, bH / 2, 10, bW / 2, bH / 2, bW / 2);
     gradS.addColorStop(0, 'rgba(8, 12, 24, 0.65)');
     gradS.addColorStop(0.7, 'rgba(8, 12, 24, 0.22)');
@@ -142,7 +210,7 @@
 
     // Grass turf illuminated by bright white/cyan searchlight spotlights
     function drawPremiumGrassBase(ctx) {
-      ctx.clearRect(0, 0, pW, pH + extraHeight);
+      ctx.clearRect(-56, -28, 512, 256);
 
       // Soil edge underlay
       ctx.fillStyle = '#221914';
@@ -243,7 +311,7 @@
       for (let i = 0; i < density; i++) {
         const fx = x + (Math.random() * 16 - 8);
         const fy = y + (Math.random() * 10 - 5);
-        
+
         ctx.fillStyle = 'rgba(8,12,24,0.3)';
         ctx.beginPath();
         ctx.arc(fx, fy + 1, 1.2, 0, Math.PI * 2);
@@ -300,12 +368,12 @@
       clusters.forEach(c => {
         const cx = x + c.dx;
         const cy = y + c.dy;
-        
+
         ctx.fillStyle = '#064e3b';
         ctx.beginPath();
         ctx.arc(cx, cy, c.r, 0, Math.PI * 2);
         ctx.fill();
-        
+
         ctx.fillStyle = '#0f766e';
         ctx.beginPath();
         ctx.arc(cx - 2, cy - 2, c.r - 2, 0, Math.PI * 2);
@@ -336,8 +404,13 @@
     };
 
     Object.values(plotCanvases).forEach(c => {
-      c.width = 400;
-      c.height = 200;
+      c.width = 1024;
+      c.height = 512;
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.scale(2, 2);
+      ctx.translate(56, 28);
     });
 
     // 01. plot_grass
@@ -426,10 +499,14 @@
 
 
     // --- PART 4: HIGH-FIDELITY BUILDINGS GENERATION (Streetlit Glows) ---
-    
+
     // 1. RENDER FARMING BUILDING (Farming, Barn & Silo)
     const cFarm = document.getElementById('canvas-farm');
     const ctxFarm = cFarm.getContext('2d');
+    ctxFarm.imageSmoothingEnabled = true;
+    ctxFarm.imageSmoothingQuality = 'high';
+    ctxFarm.scale(2, 2);
+    ctxFarm.translate(16, 106);
     drawFoundation(ctxFarm, '#14532d'); // cool forest green base
 
     // Red Barn Hall (illuminated by searchlights)
@@ -517,6 +594,10 @@
     // 2. RENDER MINING BUILDING (Mining, Cave & Scaffold)
     const cMine = document.getElementById('canvas-mine');
     const ctxMine = cMine.getContext('2d');
+    ctxMine.imageSmoothingEnabled = true;
+    ctxMine.imageSmoothingQuality = 'high';
+    ctxMine.scale(2, 2);
+    ctxMine.translate(16, 106);
     drawFoundation(ctxMine, '#1c1917'); // Dark slate/gravel base
 
     // Cave entrance portal
@@ -607,6 +688,10 @@
     // 3. RENDER FACTORY/MANUFACTURING (Factory, Sawtooth & Stacks)
     const cFactory = document.getElementById('canvas-factory');
     const ctxFact = cFactory.getContext('2d');
+    ctxFact.imageSmoothingEnabled = true;
+    ctxFact.imageSmoothingQuality = 'high';
+    ctxFact.scale(2, 2);
+    ctxFact.translate(16, 106);
     drawFoundation(ctxFact, '#1e293b'); // Cool asphalt dark-blue base
 
     // High-Contrast clean white concrete hall
@@ -680,6 +765,10 @@
     // 4. RENDER RETAIL PLAZA (Showroom, Plaza & Sign)
     const cRetail = document.getElementById('canvas-retail');
     const ctxRet = cRetail.getContext('2d');
+    ctxRet.imageSmoothingEnabled = true;
+    ctxRet.imageSmoothingQuality = 'high';
+    ctxRet.scale(2, 2);
+    ctxRet.translate(16, 106);
     drawFoundation(ctxRet, '#1e293b'); // Cool concrete base
 
     // Plaza joints
@@ -746,16 +835,1315 @@
     ctxRet.fillRect(309, baseOffsetY + 25, 4, 8);
 
 
+    // 5. RENDER MODERN CORPORATE TOWER (Glass Skyscraper, Plaza & Helipad)
+    const cCorp = document.getElementById('canvas-corporate');
+    const ctxCorp = cCorp.getContext('2d');
+    ctxCorp.imageSmoothingEnabled = true;
+    ctxCorp.imageSmoothingQuality = 'high';
+    ctxCorp.scale(2, 2);
+    ctxCorp.translate(16, 172);
+    ctxCorp.clearRect(-16, -172, 512, 512);
+
+    // --- 3D CONCRETE BASE SIDE WALLS (40px Depth) ---
+    ctxCorp.fillStyle = '#182235';
+    ctxCorp.beginPath();
+    ctxCorp.moveTo(0, baseOffsetY + H / 2);
+    ctxCorp.lineTo(W / 2, baseOffsetY + H);
+    ctxCorp.lineTo(W / 2, baseOffsetY + H + 40);
+    ctxCorp.lineTo(0, baseOffsetY + H / 2 + 40);
+    ctxCorp.closePath();
+    ctxCorp.fill();
+
+    ctxCorp.fillStyle = '#0b0f17';
+    ctxCorp.beginPath();
+    ctxCorp.moveTo(W / 2, baseOffsetY + H);
+    ctxCorp.lineTo(W, baseOffsetY + H / 2);
+    ctxCorp.lineTo(W, baseOffsetY + H / 2 + 40);
+    ctxCorp.lineTo(W / 2, baseOffsetY + H + 40);
+    ctxCorp.closePath();
+    ctxCorp.fill();
+
+    ctxCorp.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+    ctxCorp.lineWidth = 2;
+    ctxCorp.beginPath();
+    ctxCorp.moveTo(0, baseOffsetY + H / 2);
+    ctxCorp.lineTo(W / 2, baseOffsetY);
+    ctxCorp.lineTo(W, baseOffsetY + H / 2);
+    ctxCorp.stroke();
+
+    // --- FULL-TILE MODERN CORPORATE TOWER SKYSCRAPER ---
+    const towerH = 250; // Majestic skyscraper height
+    const towerBaseY = baseOffsetY + H; // 300
+
+    // Left Facade (Bright Cool Cyan-Blue Glass Curtain)
+    const tGradL = ctxCorp.createLinearGradient(0, 0, W / 2, 0);
+    tGradL.addColorStop(0, '#0369a1');
+    tGradL.addColorStop(0.3, '#0284c7');
+    tGradL.addColorStop(0.7, '#38bdf8');
+    tGradL.addColorStop(1, '#0284c7');
+    ctxCorp.fillStyle = tGradL;
+    ctxCorp.beginPath();
+    ctxCorp.moveTo(0, baseOffsetY + H / 2);
+    ctxCorp.lineTo(W / 2, baseOffsetY + H);
+    ctxCorp.lineTo(W / 2, baseOffsetY + H - towerH);
+    ctxCorp.lineTo(0, baseOffsetY + H / 2 - towerH);
+    ctxCorp.closePath();
+    ctxCorp.fill();
+
+    // Right Facade (Deep Slate Navy Glass)
+    const tGradR = ctxCorp.createLinearGradient(W / 2, 0, W, 0);
+    tGradR.addColorStop(0, '#0f172a');
+    tGradR.addColorStop(0.5, '#1e293b');
+    tGradR.addColorStop(1, '#020617');
+    ctxCorp.fillStyle = tGradR;
+    ctxCorp.beginPath();
+    ctxCorp.moveTo(W / 2, baseOffsetY + H);
+    ctxCorp.lineTo(W, baseOffsetY + H / 2);
+    ctxCorp.lineTo(W, baseOffsetY + H / 2 - towerH);
+    ctxCorp.lineTo(W / 2, baseOffsetY + H - towerH);
+    ctxCorp.closePath();
+    ctxCorp.fill();
+
+    // Vertical Steel Mullion Ribs (Left Facade)
+    ctxCorp.strokeStyle = 'rgba(226, 232, 240, 0.6)';
+    ctxCorp.lineWidth = 1.5;
+    for (let mx = 18; mx < W / 2; mx += 20) {
+      const myStart = baseOffsetY + H / 2 + (mx / 3);
+      ctxCorp.beginPath();
+      ctxCorp.moveTo(mx, myStart);
+      ctxCorp.lineTo(mx, myStart - towerH);
+      ctxCorp.stroke();
+    }
+
+    // Vertical Steel Mullion Ribs (Right Facade)
+    ctxCorp.strokeStyle = 'rgba(51, 65, 85, 0.7)';
+    ctxCorp.lineWidth = 1.5;
+    for (let mx = W / 2 + 18; mx < W; mx += 20) {
+      const myStart = baseOffsetY + H - ((mx - W / 2) / 3);
+      ctxCorp.beginPath();
+      ctxCorp.moveTo(mx, myStart);
+      ctxCorp.lineTo(mx, myStart - towerH);
+      ctxCorp.stroke();
+    }
+
+    // Horizontal Office Floor Divisions & Emissive Window Grid
+    const floors = 12;
+    const floorSpacing = towerH / floors;
+    for (let f = 1; f < floors; f++) {
+      const fyL = baseOffsetY + H - f * floorSpacing;
+
+      ctxCorp.strokeStyle = '#bae6fd';
+      ctxCorp.lineWidth = 2;
+      ctxCorp.beginPath();
+      ctxCorp.moveTo(0, fyL - H / 2);
+      ctxCorp.lineTo(W / 2, fyL);
+      ctxCorp.stroke();
+
+      ctxCorp.strokeStyle = '#334155';
+      ctxCorp.lineWidth = 2;
+      ctxCorp.beginPath();
+      ctxCorp.moveTo(W / 2, fyL);
+      ctxCorp.lineTo(W, fyL - H / 2);
+      ctxCorp.stroke();
+
+      // Emissive windows on left facade
+      if (f % 2 === 0 || f === 3 || f === 7 || f === 11) {
+        ctxCorp.fillStyle = f % 4 === 0 ? 'rgba(254, 240, 138, 0.95)' : 'rgba(103, 232, 249, 0.9)';
+        for (let w = 18; w < W / 2 - 12; w += 20) {
+          const wy = fyL - H / 2 + (w / 3) + 4;
+          ctxCorp.fillRect(w, wy - floorSpacing + 6, 12, floorSpacing - 8);
+        }
+      }
+    }
+
+    // --- CORPORATE TOWER TIER 3: SOLID FLAT ROOFTOP DECK & HELIPAD ---
+    const roofBaseY = baseOffsetY - towerH; // 140 - 250 = -110
+    const roofCenterY = baseOffsetY + H / 2 - towerH; // 220 - 250 = -30
+
+    // Flat Roof Diamond (Perfect 3D solid top matching facades exactly)
+    ctxCorp.fillStyle = '#0f172a';
+    ctxCorp.beginPath();
+    ctxCorp.moveTo(W / 2, roofBaseY);
+    ctxCorp.lineTo(W, roofCenterY);
+    ctxCorp.lineTo(W / 2, baseOffsetY + H - towerH);
+    ctxCorp.lineTo(0, roofCenterY);
+    ctxCorp.closePath();
+    ctxCorp.fill();
+    ctxCorp.strokeStyle = '#334155';
+    ctxCorp.lineWidth = 2.5;
+    ctxCorp.stroke();
+
+    // Rooftop Helipad
+    ctxCorp.fillStyle = '#1e293b';
+    ctxCorp.beginPath();
+    ctxCorp.ellipse(W / 2, roofCenterY, 48, 24, 0, 0, Math.PI * 2);
+    ctxCorp.fill();
+    ctxCorp.strokeStyle = '#eab308';
+    ctxCorp.lineWidth = 2.5;
+    ctxCorp.stroke();
+
+    // Helipad "H"
+    ctxCorp.strokeStyle = '#ffffff';
+    ctxCorp.lineWidth = 3.5;
+    ctxCorp.beginPath();
+    ctxCorp.moveTo(W / 2 - 10, roofCenterY - 8);
+    ctxCorp.lineTo(W / 2 - 10, roofCenterY + 8);
+    ctxCorp.moveTo(W / 2 + 10, roofCenterY - 8);
+    ctxCorp.lineTo(W / 2 + 10, roofCenterY + 8);
+    ctxCorp.moveTo(W / 2 - 10, roofCenterY);
+    ctxCorp.lineTo(W / 2 + 10, roofCenterY);
+    ctxCorp.stroke();
+
+    // Helipad Landing Lights
+    const padLights = [
+      { x: W / 2 - 36, y: roofCenterY, c: '#ef4444' },
+      { x: W / 2 + 36, y: roofCenterY, c: '#ef4444' },
+      { x: W / 2, y: roofCenterY - 18, c: '#22c55e' },
+      { x: W / 2, y: roofCenterY + 18, c: '#22c55e' }
+    ];
+    padLights.forEach(pl => {
+      ctxCorp.fillStyle = pl.c;
+      ctxCorp.beginPath();
+      ctxCorp.arc(pl.x, pl.y, 3, 0, Math.PI * 2);
+      ctxCorp.fill();
+    });
+
+    // Communications Mast (Centered on Roof Center)
+    ctxCorp.strokeStyle = '#cbd5e1';
+    ctxCorp.lineWidth = 2.5;
+    ctxCorp.beginPath();
+    ctxCorp.moveTo(W / 2, roofCenterY);
+    ctxCorp.lineTo(W / 2, roofCenterY - 60);
+    ctxCorp.stroke();
+
+    ctxCorp.fillStyle = '#ef4444';
+    ctxCorp.beginPath();
+    ctxCorp.arc(W / 2, roofCenterY - 61, 4, 0, Math.PI * 2);
+    ctxCorp.fill();
+    ctxCorp.fillStyle = 'rgba(239, 68, 68, 0.4)';
+    ctxCorp.beginPath();
+    ctxCorp.arc(W / 2, roofCenterY - 61, 8, 0, Math.PI * 2);
+    ctxCorp.fill();
+
+    // --- GLOWING 3D CORPORATE LOGO SIGN ---
+    const logoY = towerBaseY - towerH / 2 - 10;
+    ctxCorp.fillStyle = '#0284c7';
+    ctxCorp.beginPath();
+    ctxCorp.moveTo(60, logoY - 15);
+    ctxCorp.lineTo(160, logoY + 35);
+    ctxCorp.lineTo(160, logoY + 55);
+    ctxCorp.lineTo(60, logoY + 5);
+    ctxCorp.closePath();
+    ctxCorp.fill();
+    ctxCorp.strokeStyle = '#ffffff';
+    ctxCorp.lineWidth = 1.5;
+    ctxCorp.stroke();
+
+    ctxCorp.fillStyle = '#ffffff';
+    ctxCorp.font = 'bold 13px sans-serif';
+    ctxCorp.save();
+    ctxCorp.transform(1, 0.5, 0, 1, 0, 0);
+    ctxCorp.fillText('CAPITAL HQ', 68, logoY - 42);
+    ctxCorp.restore();
+
+
+    // 6. RENDER ULTRA-MODERN CGN HEADQUARTERS (Curved Glass Skyscraper, Obsidian Plaza & CGN Logo)
+    const cCGN = document.getElementById('canvas-cgn');
+    const ctxCGN = cCGN.getContext('2d');
+    ctxCGN.imageSmoothingEnabled = true;
+    ctxCGN.imageSmoothingQuality = 'high';
+    ctxCGN.scale(2, 2);
+
+    ctxCGN.translate(16, 172);
+    ctxCGN.clearRect(-16, -172, 512, 512);
+
+    // --- 3D CONCRETE BASE SIDE WALLS (40px Depth) ---
+    ctxCGN.fillStyle = '#182235';
+    ctxCGN.beginPath();
+    ctxCGN.moveTo(0, baseOffsetY + H / 2);
+    ctxCGN.lineTo(W / 2, baseOffsetY + H);
+    ctxCGN.lineTo(W / 2, baseOffsetY + H + 40);
+    ctxCGN.lineTo(0, baseOffsetY + H / 2 + 40);
+    ctxCGN.closePath();
+    ctxCGN.fill();
+
+    ctxCGN.fillStyle = '#0b0f17';
+    ctxCGN.beginPath();
+    ctxCGN.moveTo(W / 2, baseOffsetY + H);
+    ctxCGN.lineTo(W, baseOffsetY + H / 2);
+    ctxCGN.lineTo(W, baseOffsetY + H / 2 + 40);
+    ctxCGN.lineTo(W / 2, baseOffsetY + H + 40);
+    ctxCGN.closePath();
+    ctxCGN.fill();
+
+    ctxCGN.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+    ctxCGN.lineWidth = 2;
+    ctxCGN.beginPath();
+    ctxCGN.moveTo(0, baseOffsetY + H / 2);
+    ctxCGN.lineTo(W / 2, baseOffsetY);
+    ctxCGN.lineTo(W, baseOffsetY + H / 2);
+    ctxCGN.stroke();
+
+    // --- FULL-TILE ULTRA-MODERN CGN HEADQUARTERS SKYSCRAPER ---
+    const cgnTowerH = 260; // Extra tall skyscraper height
+    const cgnBaseY = baseOffsetY + H; // 300
+
+    // Left Facade (Deep Metallic Sapphire Blue to Neon Cyan Curtain)
+    const cgnTGradL = ctxCGN.createLinearGradient(0, 0, W / 2, 0);
+    cgnTGradL.addColorStop(0, '#1e1b4b');
+    cgnTGradL.addColorStop(0.2, '#312e81');
+    cgnTGradL.addColorStop(0.6, '#4f46e5');
+    cgnTGradL.addColorStop(0.9, '#06b6d4');
+    cgnTGradL.addColorStop(1, '#0284c7');
+    ctxCGN.fillStyle = cgnTGradL;
+    ctxCGN.beginPath();
+    ctxCGN.moveTo(0, baseOffsetY + H / 2);
+    ctxCGN.lineTo(W / 2, baseOffsetY + H);
+    ctxCGN.lineTo(W / 2, baseOffsetY + H - cgnTowerH);
+    ctxCGN.lineTo(0, baseOffsetY + H / 2 - cgnTowerH);
+    ctxCGN.closePath();
+    ctxCGN.fill();
+
+    // Right Facade (Polished Midnight Slate with Gold Reflections)
+    const cgnTGradR = ctxCGN.createLinearGradient(W / 2, 0, W, 0);
+    cgnTGradR.addColorStop(0, '#0f172a');
+    cgnTGradR.addColorStop(0.5, '#1e1b4b');
+    cgnTGradR.addColorStop(1, '#020617');
+    ctxCGN.fillStyle = cgnTGradR;
+    ctxCGN.beginPath();
+    ctxCGN.moveTo(W / 2, baseOffsetY + H);
+    ctxCGN.lineTo(W, baseOffsetY + H / 2);
+    ctxCGN.lineTo(W, baseOffsetY + H / 2 - cgnTowerH);
+    ctxCGN.lineTo(W / 2, baseOffsetY + H - cgnTowerH);
+    ctxCGN.closePath();
+    ctxCGN.fill();
+
+    // Chrome Structural Ribs (Left Facade)
+    ctxCGN.strokeStyle = 'rgba(224, 231, 255, 0.75)';
+    ctxCGN.lineWidth = 1.8;
+    for (let mx = 18; mx < W / 2; mx += 20) {
+      const myStart = baseOffsetY + H / 2 + (mx / 3);
+      ctxCGN.beginPath();
+      ctxCGN.moveTo(mx, myStart);
+      ctxCGN.lineTo(mx, myStart - cgnTowerH);
+      ctxCGN.stroke();
+    }
+
+    // Chrome Structural Ribs (Right Facade)
+    ctxCGN.strokeStyle = 'rgba(99, 102, 241, 0.6)';
+    ctxCGN.lineWidth = 1.8;
+    for (let mx = W / 2 + 18; mx < W; mx += 20) {
+      const myStart = baseOffsetY + H - ((mx - W / 2) / 3);
+      ctxCGN.beginPath();
+      ctxCGN.moveTo(mx, myStart);
+      ctxCGN.lineTo(mx, myStart - cgnTowerH);
+      ctxCGN.stroke();
+    }
+
+    // Horizontal Office Floor Divisions & Multi-Floor Emissive Window Grid
+    const cgnFloors = 12;
+    const cgnFloorSpacing = cgnTowerH / cgnFloors;
+    for (let f = 1; f < cgnFloors; f++) {
+      const fyL = baseOffsetY + H - f * cgnFloorSpacing;
+
+      ctxCGN.strokeStyle = '#c7d2fe';
+      ctxCGN.lineWidth = 2;
+      ctxCGN.beginPath();
+      ctxCGN.moveTo(0, fyL - H / 2);
+      ctxCGN.lineTo(W / 2, fyL);
+      ctxCGN.stroke();
+
+      ctxCGN.strokeStyle = '#312e81';
+      ctxCGN.lineWidth = 2;
+      ctxCGN.beginPath();
+      ctxCGN.moveTo(W / 2, fyL);
+      ctxCGN.lineTo(W, fyL - H / 2);
+      ctxCGN.stroke();
+
+      // Emissive windows on left facade
+      if (f % 2 === 0 || f === 3 || f === 5 || f === 9 || f === 11) {
+        ctxCGN.fillStyle = f % 4 === 0 ? 'rgba(253, 224, 71, 0.95)' : 'rgba(103, 232, 249, 0.9)';
+        for (let w = 18; w < W / 2 - 12; w += 20) {
+          const wy = fyL - H / 2 + (w / 3) + 4;
+          ctxCGN.fillRect(w, wy - cgnFloorSpacing + 5, 12, cgnFloorSpacing - 7);
+        }
+      }
+    }
+
+    // --- CGN TOWER TIER 3: SOLID FLAT ROOFTOP DECK & SKY-DECK ---
+    const cgnRoofBaseY = baseOffsetY - cgnTowerH; // 140 - 260 = -120
+    const cgnRoofCenterY = baseOffsetY + H / 2 - cgnTowerH; // 220 - 260 = -40
+
+    // Flat Roof Diamond (Perfect 3D solid top matching facades exactly)
+    ctxCGN.fillStyle = '#050b18';
+    ctxCGN.beginPath();
+    ctxCGN.moveTo(W / 2, cgnRoofBaseY);
+    ctxCGN.lineTo(W, cgnRoofCenterY);
+    ctxCGN.lineTo(W / 2, baseOffsetY + H - cgnTowerH);
+    ctxCGN.lineTo(0, cgnRoofCenterY);
+    ctxCGN.closePath();
+    ctxCGN.fill();
+    ctxCGN.strokeStyle = '#818cf8';
+    ctxCGN.lineWidth = 2;
+    ctxCGN.stroke();
+
+    // Flat Sky-Deck Circular Overlay
+    ctxCGN.fillStyle = '#1e1b4b';
+    ctxCGN.beginPath();
+    ctxCGN.ellipse(W / 2, cgnRoofCenterY, 52, 26, 0, 0, Math.PI * 2);
+    ctxCGN.fill();
+    ctxCGN.strokeStyle = '#818cf8';
+    ctxCGN.lineWidth = 2.5;
+    ctxCGN.stroke();
+
+    // Mast (Centered on Roof Center)
+    ctxCGN.strokeStyle = '#f8fafc';
+    ctxCGN.lineWidth = 2.5;
+    ctxCGN.beginPath();
+    ctxCGN.moveTo(W / 2, cgnRoofCenterY);
+    ctxCGN.lineTo(W / 2, cgnRoofCenterY - 65);
+    ctxCGN.stroke();
+
+    ctxCGN.fillStyle = '#ef4444';
+    ctxCGN.beginPath();
+    ctxCGN.arc(W / 2, cgnRoofCenterY - 66, 4.5, 0, Math.PI * 2);
+    ctxCGN.fill();
+    ctxCGN.fillStyle = 'rgba(239, 68, 68, 0.45)';
+    ctxCGN.beginPath();
+    ctxCGN.arc(W / 2, cgnRoofCenterY - 66, 9, 0, Math.PI * 2);
+    ctxCGN.fill();
+
+    // --- HIGH-VISIBILITY 3D ILLUMINATED "CGN" EMBLEM SIGN ---
+    const cgnLogoY = towerBaseY - cgnTowerH / 2 - 10;
+
+    ctxCGN.fillStyle = '#312e81';
+    ctxCGN.beginPath();
+    ctxCGN.moveTo(50, cgnLogoY - 15);
+    ctxCGN.lineTo(150, cgnLogoY + 35);
+    ctxCGN.lineTo(150, cgnLogoY + 60);
+    ctxCGN.lineTo(50, cgnLogoY + 10);
+    ctxCGN.closePath();
+    ctxCGN.fill();
+
+    ctxCGN.strokeStyle = '#fbbf24';
+    ctxCGN.lineWidth = 2;
+    ctxCGN.stroke();
+
+    ctxCGN.fillStyle = 'rgba(6, 182, 212, 0.4)';
+    ctxCGN.beginPath();
+    ctxCGN.moveTo(45, cgnLogoY - 18);
+    ctxCGN.lineTo(155, cgnLogoY + 37);
+    ctxCGN.lineTo(155, cgnLogoY + 64);
+    ctxCGN.lineTo(45, cgnLogoY + 9);
+    ctxCGN.closePath();
+    ctxCGN.fill();
+
+    ctxCGN.fillStyle = '#ffffff';
+    ctxCGN.font = '900 24px sans-serif';
+    ctxCGN.save();
+    ctxCGN.transform(1, 0.5, 0, 1, 0, 0);
+    ctxCGN.fillText('CGN', 58, cgnLogoY - 45);
+    ctxCGN.restore();
+
+    ctxCGN.fillStyle = '#fde047';
+    ctxCGN.font = 'bold 9px sans-serif';
+    ctxCGN.save();
+    ctxCGN.transform(1, 0.5, 0, 1, 0, 0);
+    ctxCGN.fillText('CAPITAL NETWORK', 52, cgnLogoY - 32);
+    ctxCGN.restore();
+
+
+    // 7. RENDER LUXURY 3D GRAND FOUNTAIN (Full-Tile Self-Contained 3D Marble Fountain & Base)
+    const cFountain = document.getElementById('canvas-fountain');
+    const ctxF = cFountain.getContext('2d');
+    ctxF.imageSmoothingEnabled = true;
+    ctxF.imageSmoothingQuality = 'high';
+    ctxF.scale(2, 2);
+    ctxF.translate(16, 16);
+    ctxF.clearRect(-16, -16, 512, 512);
+
+    const fWallDepth = 40; // 40px Vertical 3D Concrete Base Wall Height matching Corporate & CGN towers
+    const fCenterY = baseOffsetY + H / 2; // 220
+    const fCenterX = W / 2; // 240
+
+    // Drop Shadow under the 3D Fountain Tile Base
+    ctxF.fillStyle = 'rgba(8, 12, 24, 0.5)';
+    ctxF.beginPath();
+    ctxF.moveTo(fCenterX, baseOffsetY + H + fWallDepth + 4);
+    ctxF.lineTo(W + 8, fCenterY + fWallDepth + 4);
+    ctxF.lineTo(fCenterX, baseOffsetY + H + fWallDepth + 12);
+    ctxF.lineTo(-8, fCenterY + fWallDepth + 4);
+    ctxF.closePath();
+    ctxF.fill();
+
+
+    // --- STEP 1: 3D CONCRETE TILE BASE VERTICAL SIDE WALLS (40px Depth) ---
+    // Front-Left Vertical Side Wall (Bright Lit Side)
+    const wallGradL = ctxF.createLinearGradient(0, baseOffsetY, 0, baseOffsetY + H + fWallDepth);
+    wallGradL.addColorStop(0, '#1c2d42');
+    wallGradL.addColorStop(0.5, '#182235');
+    wallGradL.addColorStop(1, '#0f172a');
+    ctxF.fillStyle = wallGradL;
+    ctxF.beginPath();
+    ctxF.moveTo(0, fCenterY);
+    ctxF.lineTo(fCenterX, baseOffsetY + H);
+    ctxF.lineTo(fCenterX, baseOffsetY + H + fWallDepth);
+    ctxF.lineTo(0, fCenterY + fWallDepth);
+    ctxF.closePath();
+    ctxF.fill();
+
+    // Front-Right Vertical Side Wall (Shaded Side)
+    const wallGradR = ctxF.createLinearGradient(0, baseOffsetY, 0, baseOffsetY + H + fWallDepth);
+    wallGradR.addColorStop(0, '#0f172a');
+    wallGradR.addColorStop(0.6, '#0b0f17');
+    wallGradR.addColorStop(1, '#020617');
+    ctxF.fillStyle = wallGradR;
+    ctxF.beginPath();
+    ctxF.moveTo(fCenterX, baseOffsetY + H);
+    ctxF.lineTo(W, fCenterY);
+    ctxF.lineTo(W, fCenterY + fWallDepth);
+    ctxF.lineTo(fCenterX, baseOffsetY + H + fWallDepth);
+    ctxF.closePath();
+    ctxF.fill();
+
+    // Specular Highlight Line along Front 3D Center Corner Edge of concrete base
+    ctxF.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctxF.lineWidth = 2;
+    ctxF.beginPath();
+    ctxF.moveTo(fCenterX, baseOffsetY + H);
+    ctxF.lineTo(fCenterX, baseOffsetY + H + fWallDepth);
+    ctxF.stroke();
+
+    // Flat Top Diamond Face of the Concrete Base Tile (Grey Plaza ground)
+    ctxF.fillStyle = '#1e293b';
+    ctxF.beginPath();
+    ctxF.moveTo(fCenterX, baseOffsetY);
+    ctxF.lineTo(W, fCenterY);
+    ctxF.lineTo(fCenterX, baseOffsetY + H);
+    ctxF.lineTo(0, fCenterY);
+    ctxF.closePath();
+    ctxF.fill();
+    ctxF.strokeStyle = '#334155';
+    ctxF.lineWidth = 2.5;
+    ctxF.stroke();
+
+
+    // --- STEP 2: 3D RAISED WHITE MARBLE OUTER BASIN WALLS (32px Height on top of base) ---
+    const rimDepth = 32;
+    const raisedY = baseOffsetY - rimDepth;
+    const raisedCenterY = fCenterY - rimDepth;
+
+    // Raised Front-Left Outer Marble Wall (Lit)
+    const marbleGradL = ctxF.createLinearGradient(0, raisedY, 0, baseOffsetY + H);
+    marbleGradL.addColorStop(0, '#ffffff');
+    marbleGradL.addColorStop(0.5, '#f1f5f9');
+    marbleGradL.addColorStop(1, '#cbd5e1');
+    ctxF.fillStyle = marbleGradL;
+    ctxF.beginPath();
+    ctxF.moveTo(0, raisedCenterY);
+    ctxF.lineTo(fCenterX, raisedY + H);
+    ctxF.lineTo(fCenterX, baseOffsetY + H);
+    ctxF.lineTo(0, fCenterY);
+    ctxF.closePath();
+    ctxF.fill();
+
+    // Raised Front-Right Outer Marble Wall (Shaded)
+    const marbleGradR = ctxF.createLinearGradient(0, raisedY, 0, baseOffsetY + H);
+    marbleGradR.addColorStop(0, '#cbd5e1');
+    marbleGradR.addColorStop(0.6, '#94a3b8');
+    marbleGradR.addColorStop(1, '#64748b');
+    ctxF.fillStyle = marbleGradR;
+    ctxF.beginPath();
+    ctxF.moveTo(fCenterX, raisedY + H);
+    ctxF.lineTo(W, raisedCenterY);
+    ctxF.lineTo(W, fCenterY);
+    ctxF.lineTo(fCenterX, baseOffsetY + H);
+    ctxF.closePath();
+    ctxF.fill();
+
+    // Specular highlight line along front corner of raised basin
+    ctxF.strokeStyle = '#ffffff';
+    ctxF.lineWidth = 2.8;
+    ctxF.beginPath();
+    ctxF.moveTo(fCenterX, raisedY + H);
+    ctxF.lineTo(fCenterX, baseOffsetY + H);
+    ctxF.stroke();
+
+    // Raised Top Coping Rim (White Marble top face)
+    ctxF.fillStyle = '#f8fafc';
+    ctxF.beginPath();
+    ctxF.moveTo(fCenterX, raisedY);
+    ctxF.lineTo(W, raisedCenterY);
+    ctxF.lineTo(fCenterX, raisedY + H);
+    ctxF.lineTo(0, raisedCenterY);
+    ctxF.closePath();
+    ctxF.fill();
+    ctxF.strokeStyle = '#cbd5e1';
+    ctxF.lineWidth = 3.5;
+    ctxF.stroke();
+
+    // Outer Coping Glowing Cyan Ambient Strip
+    ctxF.strokeStyle = '#38bdf8';
+    ctxF.lineWidth = 2;
+    ctxF.beginPath();
+    ctxF.moveTo(fCenterX, raisedY + 3);
+    ctxF.lineTo(W - 6, raisedCenterY);
+    ctxF.lineTo(fCenterX, raisedY + H - 3);
+    ctxF.lineTo(6, raisedCenterY);
+    ctxF.closePath();
+    ctxF.stroke();
+
+
+    // --- STEP 3: SUNKEN BLUE WATER POOL SURFACE ---
+    const rimWidth = 24;
+    const rimHeight = 8;
+    const pInW = W - rimWidth * 2; // 432
+    const pInH = H - rimHeight * 2; // 144
+    const pInY = raisedY + rimHeight; // 116
+
+    // Deep Crystal Turquoise Water Surface
+    const wGrad = ctxF.createRadialGradient(fCenterX, raisedCenterY, 5, fCenterX, raisedCenterY, pInW / 2);
+    wGrad.addColorStop(0, '#67e8f9');   // Neon cyan center
+    wGrad.addColorStop(0.45, '#06b6d4'); // Ocean turquoise
+    wGrad.addColorStop(1, '#0891b2');    // Deep cyan edge
+    ctxF.fillStyle = wGrad;
+    ctxF.beginPath();
+    ctxF.moveTo(fCenterX, pInY);
+    ctxF.lineTo(fCenterX + pInW / 2, raisedCenterY);
+    ctxF.lineTo(fCenterX, pInY + pInH);
+    ctxF.lineTo(fCenterX - pInW / 2, raisedCenterY);
+    ctxF.closePath();
+    ctxF.fill();
+
+    // Underwater Glowing LED Spotlights
+    const poolLamps = [
+      { x: fCenterX - 110, y: raisedCenterY },
+      { x: fCenterX + 110, y: raisedCenterY },
+      { x: fCenterX, y: pInY + 20 },
+      { x: fCenterX, y: pInY + pInH - 20 }
+    ];
+    poolLamps.forEach(pl => {
+      ctxF.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctxF.beginPath();
+      ctxF.arc(pl.x, pl.y, 4.5, 0, Math.PI * 2);
+      ctxF.fill();
+
+      ctxF.fillStyle = 'rgba(34, 211, 238, 0.5)';
+      ctxF.beginPath();
+      ctxF.arc(pl.x, pl.y, 11, 0, Math.PI * 2);
+      ctxF.fill();
+    });
+
+    // Caustics & Water Ripple Concentric Rings
+    ctxF.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    ctxF.lineWidth = 1.3;
+    for (let r = 25; r <= 140; r += 28) {
+      ctxF.beginPath();
+      ctxF.ellipse(fCenterX, raisedCenterY, r, r * (pInH / pInW), 0, 0, Math.PI * 2);
+      ctxF.stroke();
+    }
+
+
+    // --- STEP 4: TALLER MIDDLE TIER 3D SCULPTED MARBLE BASIN & PEDESTAL ---
+    const pedW = 60;
+    const pedH = 32; // Taller pedestal
+    ctxF.fillStyle = '#cbd5e1';
+    ctxF.fillRect(fCenterX - pedW / 4, raisedCenterY - pedH, pedW / 2, pedH);
+
+    const midW = 180;
+    const midH = 56;
+    const midY = raisedCenterY - pedH - midH / 2;
+
+    ctxF.fillStyle = '#f8fafc';
+    ctxF.beginPath();
+    ctxF.moveTo(fCenterX, midY);
+    ctxF.lineTo(fCenterX + midW / 2, midY + midH / 2);
+    ctxF.lineTo(fCenterX, midY + midH);
+    ctxF.lineTo(fCenterX - midW / 2, midY + midH / 2);
+    ctxF.closePath();
+    ctxF.fill();
+    ctxF.strokeStyle = '#e2e8f0';
+    ctxF.lineWidth = 2.5;
+    ctxF.stroke();
+
+    ctxF.fillStyle = '#22d3ee';
+    ctxF.beginPath();
+    ctxF.moveTo(fCenterX, midY + 4);
+    ctxF.lineTo(fCenterX + (midW - 18) / 2, midY + midH / 2);
+    ctxF.lineTo(fCenterX, midY + midH - 4);
+    ctxF.lineTo(fCenterX - (midW - 18) / 2, midY + midH / 2);
+    ctxF.closePath();
+    ctxF.fill();
+
+    // Cascading Translucent Water Sheets (Pouring into main pool)
+    const cascades = 20;
+    for (let c = 0; c < cascades; c++) {
+      const angle = (c / cascades) * Math.PI * 2;
+      const cX = fCenterX + Math.cos(angle) * (midW / 2 - 2);
+      const cY = midY + midH / 2 + Math.sin(angle) * (midH / 2 - 2);
+
+      const targetX = fCenterX + Math.cos(angle) * (midW / 2 + 32);
+      const targetY = raisedCenterY + Math.sin(angle) * (pInH / 2 - 8);
+
+      ctxF.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      ctxF.lineWidth = 2;
+      ctxF.beginPath();
+      ctxF.moveTo(cX, cY);
+      ctxF.lineTo(targetX, targetY);
+      ctxF.stroke();
+    }
+
+
+    // --- STEP 5: EXTRA TALL UPPER TIER SPIRE & CENTRAL HIGH-PRESSURE WATER JETS ---
+    const topCenterY = midY - 14;
+
+    // Central Gold Sprout Pinnacle
+    ctxF.fillStyle = '#fbbf24';
+    ctxF.beginPath();
+    ctxF.ellipse(fCenterX, topCenterY, 14, 7, 0, 0, Math.PI * 2);
+    ctxF.fill();
+
+    // Glowing Central Spire Crystal Orb
+    ctxF.fillStyle = '#ffffff';
+    ctxF.beginPath();
+    ctxF.arc(fCenterX, topCenterY - 10, 6, 0, Math.PI * 2);
+    ctxF.fill();
+    ctxF.fillStyle = 'rgba(6, 182, 212, 0.7)';
+    ctxF.beginPath();
+    ctxF.arc(fCenterX, topCenterY - 10, 13, 0, Math.PI * 2);
+    ctxF.fill();
+
+    // Extra Tall Vertical Water Plume (90px Height!)
+    const plumeGrad = ctxF.createLinearGradient(fCenterX, topCenterY, fCenterX, topCenterY - 90);
+    plumeGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+    plumeGrad.addColorStop(0.5, 'rgba(186, 230, 253, 0.85)');
+    plumeGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctxF.fillStyle = plumeGrad;
+    ctxF.beginPath();
+    ctxF.moveTo(fCenterX - 9, topCenterY);
+    ctxF.lineTo(fCenterX, topCenterY - 90);
+    ctxF.lineTo(fCenterX + 9, topCenterY);
+    ctxF.closePath();
+    ctxF.fill();
+
+    // High Arching Parabolic Water Jets (Spraying into 4 pool quadrants)
+    const jetDirections = [
+      { dx: -95, dy: 24 },
+      { dx: 95, dy: 24 },
+      { dx: -55, dy: -30 },
+      { dx: 55, dy: -30 }
+    ];
+
+    jetDirections.forEach(j => {
+      ctxF.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      ctxF.lineWidth = 3;
+      ctxF.beginPath();
+      ctxF.moveTo(fCenterX, topCenterY - 10);
+      ctxF.quadraticCurveTo(fCenterX + j.dx * 0.5, topCenterY - 65, fCenterX + j.dx, raisedCenterY + j.dy);
+      ctxF.stroke();
+
+      ctxF.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+      ctxF.lineWidth = 1.8;
+      ctxF.beginPath();
+      ctxF.ellipse(fCenterX + j.dx, raisedCenterY + j.dy, 10, 5, 0, 0, Math.PI * 2);
+      ctxF.stroke();
+    });
+
+    // Sparkling Fine Water Spray Mist
+    ctxF.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    for (let p = 0; p < 35; p++) {
+      const pX = fCenterX + (Math.random() * 100 - 50);
+      const pY = topCenterY - 10 - (Math.random() * 70);
+      ctxF.beginPath();
+      ctxF.arc(pX, pY, Math.random() * 2.2 + 0.8, 0, Math.PI * 2);
+      ctxF.fill();
+    }
+
+
+    // 8. RENDER PREMIUM 3D STOCK EXCHANGE SKYSCRAPER (Sleek Obsidian/Platinum Shard)
+    const cStockExchange = document.getElementById('canvas-stock-exchange');
+    const ctxStock = cStockExchange.getContext('2d');
+    ctxStock.imageSmoothingEnabled = true;
+    ctxStock.imageSmoothingQuality = 'high';
+    ctxStock.scale(2, 2);
+
+    ctxStock.translate(16, 172);
+    ctxStock.clearRect(-16, -172, 512, 512);
+
+    // --- 3D CONCRETE BASE SIDE WALLS (40px Depth) ---
+    ctxStock.fillStyle = '#182235';
+    ctxStock.beginPath();
+    ctxStock.moveTo(0, baseOffsetY + H / 2);
+    ctxStock.lineTo(W / 2, baseOffsetY + H);
+    ctxStock.lineTo(W / 2, baseOffsetY + H + 40);
+    ctxStock.lineTo(0, baseOffsetY + H / 2 + 40);
+    ctxStock.closePath();
+    ctxStock.fill();
+
+    ctxStock.fillStyle = '#0b0f17';
+    ctxStock.beginPath();
+    ctxStock.moveTo(W / 2, baseOffsetY + H);
+    ctxStock.lineTo(W, baseOffsetY + H / 2);
+    ctxStock.lineTo(W, baseOffsetY + H / 2 + 40);
+    ctxStock.lineTo(W / 2, baseOffsetY + H + 40);
+    ctxStock.closePath();
+    ctxStock.fill();
+
+    // --- PLAZA BASE TOP FACE (Pavement) ---
+    ctxStock.fillStyle = '#0f172a'; // Deep slate plaza pavement
+    ctxStock.beginPath();
+    ctxStock.moveTo(W / 2, baseOffsetY);
+    ctxStock.lineTo(W, baseOffsetY + H / 2);
+    ctxStock.lineTo(W / 2, baseOffsetY + H);
+    ctxStock.lineTo(0, baseOffsetY + H / 2);
+    ctxStock.closePath();
+    ctxStock.fill();
+
+    // Plaza Border Highlights
+    ctxStock.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctxStock.lineWidth = 1.5;
+    ctxStock.stroke();
+
+    // High-tech Plaza Corner Lights (Cyan LEDs)
+    const corners = [
+      { x: 30, y: 220 },
+      { x: 450, y: 220 },
+      { x: 240, y: 288 },
+      { x: 240, y: 152 }
+    ];
+    corners.forEach(pt => {
+      ctxStock.fillStyle = '#22d3ee';
+      ctxStock.beginPath();
+      ctxStock.arc(pt.x, pt.y, 2.5, 0, Math.PI * 2);
+      ctxStock.fill();
+      ctxStock.fillStyle = 'rgba(34, 211, 238, 0.4)';
+      ctxStock.beginPath();
+      ctxStock.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
+      ctxStock.fill();
+    });
+
+    // --- SLEEK TALL 3D STOCK EXCHANGE SKYSCRAPER (Slender profile) ---
+    const stockTowerH = 340; // Taller and sleeker
+    const stockBaseY = baseOffsetY + H; // 300
+
+    const insetX = 80;
+    const insetY = 27; // 3:1 aspect ratio inset
+
+    // Left Facade (Deep Premium Obsidian Black)
+    const stockGradL = ctxStock.createLinearGradient(insetX, 0, W / 2, 0);
+    stockGradL.addColorStop(0, '#090d16');
+    stockGradL.addColorStop(0.5, '#0f172a');
+    stockGradL.addColorStop(1, '#1e293b');
+    ctxStock.fillStyle = stockGradL;
+    ctxStock.beginPath();
+    ctxStock.moveTo(insetX, baseOffsetY + H / 2);
+    ctxStock.lineTo(W / 2, baseOffsetY + H - insetY);
+    ctxStock.lineTo(W / 2, baseOffsetY + H - insetY - stockTowerH);
+    ctxStock.lineTo(insetX, baseOffsetY + H / 2 - stockTowerH);
+    ctxStock.closePath();
+    ctxStock.fill();
+
+    // Right Facade (Polished Charcoal Navy Glass)
+    const stockGradR = ctxStock.createLinearGradient(W / 2, 0, W - insetX, 0);
+    stockGradR.addColorStop(0, '#020617');
+    stockGradR.addColorStop(0.6, '#0f172a');
+    stockGradR.addColorStop(1, '#1e293b');
+    ctxStock.fillStyle = stockGradR;
+    ctxStock.beginPath();
+    ctxStock.moveTo(W / 2, baseOffsetY + H - insetY);
+    ctxStock.lineTo(W - insetX, baseOffsetY + H / 2);
+    ctxStock.lineTo(W - insetX, baseOffsetY + H / 2 - stockTowerH);
+    ctxStock.lineTo(W / 2, baseOffsetY + H - insetY - stockTowerH);
+    ctxStock.closePath();
+    ctxStock.fill();
+
+    // Fine Window Grid (Polished, dark windows with subtle cyan/white reflections)
+    const stockFloors = 16;
+    const stockFloorSpacing = stockTowerH / stockFloors;
+    for (let f = 1; f < stockFloors; f++) {
+      const fyL = baseOffsetY + H - insetY - f * stockFloorSpacing;
+
+      ctxStock.strokeStyle = 'rgba(51, 65, 85, 0.4)';
+      ctxStock.lineWidth = 1;
+      ctxStock.beginPath();
+      ctxStock.moveTo(insetX, fyL - H / 2 + insetY);
+      ctxStock.lineTo(W / 2, fyL);
+      ctxStock.stroke();
+
+      ctxStock.beginPath();
+      ctxStock.moveTo(W / 2, fyL);
+      ctxStock.lineTo(W - insetX, fyL - H / 2 + insetY);
+      ctxStock.stroke();
+
+      // Emissive windows on left and right facades
+      if (f % 3 === 0 || f === 4 || f === 10 || f === 14) {
+        ctxStock.fillStyle = 'rgba(186, 230, 253, 0.8)'; // Ice blue glow
+        for (let w = insetX + 12; w < W / 2 - 10; w += 18) {
+          const wy = fyL - H / 2 + insetY + ((w - insetX) / 3) + 3;
+          ctxStock.fillRect(w, wy - stockFloorSpacing + 4, 8, stockFloorSpacing - 6);
+        }
+        ctxStock.fillStyle = 'rgba(103, 232, 249, 0.7)'; // Soft cyan glow
+        for (let w = W / 2 + 12; w < W - insetX - 10; w += 18) {
+          const wy = fyL - ((w - W / 2) / 3) + 3;
+          ctxStock.fillRect(w, wy - stockFloorSpacing + 4, 8, stockFloorSpacing - 6);
+        }
+      }
+    }
+
+    // --- STRUCTURAL PLATINUM CROSS-BRACING (Mega-X-Bracing) ---
+    ctxStock.strokeStyle = 'rgba(241, 245, 249, 0.85)'; // Gleaming platinum white
+    ctxStock.lineWidth = 2.2;
+
+    // Tiers of X-Braces
+    const tiers = 3;
+    const tierH = stockTowerH / tiers;
+    for (let t = 0; t < tiers; t++) {
+      const yBottomL = baseOffsetY + H / 2 - t * tierH;
+      const yTopL = yBottomL - tierH;
+      const yBottomR = baseOffsetY + H - insetY - t * tierH;
+      const yTopR = yBottomR - tierH;
+
+      // Left Facade Diagonals
+      ctxStock.beginPath();
+      ctxStock.moveTo(insetX, yBottomL);
+      ctxStock.lineTo(W / 2, yTopL + insetY);
+      ctxStock.moveTo(insetX, yTopL);
+      ctxStock.lineTo(W / 2, yBottomL + insetY);
+      ctxStock.stroke();
+
+      // Right Facade Diagonals
+      ctxStock.beginPath();
+      ctxStock.moveTo(W / 2, yBottomL + insetY);
+      ctxStock.lineTo(W - insetX, yTopR - H / 2 + insetY + insetY);
+      ctxStock.moveTo(W / 2, yTopL + insetY);
+      ctxStock.lineTo(W - insetX, yBottomR - H / 2 + insetY + insetY);
+      ctxStock.stroke();
+    }
+
+    // --- GLOWING DIGITAL NEON CYAN TICKER WRAP ---
+    const tickerFloor = 4;
+    const tickerYCenter = baseOffsetY + H - insetY - tickerFloor * stockFloorSpacing; // ~210
+
+    // Banner Left Plate (Dark reflective cyan edge)
+    ctxStock.fillStyle = 'rgba(8, 17, 32, 0.95)';
+    ctxStock.beginPath();
+    ctxStock.moveTo(insetX, tickerYCenter - H / 2 + insetY);
+    ctxStock.lineTo(W / 2, tickerYCenter);
+    ctxStock.lineTo(W / 2, tickerYCenter + 18);
+    ctxStock.lineTo(insetX, tickerYCenter - H / 2 + insetY + 18);
+    ctxStock.closePath();
+    ctxStock.fill();
+    ctxStock.strokeStyle = '#06b6d4'; // Cyan neon border
+    ctxStock.lineWidth = 1.8;
+    ctxStock.stroke();
+
+    // Banner Right Plate
+    ctxStock.fillStyle = 'rgba(8, 17, 32, 0.95)';
+    ctxStock.beginPath();
+    ctxStock.moveTo(W / 2, tickerYCenter);
+    ctxStock.lineTo(W - insetX, tickerYCenter - H / 2 + insetY);
+    ctxStock.lineTo(W - insetX, tickerYCenter - H / 2 + insetY + 18);
+    ctxStock.lineTo(W / 2, tickerYCenter + 18);
+    ctxStock.closePath();
+    ctxStock.fill();
+    ctxStock.strokeStyle = '#06b6d4';
+    ctxStock.lineWidth = 1.8;
+    ctxStock.stroke();
+
+    // Glowing Neon Ticker Text (Left Facade)
+    ctxStock.fillStyle = '#22d3ee'; // Bright cyan text
+    ctxStock.font = 'bold 7px monospace';
+    ctxStock.save();
+    ctxStock.transform(1, 0.5, 0, 1, 0, 0);
+    ctxStock.fillText('▲ JSX +14.2%  ▲ CAPG +9.6%', insetX + 10, tickerYCenter - 110 + insetY);
+    ctxStock.restore();
+
+    // Glowing Neon Ticker Text (Right Facade)
+    ctxStock.fillStyle = '#22d3ee';
+    ctxStock.font = 'bold 7px monospace';
+    ctxStock.save();
+    ctxStock.transform(1, -0.5, 0, 1, 0, 0);
+    ctxStock.fillText('▲ CLG +5.6%  ▼ RET -1.2%', 255, tickerYCenter + 130);
+    ctxStock.restore();
+
+    // --- STOCK EXCHANGE ARCHITECTURAL CROWN: SLOPED SHARD ROOF ---
+    // The top roof slopes down from left/back to front/right
+    const roofYBack = baseOffsetY + insetY - stockTowerH; // -173
+    const roofYLeft = baseOffsetY + H / 2 - stockTowerH; // -120
+    const roofYRight = baseOffsetY + H / 2 - (stockTowerH - 50); // -70
+    const roofYFront = baseOffsetY + H - insetY - (stockTowerH - 50); // -17
+
+    // Top Sloped Glass Face
+    const roofGrad = ctxStock.createLinearGradient(insetX, roofYLeft, W - insetX, roofYRight);
+    roofGrad.addColorStop(0, 'rgba(203, 213, 225, 0.95)'); // Polished platinum sheen
+    roofGrad.addColorStop(0.5, 'rgba(30, 41, 59, 0.9)');    // Slate mirror glass
+    roofGrad.addColorStop(1, 'rgba(6, 182, 212, 0.45)');    // Translucent cyan glass reflection
+    ctxStock.fillStyle = roofGrad;
+    ctxStock.beginPath();
+    ctxStock.moveTo(W / 2, roofYBack);
+    ctxStock.lineTo(W - insetX, roofYRight);
+    ctxStock.lineTo(W / 2, roofYFront);
+    ctxStock.lineTo(insetX, roofYLeft);
+    ctxStock.closePath();
+    ctxStock.fill();
+
+    // Bold Platinum Architectural Outline
+    ctxStock.strokeStyle = '#cbd5e1';
+    ctxStock.lineWidth = 2.5;
+    ctxStock.stroke();
+
+    // Sleek Platinum Communications Antenna Spire
+    const spireX = W / 2 + 20; // Shifted slightly towards the taller side
+    const spireY = (roofYBack + roofYFront) / 2 - 10; // Anchored on the sloped roof
+
+    ctxStock.strokeStyle = '#cbd5e1';
+    ctxStock.lineWidth = 2;
+    ctxStock.beginPath();
+    ctxStock.moveTo(spireX, spireY);
+    ctxStock.lineTo(spireX, spireY - 70);
+    ctxStock.stroke();
+
+    // Red warning beacon light
+    ctxStock.fillStyle = '#ef4444';
+    ctxStock.beginPath();
+    ctxStock.arc(spireX, spireY - 71, 4, 0, Math.PI * 2);
+    ctxStock.fill();
+    ctxStock.fillStyle = 'rgba(239, 68, 68, 0.45)';
+    ctxStock.beginPath();
+    ctxStock.arc(spireX, spireY - 71, 8, 0, Math.PI * 2);
+    ctxStock.fill();
+
+    // --- GLOWING STOCK EXCHANGE ARCH EMBLEM (Sleek line chart icon) ---
+    const stockLogoY = stockBaseY - stockTowerH / 2 - 10;
+    ctxStock.strokeStyle = '#34d399'; // Emerald teal line
+    ctxStock.lineWidth = 3;
+    ctxStock.lineCap = 'round';
+    ctxStock.lineJoin = 'round';
+
+    ctxStock.beginPath();
+    ctxStock.moveTo(insetX + 25, stockLogoY + 15);
+    ctxStock.lineTo(insetX + 55, stockLogoY + 22);
+    ctxStock.lineTo(insetX + 85, stockLogoY + 8);
+    ctxStock.lineTo(insetX + 115, stockLogoY - 8);
+    ctxStock.stroke();
+
+    // Draw little glowing points
+    ctxStock.fillStyle = '#ffffff';
+    const points = [
+      { x: insetX + 25, y: stockLogoY + 15 },
+      { x: insetX + 55, y: stockLogoY + 22 },
+      { x: insetX + 85, y: stockLogoY + 8 },
+      { x: insetX + 115, y: stockLogoY - 8 }
+    ];
+    points.forEach(p => {
+      ctxStock.beginPath();
+      ctxStock.arc(p.x, p.y, 3, 0, Math.PI * 2);
+      ctxStock.fill();
+      ctxStock.strokeStyle = '#34d399';
+      ctxStock.lineWidth = 1.2;
+      ctxStock.stroke();
+    });
+
+
+    // --- 8B. RENDER PREMIUM 3D GLOBAL TRADE TERMINAL (Sleek Emerald Glass Skyscraper) ---
+    const cTerminal = document.getElementById('canvas-terminal');
+    const ctxTerminal = cTerminal.getContext('2d');
+    ctxTerminal.imageSmoothingEnabled = true;
+    ctxTerminal.imageSmoothingQuality = 'high';
+    ctxTerminal.setTransform(1, 0, 0, 1, 0, 0);
+    ctxTerminal.clearRect(0, 0, 1024, 1024);
+    ctxTerminal.scale(2, 2);
+
+    ctxTerminal.translate(16, 172);
+
+    // We do NOT draw the 3D concrete base side walls or plaza pavement.
+    // We only draw the skyscraper itself, which sits directly on the grey tile!
+
+    const terminalTowerH = 370; // Slightly taller than Stock Exchange (340)
+    const tInsetX = 80;
+    const tInsetY = 27;
+
+    // Left Facade (Deep Emerald/Jade Gradient)
+    const termGradL = ctxTerminal.createLinearGradient(tInsetX, 0, W / 2, 0);
+    termGradL.addColorStop(0, '#064e3b'); // Very dark emerald
+    termGradL.addColorStop(0.5, '#047857'); // Mid forest green
+    termGradL.addColorStop(1, '#10b981'); // Bright emerald green
+    ctxTerminal.fillStyle = termGradL;
+    ctxTerminal.beginPath();
+    ctxTerminal.moveTo(tInsetX, baseOffsetY + H / 2);
+    ctxTerminal.lineTo(W / 2, baseOffsetY + H - tInsetY);
+    ctxTerminal.lineTo(W / 2, baseOffsetY + H - tInsetY - terminalTowerH);
+    ctxTerminal.lineTo(tInsetX, baseOffsetY + H / 2 - terminalTowerH);
+    ctxTerminal.closePath();
+    ctxTerminal.fill();
+
+    // Right Facade (Teal/Mint Glass Gradient)
+    const termGradR = ctxTerminal.createLinearGradient(W / 2, 0, W - tInsetX, 0);
+    termGradR.addColorStop(0, '#0f766e'); // Deep teal
+    termGradR.addColorStop(0.6, '#14b8a6'); // Teal green
+    termGradR.addColorStop(1, '#2dd4bf'); // Light mint green
+    ctxTerminal.fillStyle = termGradR;
+    ctxTerminal.beginPath();
+    ctxTerminal.moveTo(W / 2, baseOffsetY + H - tInsetY);
+    ctxTerminal.lineTo(W - tInsetX, baseOffsetY + H / 2);
+    ctxTerminal.lineTo(W - tInsetX, baseOffsetY + H / 2 - terminalTowerH);
+    ctxTerminal.lineTo(W / 2, baseOffsetY + H - tInsetY - terminalTowerH);
+    ctxTerminal.closePath();
+    ctxTerminal.fill();
+
+    // Fine Window Grid (Vibrant horizontal & vertical cuts)
+    const termFloors = 18;
+    const termFloorSpacing = terminalTowerH / termFloors;
+    for (let f = 1; f < termFloors; f++) {
+      const fyL = baseOffsetY + H - tInsetY - f * termFloorSpacing;
+
+      ctxTerminal.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+      ctxTerminal.lineWidth = 1.2;
+      ctxTerminal.beginPath();
+      ctxTerminal.moveTo(tInsetX, fyL - H / 2 + tInsetY);
+      ctxTerminal.lineTo(W / 2, fyL);
+      ctxTerminal.stroke();
+
+      ctxTerminal.beginPath();
+      ctxTerminal.moveTo(W / 2, fyL);
+      ctxTerminal.lineTo(W - tInsetX, fyL - H / 2 + tInsetY);
+      ctxTerminal.stroke();
+
+      // Emissive Mint/Ice Windows
+      if (f % 2 === 0 || f === 3 || f === 9 || f === 15) {
+        ctxTerminal.fillStyle = 'rgba(167, 243, 208, 0.85)'; // Radiant mint glow
+        for (let w = tInsetX + 12; w < W / 2 - 10; w += 20) {
+          const wy = fyL - H / 2 + tInsetY + ((w - tInsetX) / 3) + 3;
+          ctxTerminal.fillRect(w, wy - termFloorSpacing + 5, 8, termFloorSpacing - 7);
+        }
+        ctxTerminal.fillStyle = 'rgba(204, 251, 241, 0.75)'; // Soft ice-blue glow
+        for (let w = W / 2 + 12; w < W - tInsetX - 10; w += 20) {
+          const wy = fyL - ((w - W / 2) / 3) + 3;
+          ctxTerminal.fillRect(w, wy - termFloorSpacing + 5, 8, termFloorSpacing - 7);
+        }
+      }
+    }
+
+    // --- STRUCTURAL MINT STRUTS (Sleek horizontal loops/accents) ---
+    ctxTerminal.strokeStyle = '#a7f3d0'; // Mint highlights
+    ctxTerminal.lineWidth = 2.0;
+    
+    // Horizontal band structures at certain floors
+    const bands = [6, 12];
+    bands.forEach(bFloor => {
+      const bY = baseOffsetY + H - tInsetY - bFloor * termFloorSpacing;
+      ctxTerminal.beginPath();
+      ctxTerminal.moveTo(tInsetX - 2, bY - H / 2 + tInsetY);
+      ctxTerminal.lineTo(W / 2, bY);
+      ctxTerminal.lineTo(W - tInsetX + 2, bY - H / 2 + tInsetY);
+      ctxTerminal.stroke();
+    });
+
+    // Outer Edge Outlines
+    ctxTerminal.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctxTerminal.lineWidth = 1.2;
+    ctxTerminal.beginPath();
+    ctxTerminal.moveTo(tInsetX, baseOffsetY + H / 2);
+    ctxTerminal.lineTo(tInsetX, baseOffsetY + H / 2 - terminalTowerH);
+    ctxTerminal.stroke();
+    ctxTerminal.beginPath();
+    ctxTerminal.moveTo(W - tInsetX, baseOffsetY + H / 2);
+    ctxTerminal.lineTo(W - tInsetX, baseOffsetY + H / 2 - terminalTowerH);
+    ctxTerminal.stroke();
+
+    // --- ARCHITECTURAL CROWN: ASYMMETRICAL STEPPED TWIN SPIRES ---
+    const tRoofYBack = baseOffsetY + tInsetY - terminalTowerH;
+    const tRoofYLeft = baseOffsetY + H / 2 - terminalTowerH;
+    const tRoofYRight = baseOffsetY + H / 2 - terminalTowerH;
+    const tRoofYFront = baseOffsetY + H - tInsetY - terminalTowerH;
+
+    // Left Stepped Crown Cap (Dark Forest Green)
+    ctxTerminal.fillStyle = '#064e3b';
+    ctxTerminal.beginPath();
+    ctxTerminal.moveTo(tInsetX, tRoofYLeft);
+    ctxTerminal.lineTo(W / 2, tRoofYFront);
+    ctxTerminal.lineTo(W / 2, tRoofYFront - 20);
+    ctxTerminal.lineTo(tInsetX, tRoofYLeft - 10);
+    ctxTerminal.closePath();
+    ctxTerminal.fill();
+
+    // Right Stepped Crown Cap (Mint Green)
+    ctxTerminal.fillStyle = '#10b981';
+    ctxTerminal.beginPath();
+    ctxTerminal.moveTo(W / 2, tRoofYFront);
+    ctxTerminal.lineTo(W - tInsetX, tRoofYRight);
+    ctxTerminal.lineTo(W - tInsetX, tRoofYRight - 35);
+    ctxTerminal.lineTo(W / 2, tRoofYFront - 48);
+    ctxTerminal.closePath();
+    ctxTerminal.fill();
+
+    // Double Spires
+    ctxTerminal.strokeStyle = '#cbd5e1';
+    ctxTerminal.lineWidth = 2.5;
+
+    // Left Spire
+    const lSpireX = tInsetX + 25;
+    const lSpireY = tRoofYLeft - 6;
+    ctxTerminal.beginPath();
+    ctxTerminal.moveTo(lSpireX, lSpireY);
+    ctxTerminal.lineTo(lSpireX, lSpireY - 50);
+    ctxTerminal.stroke();
+
+    // Right Spire (Significantly Taller)
+    const rSpireX = W - tInsetX - 25;
+    const rSpireY = tRoofYRight - 28;
+    ctxTerminal.beginPath();
+    ctxTerminal.moveTo(rSpireX, rSpireY);
+    ctxTerminal.lineTo(rSpireX, rSpireY - 80);
+    ctxTerminal.stroke();
+
+    // Dual Warning Beacons (Glowing Red)
+    ctxTerminal.fillStyle = '#f87171';
+    ctxTerminal.beginPath();
+    ctxTerminal.arc(lSpireX, lSpireY - 50, 4, 0, Math.PI * 2);
+    ctxTerminal.arc(rSpireX, rSpireY - 80, 4, 0, Math.PI * 2);
+    ctxTerminal.fill();
+
+
+    // 9. RENDER PREMIUM MODERN ARCHITECTURE LUXURY VILLA & MULTICOMPLEX (Full Tile Assets)
+    let loadedAssetsCount = 0;
+    const totalAssetsToLoad = 2;
+    function checkAssetsAndSave() {
+      loadedAssetsCount++;
+      if (loadedAssetsCount === totalAssetsToLoad) {
+        triggerAssetSaving();
+      }
+    }
+
+    const cHouse = document.getElementById('canvas-house');
+    const ctxHouse = cHouse.getContext('2d');
+    ctxHouse.setTransform(1, 0, 0, 1, 0, 0); // Reset any default transformations
+    ctxHouse.imageSmoothingEnabled = true;
+    ctxHouse.imageSmoothingQuality = 'high';
+    ctxHouse.clearRect(0, 0, 1024, 1024);
+
+    const cComplex = document.getElementById('canvas-multicomplex');
+    const ctxComplex = cComplex.getContext('2d');
+    ctxComplex.setTransform(1, 0, 0, 1, 0, 0); // Reset any default transformations
+    ctxComplex.imageSmoothingEnabled = true;
+    ctxComplex.imageSmoothingQuality = 'high';
+    ctxComplex.clearRect(0, 0, 1024, 1024);
+
+    // cTerminal setup executed programmatically in drawing block
+
+    const imgHouse = new Image();
+    imgHouse.onload = () => {
+      // 1. Create a temporary canvas to apply vertical squish and translation
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = 1024;
+      tempCanvas.height = 1024;
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.imageSmoothingEnabled = true;
+      tempCtx.imageSmoothingQuality = 'high';
+
+      // Draw the image translated by Y=25px and squished vertically to 0.73 scale
+      tempCtx.save();
+      tempCtx.translate(0, 25);
+      tempCtx.scale(1.0, 0.73);
+      tempCtx.drawImage(imgHouse, 0, 0, 1024, 1024);
+      tempCtx.restore();
+
+      // 2. Perform color-keying for transparency directly on the temp canvas
+      const imgData = tempCtx.getImageData(0, 0, 1024, 1024);
+      const data = imgData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+
+        // Calculate brightness
+        const brightness = Math.max(r, g, b);
+        if (brightness < 12) {
+          data[i + 3] = 0; // Transparent
+        } else if (brightness < 28) {
+          // Feather alpha gradient at edges
+          const ratio = (brightness - 12) / (28 - 12);
+          data[i + 3] = Math.floor(ratio * 255);
+        }
+      }
+      tempCtx.putImageData(imgData, 0, 0);
+
+      // 3. Clear target canvas cHouse and draw the processed temp canvas onto it
+      ctxHouse.clearRect(0, 0, 1024, 1024);
+      ctxHouse.drawImage(tempCanvas, 0, 0);
+
+      checkAssetsAndSave();
+    };
+    imgHouse.onerror = (e) => {
+      window.onerror('Failed to load raw house image assets/buildings/modern_villa_raw.png', 'generator.html', 1911, 0, e);
+    };
+    imgHouse.src = '/assets/buildings/modern_villa_raw.png';
+
+    const imgComplex = new Image();
+    imgComplex.onload = () => {
+      // 1. Create a temporary canvas to apply vertical squish and translation
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = 1024;
+      tempCanvas.height = 1024;
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.imageSmoothingEnabled = true;
+      tempCtx.imageSmoothingQuality = 'high';
+
+      // Draw the image translated by Y=30px and squished vertically to 0.72 scale
+      tempCtx.save();
+      tempCtx.translate(0, 30);
+      tempCtx.scale(1.0, 0.72);
+      tempCtx.drawImage(imgComplex, 0, 0, 1024, 1024);
+      tempCtx.restore();
+
+      // 2. Perform color-keying for transparency directly on the temp canvas
+      const imgData = tempCtx.getImageData(0, 0, 1024, 1024);
+      const data = imgData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+
+        // Calculate brightness
+        const brightness = Math.max(r, g, b);
+        if (brightness < 12) {
+          data[i + 3] = 0; // Transparent
+        } else if (brightness < 28) {
+          // Feather alpha gradient at edges
+          const ratio = (brightness - 12) / (28 - 12);
+          data[i + 3] = Math.floor(ratio * 255);
+        }
+      }
+      tempCtx.putImageData(imgData, 0, 0);
+
+      // 3. Clear target canvas cComplex and draw the processed temp canvas onto it
+      ctxComplex.clearRect(0, 0, 1024, 1024);
+      ctxComplex.drawImage(tempCanvas, 0, 0);
+
+      checkAssetsAndSave();
+    };
+    imgComplex.onerror = (e) => {
+      window.onerror('Failed to load raw multicomplex image assets/buildings/modern_multicomplex_raw.png', 'generator.html', 1957, 0, e);
+    };
+    imgComplex.src = '/assets/buildings/modern_multicomplex_raw.png';
+
+    // imgTerminal loader removed (drawn programmatically)
+
+
     // --- PART 5: ISO METRO ROAD NETWORK GENERATION ---
     const rW = 320;
     const rH = 150; // Height adjusted to support 40px concrete wall depth
 
     // A. road_v (Vertical road segment along col axis)
     const cRoadV = document.createElement('canvas');
-    cRoadV.width = rW;
-    cRoadV.height = rH;
+    cRoadV.width = 1024;
+    cRoadV.height = 512;
     const ctxRV = cRoadV.getContext('2d');
-    ctxRV.clearRect(0, 0, rW, rH);
+    ctxRV.imageSmoothingEnabled = true;
+    ctxRV.imageSmoothingQuality = 'high';
+    ctxRV.scale(2, 2);
+    ctxRV.translate(96, 53);
+    ctxRV.clearRect(-96, -53, 512, 256);
 
     // Left vertical concrete wall
     ctxRV.fillStyle = '#182235';
@@ -816,10 +2204,14 @@
 
     // B. road_h (Horizontal road segment along row axis)
     const cRoadH = document.createElement('canvas');
-    cRoadH.width = rW;
-    cRoadH.height = rH;
+    cRoadH.width = 1024;
+    cRoadH.height = 512;
     const ctxRH = cRoadH.getContext('2d');
-    ctxRH.clearRect(0, 0, rW, rH);
+    ctxRH.imageSmoothingEnabled = true;
+    ctxRH.imageSmoothingQuality = 'high';
+    ctxRH.scale(2, 2);
+    ctxRH.translate(96, 53);
+    ctxRH.clearRect(-96, -53, 512, 256);
 
     // Left vertical concrete wall
     ctxRH.fillStyle = '#182235';
@@ -880,10 +2272,14 @@
 
     // C. road_intersection (Crossing intersection)
     const cRoadI = document.createElement('canvas');
-    cRoadI.width = 160;
-    cRoadI.height = 120; // Expanded height to support 40px vertical walls
+    cRoadI.width = 512; // 256 * 2
+    cRoadI.height = 256; // 128 * 2
     const ctxRI = cRoadI.getContext('2d');
-    ctxRI.clearRect(0, 0, 160, 120);
+    ctxRI.imageSmoothingEnabled = true;
+    ctxRI.imageSmoothingQuality = 'high';
+    ctxRI.scale(2, 2);
+    ctxRI.translate(48, 4);
+    ctxRI.clearRect(-48, -4, 256, 128);
 
     // Left vertical concrete wall
     ctxRI.fillStyle = '#182235';
@@ -920,49 +2316,60 @@
 
 
 
-    // POST assets
-    const payload = {
-      files: [
-        { relPath: 'terrain/iso-block.png', data: blockCanvas.toDataURL('image/png') },
-        { relPath: 'terrain/iso-shadow.png', data: shadowCanvas.toDataURL('image/png') },
-        { relPath: 'plots/plot_grass.png', data: plotCanvases.grass.toDataURL('image/png') },
-        { relPath: 'plots/plot_flowers.png', data: plotCanvases.flowers.toDataURL('image/png') },
-        { relPath: 'plots/plot_hedge.png', data: plotCanvases.hedge.toDataURL('image/png') },
-        { relPath: 'plots/plot_tree.png', data: plotCanvases.tree.toDataURL('image/png') },
-        { relPath: 'plots/plot_stone.png', data: plotCanvases.stone.toDataURL('image/png') },
-        { relPath: 'plots/plot_shrubs.png', data: plotCanvases.shrubs.toDataURL('image/png') },
-        { relPath: 'plots/plot_flower_island.png', data: plotCanvases.flowerIsland.toDataURL('image/png') },
-        { relPath: 'plots/plot_landscaped.png', data: plotCanvases.landscaped.toDataURL('image/png') },
-        { relPath: 'plots/plot_mixed.png', data: plotCanvases.mixed.toDataURL('image/png') },
-        { relPath: 'plots/plot_premium.png', data: plotCanvases.premium.toDataURL('image/png') },
-        { relPath: 'buildings/building_farming.png', data: cFarm.toDataURL('image/png') },
-        { relPath: 'buildings/building_mining.png', data: cMine.toDataURL('image/png') },
-        { relPath: 'buildings/building_factory.png', data: cFactory.toDataURL('image/png') },
-        { relPath: 'buildings/building_retail.png', data: cRetail.toDataURL('image/png') },
-        { relPath: 'terrain/road_v.png', data: cRoadV.toDataURL('image/png') },
-        { relPath: 'terrain/road_h.png', data: cRoadH.toDataURL('image/png') },
-        { relPath: 'terrain/road_intersection.png', data: cRoadI.toDataURL('image/png') }
-      ]
-    };
+    function triggerAssetSaving() {
+      // POST assets
+      const payload = {
+        files: [
+          { relPath: 'terrain/iso-block.png', data: blockCanvas.toDataURL('image/png') },
+          { relPath: 'terrain/iso-shadow.png', data: shadowCanvas.toDataURL('image/png') },
+          { relPath: 'plots/plot_grass.png', data: plotCanvases.grass.toDataURL('image/png') },
+          { relPath: 'plots/plot_flowers.png', data: plotCanvases.flowers.toDataURL('image/png') },
+          { relPath: 'plots/plot_hedge.png', data: plotCanvases.hedge.toDataURL('image/png') },
+          { relPath: 'plots/plot_tree.png', data: plotCanvases.tree.toDataURL('image/png') },
+          { relPath: 'plots/plot_stone.png', data: plotCanvases.stone.toDataURL('image/png') },
+          { relPath: 'plots/plot_shrubs.png', data: plotCanvases.shrubs.toDataURL('image/png') },
+          { relPath: 'plots/plot_flower_island.png', data: plotCanvases.flowerIsland.toDataURL('image/png') },
+          { relPath: 'plots/plot_landscaped.png', data: plotCanvases.landscaped.toDataURL('image/png') },
+          { relPath: 'plots/plot_mixed.png', data: plotCanvases.mixed.toDataURL('image/png') },
+          { relPath: 'plots/plot_premium.png', data: plotCanvases.premium.toDataURL('image/png') },
+          { relPath: 'plots/plot_fountain.png', data: cFountain.toDataURL('image/png') },
+          { relPath: 'buildings/building_farming.png', data: cFarm.toDataURL('image/png') },
+          { relPath: 'buildings/building_mining.png', data: cMine.toDataURL('image/png') },
+          { relPath: 'buildings/building_factory.png', data: cFactory.toDataURL('image/png') },
+          { relPath: 'buildings/building_retail.png', data: cRetail.toDataURL('image/png') },
+          { relPath: 'buildings/building_corporate.png', data: cCorp.toDataURL('image/png') },
+          { relPath: 'buildings/building_cgn.png', data: cCGN.toDataURL('image/png') },
+          { relPath: 'buildings/building_stock_exchange.png', data: cStockExchange.toDataURL('image/png') },
+          { relPath: 'buildings/building_house.png', data: cHouse.toDataURL('image/png') },
+          { relPath: 'buildings/building_multicomplex.png', data: cComplex.toDataURL('image/png') },
+          { relPath: 'buildings/building_terminal.png', data: cTerminal.toDataURL('image/png') },
+          { relPath: 'buildings/building_fountain.png', data: cFountain.toDataURL('image/png') },
+          { relPath: 'terrain/road_v.png', data: cRoadV.toDataURL('image/png') },
+          { relPath: 'terrain/road_h.png', data: cRoadH.toDataURL('image/png') },
+          { relPath: 'terrain/road_intersection.png', data: cRoadI.toDataURL('image/png') }
+        ]
+      };
 
-    fetch('/api/save-assets', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    })
-    .then(res => res.json())
-    .then(data => {
-      console.log('Success:', data);
-      document.getElementById('status').innerText = 'SUCCESS: Assets written to disk!';
-      document.getElementById('status').style.color = 'green';
-    })
-    .catch(err => {
-      console.error('Error:', err);
-      document.getElementById('status').innerText = 'ERROR: Failed to save assets.';
-      document.getElementById('status').style.color = 'red';
-    });
+      fetch('/api/save-assets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+        .then(res => res.json())
+        .then(data => {
+          console.log('Success:', data);
+          document.getElementById('status').innerText = 'SUCCESS: Assets written to disk!';
+          document.getElementById('status').style.color = 'green';
+        })
+        .catch(err => {
+          console.error('Error:', err);
+          document.getElementById('status').innerText = 'ERROR: Failed to save assets.';
+          document.getElementById('status').style.color = 'red';
+        });
+    }
   </script>
 </body>
+
 </html>

@@ -385,6 +385,12 @@ p {
   display: block;
 }
 
+#phaser-game-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
 .hero-container {
   display: grid;
   grid-template-columns: 1.2fr 0.8fr;
